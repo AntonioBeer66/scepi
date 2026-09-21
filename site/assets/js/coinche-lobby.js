@@ -8,6 +8,7 @@ const STORAGE_KEY = 'scepi-coinche-lobbies-v1';
 const CLIENT_ID_KEY = 'scepi-coinche-client-id';
 const SEAT_LABELS = ['Nord', 'Est', 'Sud', 'Ouest'];
 const SEAT_TEAM = ['Équipe A', 'Équipe B', 'Équipe A', 'Équipe B'];
+const PERMANENT_COUNT = 4;
 
 function getClientId() {
   let id = localStorage.getItem(CLIENT_ID_KEY);
@@ -20,25 +21,54 @@ function getClientId() {
 
 function defaultState() {
   const lobbies = {};
-  for (let i = 1; i <= 4; i++) {
-    lobbies['table-' + i] = { seats: [null, null, null, null] };
+  for (let i = 1; i <= PERMANENT_COUNT; i++) {
+    lobbies['table-' + i] = { number: i, ephemeral: false, seats: [null, null, null, null] };
   }
   return lobbies;
 }
 
+// Un salon créé via « Nouveau lobby » ne vit que le temps d'une partie : une
+// fois qu'un premier joueur humain l'a rejoint puis que tout le monde est
+// reparti, il est retiré à la prochaine lecture de l'état. Un salon tout
+// juste créé (encore vide) n'est jamais supprimé avant d'avoir eu sa chance
+// d'être rejoint.
+function cleanupEphemeralLobbies(state) {
+  let changed = false;
+  for (const [id, lobby] of Object.entries(state)) {
+    if (!lobby.ephemeral) continue;
+    const hasHuman = lobby.seats.some((s) => s && s.type === 'human');
+    if (hasHuman) { lobby.hadHuman = true; continue; }
+    if (lobby.hadHuman) { delete state[id]; changed = true; }
+  }
+  return changed;
+}
+
 function loadState() {
+  let state;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    return { ...defaultState(), ...parsed };
+    state = raw ? { ...defaultState(), ...JSON.parse(raw) } : defaultState();
   } catch {
-    return defaultState();
+    state = defaultState();
   }
+  if (cleanupEphemeralLobbies(state)) saveState(state);
+  return state;
 }
 
 function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function nextLobbyNumber(state) {
+  const numbers = Object.values(state).map((l) => l.number || 0);
+  return Math.max(PERMANENT_COUNT, ...numbers) + 1;
+}
+
+function createEphemeralLobby(state) {
+  const number = nextLobbyNumber(state);
+  const id = 'lobby-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  state[id] = { number, ephemeral: true, seats: [null, null, null, null] };
+  return id;
 }
 
 function findMySeat(state, clientId) {
@@ -93,23 +123,27 @@ function seatMarkup(lobbyId, seat, index, clientId, mySeat) {
 
 function render(grid, state, clientId) {
   const mySeat = findMySeat(state, clientId);
-  const lobbyNames = { 'table-1': '1', 'table-2': '2', 'table-3': '3', 'table-4': '4' };
+  const ordered = Object.entries(state).sort((a, b) => (a[1].number || 0) - (b[1].number || 0));
 
-  grid.innerHTML = Object.entries(state).map(([lobbyId, lobby]) => {
+  grid.innerHTML = ordered.map(([lobbyId, lobby]) => {
     const filled = lobby.seats.filter(Boolean).length;
-    return `<article class="lobby" data-lobby="${lobbyId}">
-      <span class="eyebrow">SALON 0${lobbyNames[lobbyId]}</span>
-      <h3>Table ${lobbyNames[lobbyId]}</h3>
+    const canStart = mySeat && mySeat.lobbyId === lobbyId;
+    const number = String(lobby.number).padStart(2, '0');
+    return `<article class="lobby ${lobby.ephemeral ? 'is-ephemeral' : ''}" data-lobby="${lobbyId}">
+      <span class="eyebrow">SALON ${number}${lobby.ephemeral ? ' <span class="lobby-temp-tag">TEMPORAIRE</span>' : ''}</span>
+      <h3>Table ${lobby.number}</h3>
       <ul class="seat-list">
         ${lobby.seats.map((seat, i) => seatMarkup(lobbyId, seat, i, clientId, mySeat)).join('')}
       </ul>
       <p class="caption">${filled}/4 places occupées · 2 équipes</p>
+      ${canStart ? `<button type="button" class="button primary seat-btn" data-action="start" data-lobby="${lobbyId}">Lancer la partie</button>` : ''}
     </article>`;
   }).join('');
 }
 
 function init() {
   const grid = document.querySelector('#lobby-grid');
+  const newLobbyBtn = document.querySelector('#new-lobby-btn');
   if (!grid) return;
 
   const clientId = getClientId();
@@ -133,7 +167,7 @@ function init() {
 
     state = loadState();
     if (findMySeat(state, clientId)) return; // déjà installé ailleurs
-    if (state[lobbyId].seats[seatIndex]) return; // siège pris entre-temps
+    if (!state[lobbyId] || state[lobbyId].seats[seatIndex]) return; // salon disparu ou siège pris entre-temps
     state[lobbyId].seats[seatIndex] = { name: pseudo.slice(0, 18), type: 'human', clientId };
     saveState(state);
     render(grid, state, clientId);
@@ -142,12 +176,19 @@ function init() {
   grid.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
+
+    if (button.dataset.action === 'start') {
+      startTable(button.dataset.lobby);
+      return;
+    }
+
     const seatRow = button.closest('.seat-row');
     const lobbyId = seatRow.dataset.lobby;
     const seatIndex = Number(seatRow.dataset.seat);
     const action = button.dataset.action;
 
     state = loadState();
+    if (!state[lobbyId]) { render(grid, state, clientId); return; }
     const seat = state[lobbyId].seats[seatIndex];
 
     if (action === 'bot' && !seat) {
@@ -164,12 +205,52 @@ function init() {
     }
 
     saveState(state);
+    state = loadState(); // purge immédiate si le salon quitté vient de se vider
     render(grid, state, clientId);
   });
+
+  if (newLobbyBtn) {
+    newLobbyBtn.addEventListener('click', () => {
+      state = loadState();
+      if (findMySeat(state, clientId)) {
+        window.alert('Quittez votre table actuelle avant d’en ouvrir une nouvelle.');
+        return;
+      }
+      const id = createEphemeralLobby(state);
+      saveState(state);
+      render(grid, state, clientId);
+      document.querySelector(`[data-lobby="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
 
   window.addEventListener('storage', (event) => {
     if (event.key === STORAGE_KEY) refresh();
   });
+
+  function startTable(lobbyId) {
+    if (!window.SCEPICoincheGame) return;
+    state = loadState();
+    const mySeat = findMySeat(state, clientId);
+    if (!mySeat || mySeat.lobbyId !== lobbyId) return;
+
+    const lobby = state[lobbyId];
+    lobby.seats = lobby.seats.map((seat) => seat || { type: 'bot' });
+    saveState(state);
+    render(grid, state, clientId);
+
+    const lobbySection = document.querySelector('#lobby-section');
+    if (lobbySection) lobbySection.hidden = true;
+
+    const seatsForGame = lobby.seats.map((seat) => ({
+      name: seat.type === 'bot' ? 'Ordinateur' : seat.name,
+      type: seat.type,
+    }));
+
+    window.SCEPICoincheGame.start(seatsForGame, mySeat.seatIndex, () => {
+      if (lobbySection) lobbySection.hidden = false;
+      refresh();
+    });
+  }
 }
 
 if (document.readyState === 'loading') {

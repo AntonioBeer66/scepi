@@ -9,7 +9,18 @@
   font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--text);background:var(--bg);font-synthesis:none;
 }
 *{box-sizing:border-box}
-body{margin:0}
+body{
+  margin:0;
+  background-image:
+    radial-gradient(1px 1px at 40px 60px,#ffffff16,transparent),
+    radial-gradient(1px 1px at 160px 20px,#ffffff10,transparent),
+    radial-gradient(1.5px 1.5px at 260px 170px,#f4c60022,transparent),
+    radial-gradient(1px 1px at 90px 190px,#ffffff0d,transparent),
+    radial-gradient(1px 1px at 320px 90px,#ffffff14,transparent),
+    radial-gradient(1.5px 1.5px at 200px 260px,#39ff1418,transparent);
+  background-repeat:repeat;
+  background-size:360px 360px;
+}
 a{color:inherit;text-decoration:none}
 button{font:inherit}
 img{max-width:100%;height:auto}
@@ -127,7 +138,7 @@ button:not(:disabled),a{cursor:pointer}
 .table-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
 .table-center img{width:125px;opacity:.5}
 .table-center>span{font:10px Consolas,monospace;letter-spacing:.15em;color:#abc59f}
-.seat{position:absolute;z-index:1;border:1px solid #ffffff30;border-radius:20px;padding:10px 18px;background:#191721;font-size:11px;white-space:nowrap}
+.seat{position:absolute;z-index:1;border:1px solid #ffffff30;border-radius:20px;padding:10px 18px;background:#191721;font-size:11px;white-space:nowrap;transition:border-color .25s,box-shadow .25s,background .25s}
 .north{top:-20px;left:50%;transform:translateX(-50%)}
 .south{bottom:-20px;left:50%;transform:translateX(-50%)}
 .west{left:-25px;top:50%;transform:translateY(-50%)}
@@ -136,12 +147,16 @@ button:not(:disabled),a{cursor:pointer}
 /* Coinche : grille des salons -------------------------------------------- */
 
 .lobby-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
-.lobby{background:#13121a;border:1px solid var(--line);padding:24px;border-radius:10px}
+.lobby{background:radial-gradient(ellipse at 90% -20%,#39ff1414,transparent 55%),#13121a;border:1px solid var(--line);padding:24px;border-radius:10px}
 .lobby .eyebrow{color:#a7bb9f;font-size:10px;margin-bottom:16px}
 .lobby h3{font-size:22px;margin-bottom:14px}
 .empty-seats{font-size:27px;color:#749265;letter-spacing:5px}
 .lobby p{font-size:12px}
 .unavailable{background:#211e29;border:1px solid var(--line);color:#bdb5cd;font-size:11px;padding:12px;width:100%;cursor:not-allowed}
+.lobby.is-ephemeral{border-style:dashed;border-color:#5c7948}
+.lobby-temp-tag{color:var(--green);margin-left:6px}
+.new-lobby-row{margin-top:28px;padding-top:24px;border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.new-lobby-row .caption{margin:0}
 
 .seat-list{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:10px}
 .seat-row{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;background:#0f0e16}
@@ -158,6 +173,203 @@ button:not(:disabled),a{cursor:pointer}
 .seat-join-form input{flex:1;min-width:0;background:#181722;border:1px solid var(--line);border-radius:6px;color:var(--text);padding:8px 10px;font-size:12px}
 .seat-join-form input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .seat-btn{min-height:36px;padding:8px 12px;font-size:11px;white-space:nowrap}
+
+/* Table de jeu (moteur de coinche) --------------------------------- */
+
+@keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes chipPop{0%{opacity:0;transform:scale(.4) rotate(-25deg)}70%{transform:scale(1.15) rotate(6deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes collectToCenter{to{opacity:0;transform:scale(.55) translateY(-18px)}}
+@keyframes legalGlow{0%,100%{box-shadow:0 10px 24px #00000066,0 0 0 0 #f4c60066}50%{box-shadow:0 14px 30px #00000077,0 0 26px 6px #f4c60055}}
+@keyframes seatActivePulse{0%,100%{box-shadow:0 0 0 2px #f4c60055,0 0 18px 2px #f4c60033}50%{box-shadow:0 0 0 2px #f4c600aa,0 0 26px 6px #f4c60066}}
+@keyframes bannerIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.card-img{display:block;object-fit:cover;border-radius:9px;box-shadow:0 8px 20px #0007}
+.card-img.is-dealt{animation:cardIn .32s ease both}
+
+/* La table ovale existante devient la vraie table de jeu une fois la partie lancée. */
+.table-preview.is-live{height:auto;min-height:420px;padding:36px 20px;transition:min-height .3s ease}
+.table-preview .seat{cursor:default}
+.table-preview .seat.is-active{border-color:var(--gold);background:#241d10;animation:seatActivePulse 1.6s ease-in-out infinite;z-index:3}
+.table-preview .seat.is-preneur{border-color:#5c7948}
+.seat-name{font-weight:700;color:var(--text);display:block}
+.seat.is-active .seat-name{color:var(--gold)}
+.seat.is-active .seat-name:before{content:"▸";display:inline-block;color:var(--gold);margin-right:5px;animation:turnArrow 1s ease-in-out infinite}
+@keyframes turnArrow{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+.seat-cardcount{display:flex;gap:2px;margin-top:6px;justify-content:center}
+.seat-cardcount span{width:6px;height:6px;border-radius:50%;background:#3a3450;display:inline-block}
+.seat-cardcount span.is-present{background:var(--gold)}
+.dealer-chip{position:absolute;top:-11px;right:-11px;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#f4c600,#d87924);color:#181127;font:800 11px/24px Consolas,"Courier New",monospace;text-align:center;box-shadow:0 4px 10px #0008;border:2px solid #120d1e;animation:chipPop .4s ease both;z-index:2}
+.table-center.is-live{gap:0;z-index:1}
+.table-center.is-live img,.table-center.is-live>span{display:none}
+.center-trick{position:relative;width:236px;height:236px}
+.trick-slot{position:absolute;width:80px;height:123px}
+.trick-slot img{width:100%;height:100%;object-fit:cover;border-radius:8px;box-shadow:0 8px 20px #0008}
+.trick-slot.pos-0{left:50%;bottom:0;transform:translateX(-50%)}
+.trick-slot.pos-1{right:0;top:50%;transform:translateY(-50%)}
+.trick-slot.pos-2{left:50%;top:0;transform:translateX(-50%)}
+.trick-slot.pos-3{left:0;top:50%;transform:translateY(-50%)}
+.trick-slot.is-collecting img{animation:collectToCenter .55s ease forwards}
+.trick-slot.is-winner img{outline:2px solid var(--gold);outline-offset:2px}
+.contract-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-family:Consolas,"Courier New",monospace;font-size:10px;color:#e9e2f5;background:#00000066;border:1px solid #ffffff2e;border-radius:20px;padding:7px 16px;white-space:nowrap;backdrop-filter:blur(2px)}
+
+/* Panneau sous la table : score, minuteur, contrôles, main, journal */
+
+.game-view{padding:24px 0 60px}
+.game-panel-header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:16px;flex-wrap:wrap}
+.scoreboard{display:flex;gap:14px}
+.score-tile{border:1px solid var(--line);border-radius:12px;padding:10px 20px;background:radial-gradient(ellipse at 50% -30%,#f4c60018,transparent 60%),var(--surface);text-align:center;min-width:104px}
+.score-tile b{display:block;font-size:26px;line-height:1.15;color:var(--text)}
+.score-tile.you b{color:var(--green)}
+.score-tile span{font-size:10px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+.score-tile .live-tally{display:block;font-size:10px;color:var(--green);margin-top:3px;font-family:Consolas,"Courier New",monospace}
+
+.turn-timer-wrap{display:flex;align-items:center;gap:12px;margin-bottom:18px;font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 16px}
+.turn-timer-wrap b{color:var(--gold);font-weight:700}
+.turn-timer-wrap .turn-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0;animation:seatActivePulse 1s ease-in-out infinite}
+.turn-timer{flex:1;height:8px;border-radius:4px;background:#1c1828;border:1px solid var(--line);overflow:hidden}
+.turn-timer-fill{height:100%;width:100%;background:linear-gradient(90deg,var(--gold),#ffdc40);transition:background .3s}
+.turn-timer-fill.is-warning{background:linear-gradient(90deg,#d87924,#f4a600)}
+.turn-timer-fill.is-danger{background:linear-gradient(90deg,#c23a3a,#ff5b5b);animation:seatActivePulse 0.8s ease-in-out infinite}
+
+.score-banner{animation:bannerIn .3s ease both;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--surface)}
+.score-banner.ok{border-color:#3f6b31}
+.score-banner.ko{border-color:#6b3131}
+.score-banner b{font-size:16px}
+.score-banner span{color:var(--muted);font-size:13px}
+
+.game-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px;min-height:1px}
+
+/* Panneau d'enchères : sélecteur de couleur + slider central ------------- */
+
+.bidding-panel{width:100%;display:flex;flex-direction:column;align-items:center;gap:18px;border:1px solid var(--line);border-radius:16px;padding:24px 28px;background:radial-gradient(ellipse at 50% -20%,#f4c6001a,transparent 60%),var(--surface)}
+.bid-suits{display:flex;gap:10px}
+.bid-suit-swatch{width:46px;height:46px;border-radius:50%;border:2px solid var(--line);background:#181722;color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;transition:transform .18s,border-color .18s,box-shadow .18s}
+.bid-suit-swatch.red{color:#e36a6a}
+.bid-suit-swatch.is-selected{border-color:var(--gold);transform:scale(1.14);box-shadow:0 0 0 3px #f4c60033,0 6px 16px #0006}
+.bid-slider-wrap{width:min(420px,100%);display:flex;flex-direction:column;align-items:center;gap:12px}
+.bid-slider-readout{font-family:Consolas,"Courier New",monospace;text-align:center}
+.bid-slider-readout b{font-size:44px;line-height:1;color:var(--gold);letter-spacing:.02em;display:block}
+.bid-amount-slider{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:5px;background:linear-gradient(90deg,var(--gold) var(--fill,0%),#241f34 var(--fill,0%));outline:none;cursor:pointer}
+.bid-amount-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe98a,var(--gold));border:2px solid #1a130a;box-shadow:0 4px 10px #0008;cursor:pointer}
+.bid-amount-slider::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe98a,var(--gold));border:2px solid #1a130a;box-shadow:0 4px 10px #0008;cursor:pointer}
+.bid-amount-slider::-moz-range-track{height:8px;border-radius:5px;background:#241f34}
+.bid-slider-scale{display:flex;justify-content:space-between;width:100%;font-family:Consolas,"Courier New",monospace;font-size:9px;color:#7a7290;letter-spacing:.05em}
+.bid-actions{display:flex;gap:12px}
+
+.game-hand{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:34px 0 10px;border-top:1px solid var(--line)}
+.game-hand-prompt{position:absolute;top:6px;left:50%;transform:translateX(-50%);font-family:Consolas,"Courier New",monospace;font-size:11px;letter-spacing:.1em;color:var(--gold);white-space:nowrap;animation:bannerIn .3s ease both}
+.game-hand .card-img{width:128px;transition:transform .2s,opacity .2s,filter .2s}
+.game-hand .card-img.is-legal{cursor:pointer;transform:translateY(-22px);animation:legalGlow 1.9s ease-in-out infinite;z-index:1}
+.game-hand .card-img.is-legal.is-dealt{animation:cardIn .32s ease both,legalGlow 1.9s ease-in-out .32s infinite}
+.game-hand .card-img.is-legal:hover{animation-play-state:paused;transform:translateY(-38px) scale(1.08);z-index:2}
+.game-hand .card-img.is-illegal{opacity:.25;filter:grayscale(.7);transform:translateY(6px) scale(.94)}
+@media(max-width:760px){
+  .bidding-panel{padding:18px}
+  .bid-slider-readout b{font-size:32px}
+  .game-hand .card-img.is-legal{transform:translateY(-14px)}
+}
+.game-log{list-style:none;margin:0;padding:0;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto}
+.game-log li{animation:bannerIn .25s ease both}
+
+.last-trick-panel{animation:bannerIn .25s ease both;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:18px;background:var(--surface)}
+.last-trick-panel .eyebrow{color:#a7bb9f;font-size:10px;margin-bottom:12px}
+.last-trick-cards{display:flex;gap:16px;flex-wrap:wrap}
+.last-trick-card{display:flex;flex-direction:column;align-items:center;gap:6px}
+.last-trick-card .card-img{width:76px}
+.last-trick-card span{font-size:11px;color:var(--muted)}
+.last-trick-card.is-winner span{color:var(--gold);font-weight:700}
+.last-trick-card.is-winner .card-img{outline:2px solid var(--gold);outline-offset:2px}
+
+/* Mode « en partie » : compacte tout pour tenir sur un seul écran, sans
+   défilement de page (le journal et la fenêtre des règles gardent leur
+   propre défilement interne si besoin, ça ne compte pas). */
+body.is-playing .page-intro{display:none}
+body.is-playing .footer{display:none}
+body.is-playing .header-inner{min-height:48px}
+body.is-playing .header nav a{padding:13px 0}
+body.is-playing .header-tag{display:none}
+body.is-playing .table-preview.is-live{min-height:190px;padding:14px 12px;margin:6px auto 12px}
+body.is-playing .center-trick{width:150px;height:150px}
+body.is-playing .trick-slot{width:50px;height:77px}
+body.is-playing .seat{padding:6px 11px;font-size:10px}
+body.is-playing .game-view{padding:0 0 10px}
+body.is-playing .game-panel-header{margin-bottom:6px}
+body.is-playing .game-panel-header .eyebrow{font-size:9px}
+body.is-playing .scoreboard{gap:8px}
+body.is-playing .score-tile{padding:6px 14px;min-width:0}
+body.is-playing .score-tile b{font-size:18px}
+body.is-playing .turn-timer-wrap{margin-bottom:6px;padding:6px 12px;font-size:12px;gap:8px}
+body.is-playing .score-banner{padding:10px 14px;margin-bottom:6px}
+body.is-playing .game-controls{margin-bottom:6px}
+body.is-playing .bidding-panel{padding:10px 14px;gap:8px}
+body.is-playing .bid-slider-readout b{font-size:24px}
+body.is-playing .bid-suit-swatch{width:34px;height:34px;font-size:15px}
+body.is-playing .last-trick-panel{padding:8px 14px;margin-bottom:6px}
+body.is-playing .last-trick-card .card-img{width:50px}
+body.is-playing .game-hand{padding:14px 0 4px}
+body.is-playing .game-hand .card-img{width:80px}
+body.is-playing .game-hand .card-img.is-legal{transform:translateY(-10px)}
+body.is-playing .game-hand .card-img.is-legal:hover{transform:translateY(-18px) scale(1.05)}
+body.is-playing .game-log{max-height:44px;font-size:9px}
+
+@media(max-width:760px){
+  .table-preview.is-live{min-height:340px;padding:24px 10px}
+  .center-trick{width:160px;height:160px}
+  .trick-slot{width:54px;height:83px}
+  .game-hand .card-img{width:82px}
+  .scoreboard{gap:8px}
+  .score-tile{padding:8px 12px;min-width:76px}
+  .score-tile b{font-size:20px}
+
+  body.is-playing .footer{display:none}
+  body.is-playing .header-inner{min-height:44px}
+  body.is-playing .header nav{display:none}
+  body.is-playing .brand{font-size:14px}
+  body.is-playing .brand img{width:34px;height:34px}
+  body.is-playing .table-preview.is-live{min-height:180px;padding:12px 6px;margin:6px auto 12px}
+  body.is-playing .center-trick{width:118px;height:118px}
+  body.is-playing .trick-slot{width:40px;height:62px}
+  body.is-playing .seat{padding:5px 9px;font-size:9px}
+  body.is-playing .seat-cardcount{margin-top:3px}
+  body.is-playing .game-panel-header .scoreboard{gap:6px}
+  body.is-playing .score-tile{padding:6px 10px;min-width:0}
+  body.is-playing .score-tile b{font-size:16px}
+  body.is-playing .turn-timer-wrap{padding:6px 10px;font-size:11px;gap:8px}
+  body.is-playing .bidding-panel{padding:10px 10px}
+  body.is-playing .bid-slider-readout b{font-size:22px}
+  body.is-playing .bid-suits{gap:6px}
+  body.is-playing .bid-suit-swatch{width:32px;height:32px;font-size:14px}
+  body.is-playing .game-hand{padding:14px 0 4px}
+  body.is-playing .game-hand .card-img{width:58px}
+  body.is-playing .game-hand .card-img.is-legal{transform:translateY(-10px)}
+  body.is-playing .game-hand-prompt{font-size:9px}
+  body.is-playing .game-log{max-height:40px;font-size:9px}
+  body.is-playing .last-trick-card .card-img{width:40px}
+}
+
+/* Bouton « Règles » de la coinche : un panneau qui se déploie depuis le
+   bouton lui-même, pas un pop-up plein écran. Le sélecteur [hidden] est
+   répété partout avec !important : sans ça, nos propres règles de mise en
+   page (display:flex, etc.) ont la même priorité que le style natif de
+   l'attribut « hidden » et peuvent l'emporter selon l'ordre du fichier —
+   c'est exactement ce qui empêchait le panneau de se refermer. */
+
+.rules-btn{position:fixed;right:20px;bottom:20px;z-index:40;display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:#181127;border:none;border-radius:30px;padding:12px 18px;font-size:13px;font-weight:700;box-shadow:0 8px 22px #0008}
+.rules-btn:hover{background:#ffdc40}
+.rules-btn span{font-family:Consolas,"Courier New",monospace;border:1.5px solid #181127;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;font-size:10px}
+
+.rules-panel{position:fixed;right:20px;bottom:78px;z-index:41;width:min(380px,calc(100vw - 40px));max-height:min(520px,70vh);overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:0 16px 40px #000a;animation:bannerIn .2s ease both}
+.rules-panel[hidden]{display:none!important}
+.rules-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.rules-panel-head h2{font-size:17px;margin:0}
+.rules-panel-close{width:28px;height:28px;flex-shrink:0;border-radius:50%;border:1px solid var(--line);background:#181722;color:var(--text);font-size:12px}
+.rules-panel-close:hover{border-color:var(--gold)}
+.rules-panel h3{font-size:12px;color:var(--gold);margin:16px 0 6px}
+.rules-panel p{font-size:12.5px;line-height:1.6;margin-bottom:0}
+@media(max-width:760px){
+  .rules-btn{right:14px;bottom:14px;padding:10px 14px;font-size:12px}
+  .rules-panel{right:14px;left:14px;bottom:66px;width:auto;max-height:60vh;padding:18px 18px}
+}
 
 /* Instagram / footer ------------------------------------------------- */
 
@@ -182,13 +394,13 @@ button:not(:disabled),a{cursor:pointer}
 
 .page-intro{padding:76px 0 52px;max-width:850px}
 .page-intro p{font-size:18px;max-width:610px}
-.about-panel{display:grid;grid-template-columns:.8fr 1fr;gap:60px;align-items:center;padding:40px 60px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.about-panel{display:grid;grid-template-columns:.8fr 1fr;gap:60px;align-items:center;padding:40px 60px;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 88% -14%,#f4c60016,transparent 55%),var(--surface)}
 .about-emblem{text-align:center}
 .about-emblem img{width:280px}
 .tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
 .tags span{border:1px solid var(--line);padding:8px 12px;font-size:12px;border-radius:4px}
 .crew-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-.portrait-placeholder{height:210px;background:linear-gradient(135deg,#231735,#171020);border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:22px}
+.portrait-placeholder{height:210px;background:radial-gradient(1px 1px at 20% 30%,#f4c60040,transparent),radial-gradient(1px 1px at 75% 65%,#ffffff30,transparent),radial-gradient(1.5px 1.5px at 55% 20%,#f4c60030,transparent),linear-gradient(135deg,#231735,#171020);border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:22px;overflow:hidden}
 .portrait-placeholder b{font-size:80px;color:#776086}
 .portrait-placeholder span{position:absolute;top:16px;left:18px;color:var(--muted);font-family:monospace}
 .crew-card h3{margin-bottom:8px}
@@ -202,7 +414,7 @@ button:not(:disabled),a{cursor:pointer}
 .archive-placeholder h3{margin-bottom:12px}
 .archive-placeholder p{font-size:14px;margin-bottom:0}
 .contact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-.contact-card{padding:32px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.contact-card{padding:32px;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 85% -10%,#f4c60014,transparent 60%),var(--surface)}
 .contact-icon{display:block;color:var(--gold);font-size:46px;margin-bottom:32px}
 .contact-icon.linkedin{font-size:34px;font-weight:800;height:53px}
 .contact-card .eyebrow{font-size:10px;margin-bottom:15px}
