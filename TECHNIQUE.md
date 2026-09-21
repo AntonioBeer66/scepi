@@ -8,7 +8,7 @@ Créer le site de l'association de jeux vidéo de l'ESCP avec cinq onglets :
 
 | Onglet | Contenu prévu |
 | --- | --- |
-| Accueil | Présentation courte, actualités, jeu et animé du moment, prochain événement, aperçu Instagram |
+| Accueil | Présentation courte, actualités, jeu du moment, prochain événement, aperçu Instagram |
 | L'asso | Histoire, bureau, jeux pratiqués et modalités pour rejoindre l'association |
 | Coinche | Règles de l'Amicale, tutoriel, puis accès au jeu multijoueur |
 | Nos événements | Prochain événement, inscriptions et archives des éditions précédentes |
@@ -28,7 +28,7 @@ Les informations essentielles restent lisibles sans JavaScript. Le jeu multijoue
 
 ## 3. Organisation proposée des fichiers
 
-Cette arborescence est une cible ; les fichiers du site ne sont pas encore créés.
+Les cinq pages HTML, les styles communs, le menu mobile et les copies des logos sont créés dans `site/` pour une première ébauche visuelle. Le module Instagram reste une cible ultérieure ; il n'est pas encore créé et aucun service externe n'est chargé.
 
 ```text
 README.md
@@ -50,7 +50,7 @@ site/
 
 Au départ, les contenus sont modifiés directement dans les pages HTML. Les styles et scripts sont partagés. Une solution de gestion de contenu pourra être étudiée si le bureau doit publier sans modifier de fichiers.
 
-Pour le jeu et l'animé du moment, prévoir un titre, un visuel autorisé facultatif, un court résumé, le commentaire de l'asso et une date de mise à jour. Sans visuel autorisé, utiliser une composition typographique et un décor original. Pour les événements : titre, date, lieu, description, visuel et lien d'inscription lorsqu'il existe.
+Pour le jeu du moment, prévoir un titre, un visuel autorisé facultatif, un court résumé, le commentaire de l'asso et une date de mise à jour. Sans visuel autorisé, utiliser une composition typographique et un décor original. Pour les événements : titre, date, lieu, description, visuel et lien d'inscription lorsqu'il existe.
 
 ### Direction artistique intégrée à l'implémentation
 
@@ -61,7 +61,7 @@ Le site adopte un univers **SCEP Invaders spatial et arcade, dans une esthétiqu
 - Utiliser les fichiers existants de `Logos/`, récupérés depuis `main`, et préserver les originaux. L'utilisateur indique que leur utilisation, ainsi que celle de la mascotte, est normalement autorisée ; cette indication constitue la base de travail, pas une vérification juridique indépendante.
 - Sur l'accueil, mettre en évidence `Logos/0.logo_scepi_revisité_qualitatif.png` dès le premier écran : largeur indicative de 300 à 420 px sur ordinateur et de 180 à 240 px sur mobile.
 - Dans la navigation, prévoir un emblème de 48 à 64 px de haut et le nom SCEP Invaders en texte. Vérifier le rendu de `Logos/scepi_logo_blanc_v2.png` sur fond sombre avant de retenir cette variante.
-- Réserver `Logos/scepi_logo_vert_v2.png` aux accents arcade, notamment la coinche. Utiliser `Logos/invadachan.png` comme mascotte secondaire près de l'animé du moment.
+- Réserver `Logos/scepi_logo_vert_v2.png` aux accents arcade, notamment la coinche. Utiliser `Logos/invadachan.png` comme mascotte secondaire près des contenus jeux de société / conviviaux.
 - Conserver les proportions et les couleurs des logos : `object-fit: contain`, dimensions explicites et espace libre autour de l'emblème. Ne pas rogner les lauriers ou appliquer de filtre de recoloration.
 - Préparer les exports optimisés dans `site/assets/images/`, vérifier leur transparence et conserver les sources dans `Logos/`.
 
@@ -93,7 +93,7 @@ Prévoir des titres géométriques, un corps de texte de 16 à 18 px avec un int
 
 - Concevoir d'abord pour le mobile : marges de 20 à 24 px, largeur maximale de 1 200 px et absence de débordement horizontal.
 - Utiliser Grid ou Flexbox pour placer le logo et le texte côte à côte sur grand écran, puis les empiler sur petit écran.
-- Sur l'accueil : présentation et grand logo, deux cartes « Jeu & animé du moment », actualités et prochain événement, coinche, puis Instagram.
+- Sur l'accueil : présentation et grand logo, deux cartes « Jeu du moment » (jeux vidéo / jeux de société), actualités et prochain événement, coinche, puis Instagram.
 - Conserver les cinq onglets et l'identité commune sur toutes les pages. Présenter le bureau avec des portraits, les événements avec une mise en avant et des archives, et le contact dans une composition sobre.
 - Pour la coinche, garder les cartes, annonces, atout et scores prioritaires sur la décoration ; conserver les symboles et couleurs usuels des cartes.
 - Prévoir des cibles interactives d'au moins 44 px, des états de focus visibles et un menu mobile utilisable au clavier.
@@ -105,7 +105,7 @@ Prévoir des titres géométriques, un corps de texte de 16 à 18 px avec un int
 #### Visuels pour un site public
 
 - Employer les ressources de l'association, des créations originales ou des ressources disposant d'une autorisation ou d'une licence adaptée à la publication prévue.
-- Ne pas ajouter d'affiches d'animés, captures de jeux ou personnages trouvés en ligne sans autorisation identifiée. Les cartes de recommandation doivent fonctionner sans ces images.
+- Ne pas ajouter d'affiches, captures de jeux ou personnages trouvés en ligne sans autorisation identifiée. Les cartes de recommandation doivent fonctionner sans ces images.
 - Pour chaque ressource externe retenue, consigner sa source, son auteur, sa licence ou autorisation et l'attribution éventuelle dans un futur fichier `CREDITS.md`. Afficher les crédits sur le site lorsque les conditions l'exigent.
 - Pour les publications Instagram, privilégier l'intégration officielle prévue en section 5 plutôt que la copie des images dans le dépôt.
 
@@ -153,7 +153,7 @@ La documentation officielle Meta n'a pas pu être consultée lors de ce cadrage 
 
 ### Prérequis fonctionnel
 
-Obtenir et valider les règles de l'Amicale : distribution, annonces, atouts, coinche et surcoinche, obligations de jeu, calcul des points et fin de partie. Écrire des exemples de manches et de scores avant d'implémenter ces règles.
+Le manuel de l'Amicale est adapté en spécification serveur dans [REGLES_COINCHE.md](REGLES_COINCHE.md) : états, actions, cartes légales, délais, reconnexion et scores. Ce fichier est la référence fonctionnelle du moteur. Sa section 1 distingue les conventions V1 des règles explicitement issues du manuel, notamment le mélange automatique à chaque donne, le score du contrat « 80 » et la montée à l'atout. Centraliser ces choix dans un profil de règles versionné, fixé pour toute la partie. La section 11 décrit les cas de validation du moteur.
 
 ### Architecture envisagée
 
@@ -187,7 +187,7 @@ La conservation des parties après redémarrage du serveur reste à définir. Le
 ## 8. Ordre de réalisation
 
 1. Créer les cinq pages et la navigation commune.
-2. Appliquer la direction artistique intégrée en section 3 et intégrer les contenus disponibles, dont le jeu et l'animé du moment.
+2. Appliquer la direction artistique intégrée en section 3 et intégrer les contenus disponibles, dont le jeu du moment.
 3. Ajouter les liens sociaux et essayer l'intégration Instagram avec le vrai compte.
 4. Choisir l'hébergement, préparer le déploiement et le raccordement de `scepinvaders.com`, puis vérifier le site sur cet environnement en préservant les réglages de messagerie existants.
 5. Formaliser les règles de coinche, puis développer et tester le multijoueur.
@@ -200,7 +200,7 @@ Le développement se déroule sur `antonio`, actuellement liée à `origin/Anton
 - Photos et présentation du bureau ; les logos sont disponibles dans `Logos/` et la palette proposée est documentée en section 3.
 - Liens LinkedIn et Instagram, publications à mettre en avant.
 - Coordonnées de contact, prochain événement et éventuel lien d'inscription.
-- Première sélection de jeu et d'animé du moment.
+- Première sélection de jeu du moment.
 - Règles de coinche de l'Amicale.
 
 Ces informations ne bloquent pas la création de la structure statique.
