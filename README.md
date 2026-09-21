@@ -2,6 +2,10 @@
 
 Projet de site web de SCEPI, l'association de jeux vidéo de l'ESCP.
 
+Voir le [cadrage technique](TECHNIQUE.md) pour l'architecture envisagée, l'hébergement OVH, l'intégration Instagram et la coinche en ligne.
+
+Voir la [direction artistique](DIRECTION_ARTISTIQUE.md) pour l'univers SCEP Invaders, la mise en valeur des logos et les principes visuels du site.
+
 ## Objectifs du site
 
 - Faire découvrir l'association, ses membres et ses activités.
