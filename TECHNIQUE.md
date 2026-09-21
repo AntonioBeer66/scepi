@@ -168,7 +168,7 @@ Le manuel de l'Amicale est adapté en spécification serveur dans [REGLES_COINCH
 - Quatre à cinq salons ouverts de quatre places, accessibles librement en choisissant un pseudonyme, conformément au README.
 - Quatre joueurs, deux équipes et pseudonymes, sans comptes obligatoires au départ.
 - Annonces, tours de jeu et tableau des scores conformes aux règles validées.
-- Chaque joueur dispose de 15 secondes pour jouer une carte ; à expiration, le serveur choisit au hasard une carte autorisée. Le serveur contrôle le délai et empêche qu'une action tardive joue une seconde carte.
+- Chaque joueur dispose de 30 secondes pour jouer une carte ; à expiration, le serveur choisit au hasard une carte autorisée. Le serveur contrôle le délai et empêche qu'une action tardive joue une seconde carte.
 - Reconnexion avec identité de session ; un pseudonyme seul ne permet pas de reprendre une place.
 - Gestion explicite d'un joueur absent ou déconnecté.
 

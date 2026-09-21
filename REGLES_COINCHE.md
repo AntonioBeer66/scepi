@@ -17,9 +17,9 @@ Les conventions ci-dessous rendent les points incomplets du manuel exécutables.
 | Partenaire maître et couleur demandée absente | Toute carte autorisée, y compris un atout inférieur à celui du partenaire. |
 | Capot beloté | Contrat distinct à 270 ; huit plis ET belote valide, sinon chute sans repli à 250. |
 | Belote | Déclaration volontaire par bouton, dans les 10 secondes suivant chaque carte concernée ; aucune annonce automatique. |
-| Délais techniques | 15 s par enchère, 5 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
+| Délais techniques | 30 s par enchère, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
 
-Le délai de **15 secondes par carte**, avec carte légale aléatoire à expiration, vient du README du projet. Les règles fondamentales de cartes et de score proviennent des articles 5 à 11 et de l'annexe 1 du manuel. Le mélange et la désignation du donneur sont simplifiés pour le jeu en ligne.
+Le délai de **30 secondes par carte**, avec carte légale aléatoire à expiration, vient du README du projet. Les règles fondamentales de cartes et de score proviennent des articles 5 à 11 et de l'annexe 1 du manuel. Le mélange et la désignation du donneur sont simplifiés pour le jeu en ligne.
 
 ## 2. Salons, joueurs et état serveur
 
@@ -69,7 +69,7 @@ La reconnexion est traitée indépendamment de la phase.
 3. Dès le début de la partie, avant la première distribution, mélanger les 32 cartes au hasard côté serveur. Utiliser un mélange uniforme, par exemple Fisher–Yates avec des tirages non biaisés issus d'un générateur cryptographiquement sûr. Ne jamais distribuer le paquet dans son ordre de création ni utiliser une graine fixe en production. Répéter ce mélange à chaque nouvelle donne selon la convention V1 ; un simple tri aléatoire des mains à l'écran ne remplace pas le mélange du paquet.
 4. À partir de `suivant(donneur)`, distribuer trois cartes à chacun, puis trois, puis deux. Vérifier huit cartes par main et aucune duplication.
 5. Réinitialiser les données de donne, les fenêtres, les passes et le multiplicateur à 1 ; conserver les scores de partie.
-6. Démarrer les enchères avec `joueurActif = suivant(donneur)` et 15 secondes pour agir.
+6. Démarrer les enchères avec `joueurActif = suivant(donneur)` et 30 secondes pour agir.
 
 Ne pas implémenter la coupe, le tirage physique du donneur, les droits au mélange, l'ordre de ramassage des plis ni les sanctions de fausse donne. Une mauvaise main ne permet pas d'annuler la donne : aucune misère.
 
@@ -85,12 +85,12 @@ Ne pas implémenter la coupe, le tirage physique du donneur, les droits au méla
 - La dernière enchère définit le preneur et son équipe ; elle remet les passes à zéro.
 - Types : `NUMERIQUE` pour 80 à 160, `CAPOT` pour 250, `CAPOT_BELOTE` pour 270.
 - Ne pas contrôler la composition de la main pour permettre une enchère, même à 270 : un contrat peut être irréalisable et chuter.
-- Après une action qui ne clôt pas les enchères, avancer au joueur suivant et démarrer ses 15 secondes. À expiration, effectuer `PASSER` automatiquement.
+- Après une action qui ne clôt pas les enchères, avancer au joueur suivant et démarrer ses 30 secondes. À expiration, effectuer `PASSER` automatiquement.
 
 ### COINCHER et SURCOINCHER
 
 - Pendant `ENCHERES`, tout défenseur peut `COINCHER` un contrat adverse existant, même hors tour. Un preneur ne peut pas coincher son camp.
-- Fixer le multiplicateur à 2, annuler le délai d'enchère et ouvrir `SURCOINCHE` pour 5 secondes. Toute nouvelle enchère ou passe est alors refusée.
+- Fixer le multiplicateur à 2, annuler le délai d'enchère et ouvrir `SURCOINCHE` pour 10 secondes. Toute nouvelle enchère ou passe est alors refusée.
 - Un des preneurs peut `SURCOINCHER` : fixer le multiplicateur à 4 et démarrer immédiatement le jeu.
 - À expiration sans surcoinche, démarrer avec multiplicateur 2. Aucun multiplicateur supérieur à 4.
 - Après les trois passes qui ferment normalement les enchères, aucune coinche n'est acceptée.
@@ -140,10 +140,10 @@ Fournir reste obligatoire sur son partenaire. Sans couleur demandée, couper sur
 
 1. Vérifier phase `JEU`, joueur actif, carte présente dans sa main et dans `cartesLegales`.
 2. Retirer cette carte et l'ajouter une seule fois au pli courant. Ouvrir une éventuelle fenêtre de belote.
-3. À moins de quatre cartes, passer au siège suivant et démarrer ses 15 secondes.
+3. À moins de quatre cartes, passer au siège suivant et démarrer ses 30 secondes.
 4. À quatre cartes, le plus fort atout gagne ; sans atout, la plus forte carte de la couleur demandée gagne.
 5. Ajouter les points des quatre cartes à l'équipe gagnante et incrémenter son nombre de plis. Archiver le pli et vider le pli courant.
-6. Au huitième pli, ajouter **10 points** au gagnant de ce pli et passer à `CLOTURE_BELOTE`. Sinon, le gagnant entame avec 15 secondes.
+6. Au huitième pli, ajouter **10 points** au gagnant de ce pli et passer à `CLOTURE_BELOTE`. Sinon, le gagnant entame avec 30 secondes.
 
 À expiration d'un tour, le serveur choisit uniformément dans `cartesLegales` et applique la même procédure. Il n'annonce pas belote à la place du joueur. Les animations n'ajoutent pas de temps ni de nouvel état de jeu.
 

@@ -53,7 +53,7 @@ Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adap
 - Publier les règles et un tutoriel pour apprendre à jouer.
 - Développer un jeu de coinche en ligne.
 - avoir 4-5 lobbys de 4 qu'on peut rejoindre librement, on doit juste choisir un nom quand on rentre
-- chaque joueur a 15s pour jouer un carte, s'il ne le fait pas une carte jouable est jouée au hasard
+- chaque joueur a 30s pour jouer une carte (ou enchérir), s'il ne le fait pas une carte jouable est jouée au hasard
 
 ### Nos événements
 
