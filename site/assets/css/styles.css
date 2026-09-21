@@ -318,8 +318,8 @@ body.is-playing .brand img{width:30px;height:30px}
 body.is-playing main.container{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative;overflow:clip;padding-block:4px}
 
 body.is-playing #live-table.table-preview.is-live{flex:1 1 0;min-height:0;margin:4px auto;padding:16px 20px;container-type:size}
-body.is-playing .center-trick{width:min(50cqw,50cqh);height:min(50cqw,50cqh)}
-body.is-playing .trick-slot{width:min(16.5cqw,16.5cqh);height:min(25.3cqw,25.3cqh)}
+body.is-playing .center-trick{width:min(60cqw,60cqh);height:min(60cqw,60cqh)}
+body.is-playing .trick-slot{width:min(20cqw,20cqh);height:min(30.7cqw,30.7cqh)}
 
 body.is-playing #game-view.game-view{flex:0 0 auto;padding:0}
 body.is-playing .game-panel-header{margin-bottom:4px}
@@ -345,7 +345,7 @@ body.is-playing .bid-slider-scale{font-size:8px}
 body.is-playing .bid-actions{gap:8px}
 body.is-playing .bid-actions .button,body.is-playing .game-controls .button{min-height:28px;padding:6px 12px;font-size:10px}
 body.is-playing .game-hand{padding:6px 0 4px;border-top:none}
-body.is-playing .game-hand .card-img{width:clamp(72px,11dvh,132px)}
+body.is-playing .game-hand .card-img{width:clamp(80px,13dvh,152px)}
 body.is-playing .game-hand .card-img.is-legal{transform:translateY(-14px)}
 body.is-playing .game-hand .card-img.is-legal:hover{transform:translateY(-24px) scale(1.05)}
 body.is-playing .game-log{max-height:30px}
@@ -366,8 +366,8 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
   body.is-playing .brand{font-size:14px}
   body.is-playing .brand img{width:32px;height:32px}
   body.is-playing #live-table.table-preview.is-live{margin:2px auto;padding:12px 10px}
-  body.is-playing .center-trick{width:min(56cqw,56cqh);height:min(56cqw,56cqh)}
-  body.is-playing .trick-slot{width:min(18.5cqw,18.5cqh);height:min(28.4cqw,28.4cqh)}
+  body.is-playing .center-trick{width:min(66cqw,66cqh);height:min(66cqw,66cqh)}
+  body.is-playing .trick-slot{width:min(22cqw,22cqh);height:min(33.7cqw,33.7cqh)}
   body.is-playing .seat{padding:5px 9px;font-size:10px}
   body.is-playing .seat-compass{font-size:9px}
   /* Les enchères affichées sous un siège sont ce qui manquait le plus de
@@ -384,7 +384,7 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
   body.is-playing .bid-suits{gap:4px}
   body.is-playing .bid-suit-swatch{width:26px;height:26px;font-size:12px}
   body.is-playing .game-hand{padding:4px 0 3px}
-  body.is-playing .game-hand .card-img{width:clamp(56px,10dvh,96px)}
+  body.is-playing .game-hand .card-img{width:clamp(64px,12dvh,112px)}
   body.is-playing .game-hand .card-img.is-legal{transform:translateY(-9px)}
   body.is-playing .game-hand-prompt{font-size:9px}
   body.is-playing .game-log{max-height:24px;font-size:10px}
@@ -446,17 +446,17 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
 .crew-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 .portrait-placeholder{height:210px;background:radial-gradient(1px 1px at 20% 30%,#f4c60040,transparent),radial-gradient(1px 1px at 75% 65%,#ffffff30,transparent),radial-gradient(1.5px 1.5px at 55% 20%,#f4c60030,transparent),linear-gradient(135deg,#231735,#171020);border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;margin-bottom:22px;overflow:hidden}
 .portrait-placeholder b{font-size:80px;color:#776086}
-.portrait-placeholder span{position:absolute;top:16px;left:18px;color:var(--muted);font-family:monospace}
+.portrait-placeholder span{position:absolute;top:16px;left:18px;right:18px;color:var(--muted);font-family:Consolas,"Courier New",monospace;font-size:10px;letter-spacing:.14em}
 .crew-card h3{margin-bottom:8px}
 .crew-card p{font-size:13px}
+/* Grille « temps forts » de la page événements : 4 cartes, mieux réparties
+   en 2×2 que sur les 3 colonnes par défaut de .crew-grid (qui laisserait
+   une carte seule sur sa ligne). */
+.highlight-grid{grid-template-columns:repeat(2,1fr)}
 .join-panel{margin-top:60px;padding:42px 0;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:24px}
 .join-panel h2{margin:0}
 .green-pill{border-color:#39ff1440;color:#b7d4af}
 .caption{color:var(--muted);font-size:11px;letter-spacing:0;margin-top:22px}
-.archive-placeholder{text-align:center;border:1px dashed #ffffff25;padding:55px 20px;border-radius:12px}
-.archive-placeholder>span{display:block;font-size:50px;color:#9276aa;margin-bottom:18px}
-.archive-placeholder h3{margin-bottom:12px}
-.archive-placeholder p{font-size:14px;margin-bottom:0}
 .contact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
 .contact-card{padding:32px;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 85% -10%,#f4c60014,transparent 60%),var(--surface)}
 .contact-icon{display:block;color:var(--gold);font-size:46px;margin-bottom:32px}
@@ -604,3 +604,14 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}
 }
+
+/* Révélation au scroll ------------------------------------------------ */
+/* N'existe que sous .js (ajoutée immédiatement par main.js) : sans elle,
+   tout reste visible d'emblée — pas de dépendance dure au JS pour voir le
+   contenu. prefers-reduced-motion (règle ci-dessus) neutralise déjà les
+   transitions, donc .is-visible s'applique alors instantanément. */
+.js .reveal,.js .reveal-stagger>*{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s cubic-bezier(.16,.8,.3,1)}
+.js .reveal.is-visible,.js .reveal-stagger.is-visible>*{opacity:1;transform:translateY(0)}
+.js .reveal-stagger.is-visible>*:nth-child(2){transition-delay:.08s}
+.js .reveal-stagger.is-visible>*:nth-child(3){transition-delay:.16s}
+.js .reveal-stagger.is-visible>*:nth-child(4){transition-delay:.24s}
