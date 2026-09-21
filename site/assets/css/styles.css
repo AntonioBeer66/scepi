@@ -11,15 +11,21 @@
 *{box-sizing:border-box}
 body{
   margin:0;
+  background-color:var(--bg);
   background-image:
     radial-gradient(1px 1px at 40px 60px,#ffffff16,transparent),
     radial-gradient(1px 1px at 160px 20px,#ffffff10,transparent),
     radial-gradient(1.5px 1.5px at 260px 170px,#f4c60022,transparent),
     radial-gradient(1px 1px at 90px 190px,#ffffff0d,transparent),
     radial-gradient(1px 1px at 320px 90px,#ffffff14,transparent),
-    radial-gradient(1.5px 1.5px at 200px 260px,#39ff1418,transparent);
-  background-repeat:repeat;
-  background-size:360px 360px;
+    radial-gradient(1.5px 1.5px at 200px 260px,#39ff1418,transparent),
+    linear-gradient(#ffffff08 1px,transparent 1px),
+    linear-gradient(90deg,#ffffff08 1px,transparent 1px),
+    radial-gradient(ellipse 900px 600px at 10% -5%,#39ff1412,transparent 60%),
+    radial-gradient(ellipse 900px 600px at 95% 105%,#f4c60012,transparent 60%);
+  background-repeat:repeat,repeat,repeat,repeat,repeat,repeat,repeat,repeat,no-repeat,no-repeat;
+  background-size:360px 360px,360px 360px,360px 360px,360px 360px,360px 360px,360px 360px,120px 120px,120px 120px,auto,auto;
+  background-attachment:fixed;
 }
 a{color:inherit;text-decoration:none}
 button{font:inherit}
@@ -131,12 +137,12 @@ button:not(:disabled),a{cursor:pointer}
 .outline{border-color:#5c7948;background:transparent;color:#dcf2d6;margin-top:12px}
 .outline:hover{background:#25321d}
 .playing-cards{position:relative;min-height:270px;align-self:center}
-.playing-card{position:absolute;left:40%;top:40px;width:132px;height:auto;aspect-ratio:685/1050;border-radius:10px;transform:rotate(-4deg);box-shadow:0 10px 30px #0006;object-fit:cover;background:#eee9dc}
-.playing-card.red{transform:translate(77px,17px) rotate(17deg)}
-.playing-card.back{transform:translate(-75px,12px) rotate(-23deg);background:none;box-shadow:0 10px 30px #0008}
+.playing-card{position:absolute;left:40%;top:40px;width:132px;height:auto;aspect-ratio:685/1050;border-radius:10px;transform:rotate(-4deg);box-shadow:0 10px 30px #0006;object-fit:cover;background:#eee9dc;z-index:2}
+.playing-card.red{transform:translate(77px,17px) rotate(17deg);z-index:3}
+.playing-card.back{transform:translate(-128px,4px) rotate(-23deg);background:none;box-shadow:0 10px 30px #0008;z-index:1}
 .table-preview{position:relative;width:min(760px,100%);height:340px;margin:12px auto 40px;background:radial-gradient(ellipse,#23341f,#111b13);border:10px solid #232229;outline:1px solid #ffffff24;border-radius:160px;box-shadow:inset 0 0 0 1px #638c493a}
 .table-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
-.table-center img{width:125px;opacity:.5}
+.table-center>img{width:125px;opacity:.5}
 .table-center>span{font:10px Consolas,monospace;letter-spacing:.15em;color:#abc59f}
 .seat{position:absolute;z-index:1;border:1px solid #ffffff30;border-radius:20px;padding:10px 18px;background:#191721;font-size:11px;white-space:nowrap;transition:border-color .25s,box-shadow .25s,background .25s}
 .north{top:-20px;left:50%;transform:translateX(-50%)}
@@ -195,12 +201,13 @@ button:not(:disabled),a{cursor:pointer}
 .seat.is-active .seat-name{color:var(--gold)}
 .seat.is-active .seat-name:before{content:"▸";display:inline-block;color:var(--gold);margin-right:5px;animation:turnArrow 1s ease-in-out infinite}
 @keyframes turnArrow{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
-.seat-cardcount{display:flex;gap:2px;margin-top:6px;justify-content:center}
-.seat-cardcount span{width:6px;height:6px;border-radius:50%;background:#3a3450;display:inline-block}
-.seat-cardcount span.is-present{background:var(--gold)}
+.seat-compass{font-weight:400;color:var(--muted);font-size:10px}
+.seat-bid{display:inline-block;margin-top:5px;font-family:Consolas,"Courier New",monospace;font-size:10px;color:var(--gold);background:#00000055;border:1px solid #f4c60050;border-radius:10px;padding:2px 9px;white-space:nowrap}
+.seat-cardrow{display:flex;justify-content:center;margin-top:7px}
+.seat-card-back{position:relative;width:16px;height:auto;aspect-ratio:685/1050;border-radius:2px;box-shadow:0 2px 5px #0009;margin-left:-9px;border:1px solid #00000060}
+.seat-card-back:first-child{margin-left:0}
 .dealer-chip{position:absolute;top:-11px;right:-11px;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#f4c600,#d87924);color:#181127;font:800 11px/24px Consolas,"Courier New",monospace;text-align:center;box-shadow:0 4px 10px #0008;border:2px solid #120d1e;animation:chipPop .4s ease both;z-index:2}
 .table-center.is-live{gap:0;z-index:1}
-.table-center.is-live img,.table-center.is-live>span{display:none}
 .center-trick{position:relative;width:236px;height:236px}
 .trick-slot{position:absolute;width:80px;height:123px}
 .trick-slot img{width:100%;height:100%;object-fit:cover;border-radius:8px;box-shadow:0 8px 20px #0008}
@@ -210,7 +217,6 @@ button:not(:disabled),a{cursor:pointer}
 .trick-slot.pos-3{left:0;top:50%;transform:translateY(-50%)}
 .trick-slot.is-collecting img{animation:collectToCenter .55s ease forwards}
 .trick-slot.is-winner img{outline:2px solid var(--gold);outline-offset:2px}
-.contract-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-family:Consolas,"Courier New",monospace;font-size:10px;color:#e9e2f5;background:#00000066;border:1px solid #ffffff2e;border-radius:20px;padding:7px 16px;white-space:nowrap;backdrop-filter:blur(2px)}
 
 /* Panneau sous la table : score, minuteur, contrôles, main, journal */
 
@@ -271,7 +277,11 @@ button:not(:disabled),a{cursor:pointer}
 .game-log{list-style:none;margin:0;padding:0;font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto}
 .game-log li{animation:bannerIn .25s ease both}
 
-.last-trick-panel{animation:bannerIn .25s ease both;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:18px;background:var(--surface)}
+/* Bouton + panneau « pli précédent », ancrés à gauche de l'écran — pendant
+   contrepoint du bouton « Règles » qui vit à droite. */
+.last-trick-btn{position:fixed;left:20px;bottom:20px;z-index:40;display:inline-flex;align-items:center;gap:8px;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:30px;padding:12px 18px;font-size:13px;font-weight:700;box-shadow:0 8px 22px #0008}
+.last-trick-btn:hover{border-color:var(--gold);color:var(--gold)}
+.last-trick-panel{position:fixed;left:20px;bottom:78px;z-index:41;width:min(360px,calc(100vw - 40px));max-height:min(480px,65vh);overflow-y:auto;animation:bannerIn .2s ease both;border:1px solid var(--line);border-radius:16px;padding:18px 20px;background:var(--surface);box-shadow:0 16px 40px #000a}
 .last-trick-panel .eyebrow{color:#a7bb9f;font-size:10px;margin-bottom:12px}
 .last-trick-cards{display:flex;gap:16px;flex-wrap:wrap}
 .last-trick-card{display:flex;flex-direction:column;align-items:center;gap:6px}
@@ -279,38 +289,68 @@ button:not(:disabled),a{cursor:pointer}
 .last-trick-card span{font-size:11px;color:var(--muted)}
 .last-trick-card.is-winner span{color:var(--gold);font-weight:700}
 .last-trick-card.is-winner .card-img{outline:2px solid var(--gold);outline-offset:2px}
+@media(max-width:760px){
+  .last-trick-btn{left:14px;bottom:14px;padding:10px 14px;font-size:12px}
+  .last-trick-panel{left:14px;right:14px;bottom:66px;width:auto;max-height:60vh;padding:16px 16px}
+}
 
-/* Mode « en partie » : compacte tout pour tenir sur un seul écran, sans
-   défilement de page (le journal et la fenêtre des règles gardent leur
-   propre défilement interne si besoin, ça ne compte pas). */
+/* Mode « en partie » : la partie doit impérativement tenir dans la fenêtre,
+   sans le moindre défilement de page. La table et le panneau du bas
+   partagent l'espace vertical en flex (seule la table est élastique,
+   flex:1) — c'est ce qui garantit qu'aucune combinaison de contenu ne peut
+   jamais déborder ni pousser un bouton hors champ. Seul le panneau
+   d'enchères, lui, est sorti de ce flux et flotte par-dessus la table en
+   overlay : c'est le plus gros consommateur d'espace et le seul dont on
+   nous a demandé qu'il puisse recouvrir la table. Le score, le minuteur et
+   le bouton « pli précédent » restent toujours dans le flux normal, jamais
+   recouverts. Le pli est dimensionné en unités de conteneur (cqw/cqh) pour
+   suivre la taille RÉELLE de la table. Le journal garde son propre
+   défilement interne, ça ne compte pas comme un défilement de page. */
+body.is-playing{height:100dvh;overflow:clip;display:flex;flex-direction:column}
 body.is-playing .page-intro{display:none}
 body.is-playing .footer{display:none}
-body.is-playing .header-inner{min-height:48px}
-body.is-playing .header nav a{padding:13px 0}
+body.is-playing .header{flex:0 0 auto}
+body.is-playing .header-inner{min-height:40px}
+body.is-playing .header nav a{padding:9px 0}
 body.is-playing .header-tag{display:none}
-body.is-playing .table-preview.is-live{min-height:190px;padding:14px 12px;margin:6px auto 12px}
-body.is-playing .center-trick{width:150px;height:150px}
-body.is-playing .trick-slot{width:50px;height:77px}
-body.is-playing .seat{padding:6px 11px;font-size:10px}
-body.is-playing .game-view{padding:0 0 10px}
-body.is-playing .game-panel-header{margin-bottom:6px}
-body.is-playing .game-panel-header .eyebrow{font-size:9px}
+body.is-playing .brand img{width:30px;height:30px}
+
+body.is-playing main.container{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;position:relative;overflow:clip;padding-block:4px}
+
+body.is-playing #live-table.table-preview.is-live{flex:1 1 0;min-height:0;margin:4px auto;padding:16px 20px;container-type:size}
+body.is-playing .center-trick{width:min(50cqw,50cqh);height:min(50cqw,50cqh)}
+body.is-playing .trick-slot{width:min(16.5cqw,16.5cqh);height:min(25.3cqw,25.3cqh)}
+
+body.is-playing #game-view.game-view{flex:0 0 auto;padding:0}
+body.is-playing .game-panel-header{margin-bottom:4px}
+body.is-playing .game-panel-header .eyebrow{margin-bottom:2px;font-size:10px}
+body.is-playing .game-panel-header .button{min-height:32px;padding:7px 12px;font-size:11px}
 body.is-playing .scoreboard{gap:8px}
-body.is-playing .score-tile{padding:6px 14px;min-width:0}
-body.is-playing .score-tile b{font-size:18px}
-body.is-playing .turn-timer-wrap{margin-bottom:6px;padding:6px 12px;font-size:12px;gap:8px}
-body.is-playing .score-banner{padding:10px 14px;margin-bottom:6px}
-body.is-playing .game-controls{margin-bottom:6px}
-body.is-playing .bidding-panel{padding:10px 14px;gap:8px}
-body.is-playing .bid-slider-readout b{font-size:24px}
-body.is-playing .bid-suit-swatch{width:34px;height:34px;font-size:15px}
-body.is-playing .last-trick-panel{padding:8px 14px;margin-bottom:6px}
-body.is-playing .last-trick-card .card-img{width:50px}
-body.is-playing .game-hand{padding:14px 0 4px}
-body.is-playing .game-hand .card-img{width:80px}
-body.is-playing .game-hand .card-img.is-legal{transform:translateY(-10px)}
-body.is-playing .game-hand .card-img.is-legal:hover{transform:translateY(-18px) scale(1.05)}
-body.is-playing .game-log{max-height:44px;font-size:9px}
+body.is-playing .score-tile{padding:4px 12px}
+body.is-playing .score-tile b{font-size:16px}
+body.is-playing .score-tile span{font-size:8px}
+body.is-playing .score-tile .live-tally{font-size:8px;margin-top:1px}
+body.is-playing .turn-timer-wrap{width:min(360px,100%);margin:0 auto 6px;padding:5px 12px;font-size:10px;gap:6px}
+body.is-playing .score-banner{margin-bottom:4px;padding:10px 14px}
+/* Panneau d'enchères : sorti du flux (il ne compte plus dans la hauteur du
+   panneau du bas, la table garde donc toute sa place) et réduit à une
+   carte compacte centrée, flottant juste au-dessus de la main. */
+body.is-playing .game-controls{margin-bottom:0;min-height:0}
+body.is-playing .bidding-panel{position:absolute;left:50%;bottom:min(24dvh,210px);transform:translateX(-50%);z-index:6;width:min(380px,92vw);margin:0;padding:8px 14px;gap:5px;box-shadow:0 14px 34px #000b}
+body.is-playing .bid-suits{gap:5px}
+body.is-playing .bid-suit-swatch{width:28px;height:28px;font-size:13px}
+body.is-playing .bid-slider-wrap{gap:3px}
+body.is-playing .bid-slider-readout b{font-size:19px}
+body.is-playing .bid-slider-scale{font-size:8px}
+body.is-playing .bid-actions{gap:8px}
+body.is-playing .bid-actions .button,body.is-playing .game-controls .button{min-height:28px;padding:6px 12px;font-size:10px}
+body.is-playing .game-hand{padding:6px 0 4px;border-top:none}
+body.is-playing .game-hand .card-img{width:clamp(72px,11dvh,132px)}
+body.is-playing .game-hand .card-img.is-legal{transform:translateY(-14px)}
+body.is-playing .game-hand .card-img.is-legal:hover{transform:translateY(-24px) scale(1.05)}
+body.is-playing .game-log{max-height:30px}
+/* Les annonces doivent rester lisibles même une fois tout comprimé. */
+body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
 
 @media(max-width:760px){
   .table-preview.is-live{min-height:340px;padding:24px 10px}
@@ -321,30 +361,34 @@ body.is-playing .game-log{max-height:44px;font-size:9px}
   .score-tile{padding:8px 12px;min-width:76px}
   .score-tile b{font-size:20px}
 
-  body.is-playing .footer{display:none}
-  body.is-playing .header-inner{min-height:44px}
+  body.is-playing .header-inner{min-height:42px}
   body.is-playing .header nav{display:none}
   body.is-playing .brand{font-size:14px}
-  body.is-playing .brand img{width:34px;height:34px}
-  body.is-playing .table-preview.is-live{min-height:180px;padding:12px 6px;margin:6px auto 12px}
-  body.is-playing .center-trick{width:118px;height:118px}
-  body.is-playing .trick-slot{width:40px;height:62px}
-  body.is-playing .seat{padding:5px 9px;font-size:9px}
-  body.is-playing .seat-cardcount{margin-top:3px}
-  body.is-playing .game-panel-header .scoreboard{gap:6px}
-  body.is-playing .score-tile{padding:6px 10px;min-width:0}
-  body.is-playing .score-tile b{font-size:16px}
-  body.is-playing .turn-timer-wrap{padding:6px 10px;font-size:11px;gap:8px}
-  body.is-playing .bidding-panel{padding:10px 10px}
-  body.is-playing .bid-slider-readout b{font-size:22px}
-  body.is-playing .bid-suits{gap:6px}
-  body.is-playing .bid-suit-swatch{width:32px;height:32px;font-size:14px}
-  body.is-playing .game-hand{padding:14px 0 4px}
-  body.is-playing .game-hand .card-img{width:58px}
-  body.is-playing .game-hand .card-img.is-legal{transform:translateY(-10px)}
+  body.is-playing .brand img{width:32px;height:32px}
+  body.is-playing #live-table.table-preview.is-live{margin:2px auto;padding:12px 10px}
+  body.is-playing .center-trick{width:min(56cqw,56cqh);height:min(56cqw,56cqh)}
+  body.is-playing .trick-slot{width:min(18.5cqw,18.5cqh);height:min(28.4cqw,28.4cqh)}
+  body.is-playing .seat{padding:5px 9px;font-size:10px}
+  body.is-playing .seat-compass{font-size:9px}
+  /* Les enchères affichées sous un siège sont ce qui manquait le plus de
+     lisibilité sur petit écran : nettement agrandies plutôt que réduites. */
+  body.is-playing .seat-bid{font-size:11px;padding:3px 8px;margin-top:3px}
+  body.is-playing .seat-cardrow{margin-top:3px}
+  body.is-playing .seat-card-back{width:10px;margin-left:-6px}
+  body.is-playing .game-panel-header .eyebrow{font-size:9px}
+  body.is-playing .score-tile{padding:5px 10px}
+  body.is-playing .score-tile b{font-size:15px}
+  body.is-playing .turn-timer-wrap{width:min(280px,100%);padding:4px 10px;font-size:10px;gap:6px}
+  body.is-playing .bidding-panel{bottom:min(21dvh,175px);width:min(300px,92vw);padding:6px 10px;gap:5px}
+  body.is-playing .bid-slider-readout b{font-size:18px}
+  body.is-playing .bid-suits{gap:4px}
+  body.is-playing .bid-suit-swatch{width:26px;height:26px;font-size:12px}
+  body.is-playing .game-hand{padding:4px 0 3px}
+  body.is-playing .game-hand .card-img{width:clamp(56px,10dvh,96px)}
+  body.is-playing .game-hand .card-img.is-legal{transform:translateY(-9px)}
   body.is-playing .game-hand-prompt{font-size:9px}
-  body.is-playing .game-log{max-height:40px;font-size:9px}
-  body.is-playing .last-trick-card .card-img{width:40px}
+  body.is-playing .game-log{max-height:24px;font-size:10px}
+  body.is-playing .last-trick-card .card-img{width:44px}
 }
 
 /* Bouton « Règles » de la coinche : un panneau qui se déploie depuis le
@@ -435,6 +479,10 @@ body.is-playing .game-log{max-height:44px;font-size:9px}
 .slider-cta{position:absolute;left:50%;bottom:9%;transform:translateX(-50%);z-index:2}
 .slider-cta .button{min-height:40px;padding:11px 22px;font-size:12px}
 .slider-dots{position:absolute;left:50%;bottom:3.4%;transform:translateX(-50%);z-index:3;display:flex;gap:10px}
+.slider-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:46px;height:46px;border-radius:50%;border:1px solid #ffffff33;background:#0c0914aa;backdrop-filter:blur(4px);color:var(--text);font-size:26px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.slider-arrow:hover{background:#0c0914e6;border-color:var(--gold);transform:translateY(-50%) scale(1.06)}
+.slider-arrow.prev{left:20px}
+.slider-arrow.next{right:20px}
 .slider-dot{width:8px;height:8px;border-radius:50%;border:1px solid #ffffff55;background:transparent;padding:0}
 .slider-dot[aria-selected="true"]{background:var(--gold);border-color:var(--gold)}
 /* Theme-based slide backgrounds (fallback while the SVG loads) */
@@ -530,7 +578,7 @@ body.is-playing .game-log{max-height:44px;font-size:9px}
   .seat{font-size:9px;padding:9px 11px}
   .west{left:-20px}
   .east{right:-20px}
-  .table-center img{width:95px}
+  .table-center>img{width:95px}
   .table-center>span{font-size:8px}
   .lobby-grid{grid-template-columns:1fr 1fr;gap:12px}
   .lobby{padding:18px 12px}
@@ -548,6 +596,9 @@ body.is-playing .game-log{max-height:44px;font-size:9px}
   .slider-content p{font-size:.95rem}
   .slider-cta{bottom:13%}
   .slider-dots{bottom:5%}
+  .slider-arrow{width:36px;height:36px;font-size:20px}
+  .slider-arrow.prev{left:10px}
+  .slider-arrow.next{right:10px}
 }
 
 @media(prefers-reduced-motion:reduce){

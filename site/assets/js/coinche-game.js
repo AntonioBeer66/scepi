@@ -144,10 +144,29 @@
   function bestSuitFor(hand) {
     let best = null;
     for (const suit of SUITS) {
-      const score = suitStrength(hand, suit);
+      const score = suitStrength(hand, suit) + estimateTricks(hand, suit) * 14;
       if (!best || score > best.score) best = { suit, score };
     }
     return best;
+  }
+
+  // Estimation du nombre de plis gagnables « seul », sans rien savoir des
+  // mains adverses : longueur et honneurs d'atout (affranchissement), plus
+  // les as et rois gardés dans les autres couleurs (contrôle latéral quasi
+  // garanti). Sert à peser les enchères sur autre chose que le simple total
+  // de points des cartes.
+  function estimateTricks(hand, atout) {
+    const trumps = hand.filter((c) => c.suit === atout);
+    const trumpHonors = trumps.filter((c) => c.rank === 'J' || c.rank === '9' || c.rank === 'A').length;
+    let tricks = Math.min(trumps.length, trumps.length * 0.7 + trumpHonors * 0.3);
+    for (const s of SUITS) {
+      if (s === atout) continue;
+      const cards = hand.filter((c) => c.suit === s);
+      if (!cards.length) continue;
+      if (cards.some((c) => c.rank === 'A')) tricks += 1;
+      else if (cards.some((c) => c.rank === 'K') && cards.length >= 2) tricks += 0.5;
+    }
+    return tricks;
   }
 
   // ---- État de jeu -------------------------------------------------------
@@ -188,6 +207,13 @@
     G.belote = { holder: null, kingPlayed: false, queenPlayed: false, beloteDeclared: false, rebeloteDeclared: false, windowBelote: false, windowRebelote: false };
     G.resolvingTrick = null;
     G.lastTrick = null;
+    // Mémoire de l'IA pour cette donne : cartes déjà vues (les siennes
+    // exclues, pour compter ce qu'il reste ailleurs) et « manques » déduits
+    // — un siège qui ne fournit pas une couleur demandée n'en a plus, ce qui
+    // permet ensuite de ne pas mener un as dans une couleur où un adversaire
+    // pourra couper, ou au contraire de savoir qu'une couleur est sûre.
+    G.seen = new Set();
+    G.void = [{}, {}, {}, {}];
     els.showLastTrick = false;
     clearTimer('collect');
     clearTimer('sweep');
@@ -278,10 +304,31 @@
       // Le partenaire a annoncé : on additionne sa force supposée (déduite
       // de son enchère) à la nôtre pour juger si on peut monter le contrat.
       const partnerEstimate = current.montant - 6;
-      const combined = score + partnerEstimate * 0.55;
+      let combined = score + partnerEstimate * 0.55;
+
+      // Raisonnement psychologique : le bot ne voit jamais les cartes des
+      // autres, seulement ses propres cartes et l'historique des enchères.
+      // Mais certaines de ses cartes sont des points quasiment garantis une
+      // fois que le partenaire s'est déjà engagé haut : un as hors-atout
+      // (11 points, la carte la plus forte de sa couleur) se compte presque
+      // toujours, surtout si le partenaire vise déjà un contrat costaud
+      // (≥90). Deux as ou plus dans ce contexte valent une vraie relance,
+      // pas seulement un bonus de score.
+      const acesHorsAtout = hand.filter((c) => c.rank === 'A' && c.suit !== suit).length;
+      let confidenceBonus = 0;
+      if (current.montant >= 90 && acesHorsAtout >= 2) {
+        confidenceBonus = 20;
+        log(`${seatName(seat)} sent ${acesHorsAtout} as garantis derrière l'annonce de son partenaire…`);
+      } else if (current.montant >= 90 && acesHorsAtout === 1) {
+        confidenceBonus = 8;
+      }
+      combined += confidenceBonus;
+
       const raiseThreshold = current.montant + 18 / p.aggr - noise;
       if (combined >= raiseThreshold && current.montant < 160 && suit === current.atout) {
-        return { type: 'ENCHERIR', montant: current.montant + 10, atout: current.atout };
+        const bump = confidenceBonus >= 20 ? 20 : 10;
+        const montant = Math.min(160, current.montant + bump);
+        return { type: 'ENCHERIR', montant, atout: current.atout };
       }
       return { type: 'PASSER' };
     }
@@ -295,13 +342,40 @@
     return { type: 'PASSER' };
   }
 
+  // Le vrai signal d'une chute programmée, ce n'est pas « j'ai des points »
+  // mais « je tiens des atouts que le preneur ne peut jamais forcer à
+  // sortir » : le Valet et le 9 d'atout sont imprenables, et une belle
+  // longueur d'atout use la main adverse au fil des plis.
+  function trumpControlScore(hand, atout) {
+    const trumps = hand.filter((c) => c.suit === atout);
+    if (!trumps.length) return 0;
+    let score = trumps.length * 9;
+    if (trumps.some((c) => c.rank === 'J')) score += 26;
+    if (trumps.some((c) => c.rank === '9')) score += 18;
+    if (trumps.length >= 3) score += 12;
+    return score;
+  }
+
   function botWantsToCoinche(seat) {
     const contract = G.contract;
     if (!contract || teamOf(seat) === contract.equipePreneur) return false;
     const p = personality(seat);
-    const defense = suitStrength(G.hands[seat], contract.atout);
-    const threshold = (58 + (contract.montant - 80) * 0.35) / p.coincheAppetite;
-    if (defense < threshold) return false;
+    const hand = G.hands[seat];
+    // Défense = contrôle d'atout imprenable + as latéraux quasi garantis,
+    // pas juste un total de points de cartes.
+    const sideAces = hand.filter((c) => c.rank === 'A' && c.suit !== contract.atout).length;
+    if (contract.type !== 'NUMERIQUE') {
+      // Capot / capot beloté : un seul pli suffit à faire chuter tout le
+      // contrat, donc un simple honneur d'atout gardé ou un as latéral
+      // suffisent déjà à tenter la coinche — le calcul n'a rien à voir
+      // avec un contrat au nombre.
+      const confidence = trumpControlScore(hand, contract.atout) + sideAces * 22;
+      if (confidence < 40 / p.coincheAppetite) return false;
+      return Math.random() < 0.6 * p.coincheAppetite;
+    }
+    const confidence = trumpControlScore(hand, contract.atout) + sideAces * 16;
+    const threshold = (62 + (contract.montant - 80) * 0.4) / p.coincheAppetite;
+    if (confidence < threshold) return false;
     return Math.random() < 0.55 * p.coincheAppetite;
   }
 
@@ -309,8 +383,10 @@
     const contract = G.contract;
     if (!contract || teamOf(seat) !== contract.equipePreneur) return false;
     const p = personality(seat);
-    const confidence = suitStrength(G.hands[seat], contract.atout);
-    if (confidence < 78 / p.aggr) return false;
+    const hand = G.hands[seat];
+    const sideAces = hand.filter((c) => c.rank === 'A' && c.suit !== contract.atout).length;
+    const confidence = trumpControlScore(hand, contract.atout) + sideAces * 14;
+    if (confidence < 92 / p.aggr) return false;
     return Math.random() < 0.6 * p.aggr;
   }
 
@@ -343,20 +419,50 @@
   // partenaire déjà maître du pli, gagne le moins cher possible sinon jette
   // sa carte la plus faible quand elle ne peut pas l'emporter.
 
+  // Sièges qui n'ont pas encore joué dans le pli en cours, hors nous-même —
+  // sert à savoir si quelqu'un peut encore surenchérir après notre carte.
+  function seatsStillToAct(pli, seat) {
+    const played = new Set(pli.map((e) => e.siege));
+    return [0, 1, 2, 3].filter((s) => s !== seat && !played.has(s));
+  }
+
   function botChooseCard(seat) {
     const hand = G.hands[seat];
     const atout = G.contract.atout;
     const pli = G.pliCourant;
     const legal = computeLegal(hand, pli, atout, seat);
     if (legal.length === 1) return legal[0];
+    const myTeam = teamOf(seat);
+    const isPreneurTeam = G.contract && myTeam === G.contract.equipePreneur;
 
     if (!pli.length) {
-      const acesHorsAtout = legal.filter((c) => c.rank === 'A' && c.suit !== atout);
+      const opponents = [0, 1, 2, 3].filter((s) => teamOf(s) !== myTeam);
+
+      // Mener un as n'est vraiment « sûr » que si aucun adversaire n'est
+      // connu manquant dans cette couleur (sinon il coupe à l'atout et
+      // l'as est perdu pour rien) — déduit des manques déjà observés dans
+      // les plis précédents, jamais des mains adverses elles-mêmes.
+      const acesHorsAtout = legal.filter((c) => c.rank === 'A' && c.suit !== atout
+        && !opponents.some((o) => G.void[o][c.suit]));
       if (acesHorsAtout.length) return acesHorsAtout[Math.floor(Math.random() * acesHorsAtout.length)];
 
       const trumps = legal.filter((c) => c.suit === atout);
-      if (trumps.length >= 4) {
-        return trumps.slice().sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
+      const trumpHonors = trumps.filter((c) => c.rank === 'J' || c.rank === '9');
+
+      if (isPreneurTeam) {
+        // Le camp du preneur a intérêt à affranchir tôt : une belle
+        // longueur, ou de vrais honneurs même sur une main plus courte,
+        // valent la peine de mener l'atout pour user la défense pendant
+        // qu'on est encore maître dessus.
+        if (trumps.length >= 4 || (trumps.length >= 2 && trumpHonors.length >= 1)) {
+          return trumps.slice().sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
+        }
+      } else if (trumpHonors.length && trumps.length <= 2) {
+        // La défense n'a presque jamais intérêt à entamer l'atout : ça ne
+        // fait qu'user gratuitement ses propres atouts au profit du
+        // preneur. Exception : encaisser tout de suite un maître sûr
+        // (Valet/9) qu'on ne rejouera peut-être jamais si on reperd la main.
+        return trumpHonors.sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
       }
 
       const bySuit = {};
@@ -373,16 +479,61 @@
 
     const couleurDemandee = pli[0].carte.suit;
     const maitreSeat = trickWinnerSeat(pli, atout);
-    const partnerWinning = teamOf(maitreSeat) === teamOf(seat) && maitreSeat !== seat;
+    const partnerWinning = teamOf(maitreSeat) === myTeam && maitreSeat !== seat;
+    const stillToAct = seatsStillToAct(pli, seat);
+    const opponentStillToAct = stillToAct.some((s) => teamOf(s) !== myTeam);
 
     if (partnerWinning) {
+      const partnerCarte = pli.find((e) => e.siege === maitreSeat).carte;
+      const partnerCertain = partnerCarte.suit === atout && (partnerCarte.rank === 'J' || partnerCarte.rank === '9');
+      if (opponentStillToAct && !partnerCertain) {
+        // Le pli n'est pas encore gagné : un adversaire joue encore après
+        // nous et peut surcouper notre partenaire. Fournir sans se délester
+        // tout de suite de nos meilleures cartes pour rien.
+        return legal.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+      }
+      // Plus personne ne peut menacer ce pli (ou notre partenaire tient un
+      // maître imprenable) : on peut nourrir sans risque.
       return legal.slice().sort((a, b) => cardPoints(b, atout) - cardPoints(a, atout))[0];
     }
 
     const maitreCarte = pli.find((e) => e.siege === maitreSeat).carte;
     const winners = legal.filter((c) => winValue(c, atout, couleurDemandee) > winValue(maitreCarte, atout, couleurDemandee));
+
+    if (winners.length && winners.length < legal.length) {
+      // Vraie liberté de ne pas prendre (uniquement possible hors-atout,
+      // quand une de nos cartes plus faibles fournit déjà la couleur) : si
+      // personne d'autre ne peut nous voler ce pli, que son enjeu est
+      // faible et qu'on n'est pas en fin de donne, autant garder notre as
+      // pour un pli qui en vaudra vraiment la peine.
+      const endgame = G.plisJoues >= 6;
+      const trickValue = trickPoints(pli, atout);
+      const cheapestWinner = winners.slice().sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
+      if (!endgame && !opponentStillToAct && trickValue < 8 && cheapestWinner.rank === 'A') {
+        const decline = legal.filter((c) => !winners.includes(c));
+        return decline.sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+      }
+    }
+
     if (winners.length) {
       return winners.slice().sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
+    }
+
+    // Aucune carte ne peut gagner : défausse. Si le choix s'étend à
+    // plusieurs couleurs (vraiment libre, pas juste « la couleur demandée
+    // sans pouvoir monter »), autant délester notre couleur déjà la plus
+    // courte pour se rapprocher d'un manque utile plus tard, plutôt qu'une
+    // défausse purement au hasard des points.
+    const legalSuits = new Set(legal.map((c) => c.suit));
+    if (legalSuits.size > 1) {
+      const bySuit = {};
+      for (const c of hand) (bySuit[c.suit] = bySuit[c.suit] || []).push(c);
+      const nonTrumpSuits = [...legalSuits].filter((s) => s !== atout);
+      const candidates = nonTrumpSuits.length ? nonTrumpSuits : [...legalSuits];
+      let shortest = candidates[0];
+      for (const s of candidates) if (bySuit[s].length < bySuit[shortest].length) shortest = s;
+      const pool = legal.filter((c) => c.suit === shortest);
+      return pool.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
     }
 
     return legal.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
@@ -552,9 +703,14 @@
       if (!legal.some((c) => c.id === action.carte.id)) return;
 
       const fromRect = captureOrigin(seat, action.carte);
+      const couleurDemandeeAvant = G.pliCourant.length ? G.pliCourant[0].carte.suit : null;
       clearTurnTimers();
       const carte = hand.splice(idx, 1)[0];
       G.pliCourant.push({ siege: seat, carte });
+      G.seen.add(carte.id);
+      if (couleurDemandeeAvant && carte.suit !== couleurDemandeeAvant) {
+        G.void[seat][couleurDemandeeAvant] = true;
+      }
       openBeloteWindowsIfNeeded(seat, carte);
 
       if (G.pliCourant.length < 4) {
@@ -642,25 +798,34 @@
   // statique) devient la vraie table de jeu : sièges, jeton donneur, pli
   // central et contrat s'affichent directement dessus.
 
-  function seatDots(seat) {
+  const COMPASS_LABEL = { north: 'Nord', south: 'Sud', east: 'Est', west: 'Ouest' };
+
+  function seatCardBacks(seat) {
     const remaining = G.hands[seat].length;
-    let dots = '';
-    for (let i = 0; i < 8; i++) dots += `<span class="${i < remaining ? 'is-present' : ''}"></span>`;
-    return `<span class="seat-cardcount" title="${remaining} carte${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}">${dots}</span>`;
+    let imgs = '';
+    for (let i = 0; i < remaining; i++) {
+      imgs += `<img class="seat-card-back" src="../assets/images/cards/back.svg" alt="" style="z-index:${i}">`;
+    }
+    return `<span class="seat-cardrow" title="${remaining} carte${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}">${imgs}</span>`;
   }
 
   function renderLiveSeat(compass, seat) {
     const active = !G.resolvingTrick && G.joueurActif === seat && (G.phase === 'ENCHERES' || G.phase === 'JEU');
     const isPreneur = G.contract && G.contract.preneur === seat;
     const isDealer = G.donneur === seat;
+    const showsBid = isPreneur && (G.phase === 'ENCHERES' || G.phase === 'SURCOINCHE' || G.phase === 'JEU' || G.phase === 'CLOTURE_BELOTE');
     return `<span class="seat ${compass}${active ? ' is-active' : ''}${isPreneur ? ' is-preneur' : ''}">
       ${isDealer ? '<span class="dealer-chip" title="Donneur">D</span>' : ''}
-      <span class="seat-name">${esc(seatName(seat))}${isPreneur ? ' <b class="taker-badge">preneur</b>' : ''}</span>
-      ${seat === G.you ? '' : seatDots(seat)}
+      <span class="seat-name">${esc(seatName(seat))} <span class="seat-compass">(${COMPASS_LABEL[compass]})</span></span>
+      ${showsBid ? `<span class="seat-bid">${SUIT_SYMBOL[G.contract.atout]} ${G.contract.montant}${G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : ''}</span>` : ''}
+      ${seat === G.you ? '' : seatCardBacks(seat)}
     </span>`;
   }
 
   function renderLiveTrick() {
+    // Le contrat s'affiche déjà sous le siège du dernier qui a annoncé
+    // (badge .seat-bid) : pas besoin d'un doublon flottant au centre, qui
+    // ne fait que grignoter la place du pli lui-même.
     let slots = '';
     for (let pos = 0; pos < 4; pos++) {
       const seat = (G.you + pos) % 4;
@@ -669,10 +834,7 @@
       const winner = G.resolvingTrick && G.resolvingTrick.winnerSeat === seat ? ' is-winner' : '';
       slots += `<div class="trick-slot pos-${pos}${collecting}${winner}" data-seat="${seat}">${entry ? cardImg(entry.carte) : ''}</div>`;
     }
-    const contractChip = G.contract
-      ? `<div class="contract-chip">${SUIT_SYMBOL[G.contract.atout]} ${G.contract.montant} par ${esc(seatName(G.contract.preneur))}${G.multiplicateur > 1 ? ` · ×${G.multiplicateur}` : ''}</div>`
-      : '';
-    return `<div class="center-trick">${slots}</div>${contractChip}`;
+    return `<div class="center-trick">${slots}</div>`;
   }
 
   // ---- Vol de carte main → table -----------------------------------------
@@ -758,7 +920,7 @@
   }
 
   function bidReadout(value) {
-    return value === 250 ? 'CAPOT' : value === 270 ? 'CAPOT+' : String(value);
+    return value === 250 ? 'Capot' : value === 270 ? 'Capot Beloté' : String(value);
   }
 
   function renderBiddingPanel() {
@@ -812,7 +974,9 @@
 
   function renderLastTrickButton() {
     if (!G.lastTrick) return '';
-    return `<button type="button" class="button outline" data-action="toggle-last-trick">${els.showLastTrick ? 'Masquer' : 'Voir'} le pli précédent</button>`;
+    // Bouton ancré à gauche de l'écran, à l'écart des contrôles centraux —
+    // symétrique du bouton « Règles » qui vit lui à droite.
+    return `<button type="button" class="last-trick-btn" data-action="toggle-last-trick" aria-expanded="${els.showLastTrick ? 'true' : 'false'}">${els.showLastTrick ? 'Masquer' : 'Voir'} le pli précédent</button>`;
   }
 
   function renderLastTrickPanel() {
@@ -895,8 +1059,8 @@
         ${renderBiddingPanel()}
         ${renderCoincheButton()}
         ${renderBeloteButtons()}
-        ${renderLastTrickButton()}
       </div>
+      ${renderLastTrickButton()}
       ${renderLastTrickPanel()}
       ${renderHand()}
       <ul class="game-log">${G.log.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>

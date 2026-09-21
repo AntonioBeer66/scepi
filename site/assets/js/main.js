@@ -47,6 +47,10 @@ function nextSlide() {
 }
 
 function startAutoAdvance() {
+  // Toujours repartir d'un état propre : sans ce clearTimeout, des appels
+  // successifs (survol répété, fin de swipe tactile) empilaient plusieurs
+  // boucles setTimeout en parallèle, ce qui faisait « accélérer » le slider.
+  clearTimeout(autoAdvanceTimeout);
   autoAdvanceTimeout = setTimeout(() => {
     nextSlide();
     startAutoAdvance();
@@ -98,6 +102,20 @@ if (sliderContainer && slides.length > 0) {
       stopAutoAdvance();
       startAutoAdvance();
     });
+  });
+
+  // Arrow navigation (boutons latéraux)
+  const prevArrow = document.querySelector('.slider-arrow.prev');
+  const nextArrow = document.querySelector('.slider-arrow.next');
+  prevArrow?.addEventListener('click', () => {
+    goToSlide(slideIndex - 1);
+    stopAutoAdvance();
+    startAutoAdvance();
+  });
+  nextArrow?.addEventListener('click', () => {
+    goToSlide(slideIndex + 1);
+    stopAutoAdvance();
+    startAutoAdvance();
   });
 }
 
