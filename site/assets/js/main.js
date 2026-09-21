@@ -101,11 +101,13 @@ if (sliderContainer && slides.length > 0) {
   });
 }
 
-// Handle visibility change to pause when tab is hidden
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    stopAutoAdvance();
-  } else {
-    startAutoAdvance();
-  }
-});
+// Handle visibility change to pause when tab is hidden (slider pages only)
+if (sliderContainer && slides.length > 0) {
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopAutoAdvance();
+    } else {
+      startAutoAdvance();
+    }
+  });
+}
