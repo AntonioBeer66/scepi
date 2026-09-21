@@ -1,0 +1,40 @@
+<svg viewBox="0 0 685 1050" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0%" stop-color="#1a0f2e"/>
+<stop offset="55%" stop-color="#281747"/>
+<stop offset="100%" stop-color="#0c0914"/>
+</linearGradient>
+<pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+<path d="M34 0H0V34" fill="none" stroke="#ffffff0d" stroke-width="1"/>
+</pattern>
+<radialGradient id="glow" cx="50%" cy="50%" r="55%">
+<stop offset="0%" stop-color="#f4c60022"/>
+<stop offset="100%" stop-color="#f4c60000"/>
+</radialGradient>
+</defs>
+
+<rect width="685" height="1050" rx="34" fill="url(#bg)"/>
+<rect x="18" y="18" width="649" height="1014" rx="24" fill="url(#grid)"/>
+<rect x="18" y="18" width="649" height="1014" rx="24" fill="url(#glow)"/>
+<rect x="18" y="18" width="649" height="1014" rx="24" fill="none" stroke="#f4c60055" stroke-width="2"/>
+<rect x="34" y="34" width="617" height="982" rx="16" fill="none" stroke="#ffffff1a" stroke-width="1"/>
+
+<g stroke="#f4c60040" stroke-width="1.5" fill="none">
+<circle cx="342.5" cy="525" r="175"/>
+<circle cx="342.5" cy="525" r="235"/>
+</g>
+
+<g fill="#f4c600">
+<circle cx="120" cy="150" r="3.5"/>
+<circle cx="560" cy="180" r="3"/>
+<circle cx="90" cy="880" r="3"/>
+<circle cx="590" cy="900" r="3.5"/>
+<circle cx="150" cy="950" r="2.5"/>
+<circle cx="540" cy="120" r="2.5"/>
+</g>
+
+<image href="../logo-white.png" x="152.5" y="335" width="380" height="380" preserveAspectRatio="xMidYMid meet"/>
+
+<text x="342.5" y="880" text-anchor="middle" font-family="Consolas,'Courier New',monospace" font-size="14" letter-spacing="5" fill="#bdb5cd">LA COINCHE · ESCP</text>
+</svg>

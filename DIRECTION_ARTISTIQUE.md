@@ -19,7 +19,7 @@ Les visuels examinés présentent un emblème spatial triangulaire, une couronne
 | `Logos/0.logo_scepi_revisité_qualitatif.png` | Emblème principal violet/or, grand format sur l'accueil et présentation de l'asso |
 | `Logos/scepi_logo_vert_v2.png` | Variante arcade, principalement pour la rubrique coinche ou une mise en avant ponctuelle |
 | `Logos/scepi_logo_blanc_v2.png` | Variante envisagée pour la navigation sur fond sombre, après vérification du rendu et de la transparence |
-| `Logos/invadachan.png` | Mascotte secondaire accompagnant la sélection d'animé ou un message convivial |
+| `Logos/invadachan.png` | Mascotte secondaire accompagnant la rubrique jeux de société ou un message convivial |
 
 Les autres variantes noires, blanches et en dégradé du dossier restent disponibles ; leur rendu doit être vérifié sur le fond final avant utilisation. La prévisualisation du logo blanc sur fond blanc ne permet pas d'évaluer sa lisibilité.
 
@@ -76,7 +76,7 @@ Privilégier les surfaces sombres et réserver les couleurs vives à quelques é
 ### Accueil
 
 1. Premier écran : grand logo coloré, nom SCEP Invaders, courte présentation de l'association ESCP. Actions « Découvrir l'asso » et « Voir nos événements ».
-2. Jeu & animé du moment : deux grandes cartes de poids équivalent avec visuel, titre et recommandation de l'asso. Invadachan peut accompagner la carte animé sans masquer son contenu.
+2. Jeu du moment : deux grandes cartes de poids équivalent (jeux vidéo / jeux de société) avec visuel, titre et recommandation de l'asso. Invadachan peut accompagner la carte jeux de société sans masquer son contenu.
 3. Actualités et prochain événement : une mise en avant claire, avec date et inscription seulement lorsqu'elles sont connues.
 4. Coinche : bloc distinct avec accent vert, présentant les règles et, lorsqu'il est disponible, l'accès au jeu. Avant cela, proposer « Découvrir les règles » uniquement lorsque ces règles sont publiées.
 5. Instagram : quelques publications sélectionnées, intégrées dans une section cohérente avec le site et accompagnées d'un lien vers le compte.
@@ -101,9 +101,9 @@ Page sobre : contact de l'association, partenariats, LinkedIn et Instagram. Gard
 
 - Prévoir un état initial soigné pour Instagram : titre, explication courte, bouton de chargement et lien externe. Suivre les modalités techniques décrites dans `TECHNIQUE.md`.
 - Accepter le style natif des publications intégrées ; ne pas compter sur leur personnalisation interne pour assurer la cohérence du site.
-- Utiliser les photos de l'asso et les visuels de jeux/animés disponibles avec les droits nécessaires. Garder un traitement cohérent et éviter les banques d'images génériques en remplacement de l'identité réelle.
+- Utiliser les photos de l'asso et les visuels de jeux disponibles avec les droits nécessaires. Garder un traitement cohérent et éviter les banques d'images génériques en remplacement de l'identité réelle.
 - L'utilisateur indique que l'utilisation des logos fournis et de la mascotte est normalement autorisée ; ils constituent la base de travail du site.
-- Pour ce site public, ne pas ajouter d'affiches, captures ou personnages tiers sans autorisation identifiée. Sans visuel autorisé, présenter le jeu ou l'animé par son titre, le commentaire de l'asso et un décor original CSS/SVG.
+- Pour ce site public, ne pas ajouter d'affiches, captures ou personnages tiers sans autorisation identifiée. Sans visuel autorisé, présenter le jeu par son titre, le commentaire de l'asso et un décor original CSS/SVG.
 - Consigner les sources, licences et attributions des ressources externes retenues dans un futur `CREDITS.md`, avec les crédits publics requis. Les modalités d'implémentation sont intégrées à la section 3 de `TECHNIQUE.md`.
 - Animations courtes et discrètes : transition de bouton ou légère apparition, généralement 150 à 250 ms.
 - Respecter `prefers-reduced-motion`. Aucun clignotement, curseur personnalisé imposé, son automatique ou animation permanente indispensable à la compréhension.
@@ -115,7 +115,7 @@ Page sobre : contact de l'association, partenariats, LinkedIn et Instagram. Gard
 - L'ensemble évoque le spatial et l'arcade tout en restant moderne, aéré et lisible.
 - Le violet et l'or structurent l'identité ; le vert reste un accent ciblé.
 - Les cinq onglets sont immédiatement compréhensibles et accessibles au clavier.
-- Le jeu et l'animé du moment disposent chacun d'une vraie mise en avant.
+- Le jeu vidéo et les jeux de société du moment disposent chacun d'une vraie mise en avant.
 - Les textes restent lisibles sur tous les fonds et les états de focus sont visibles.
 - Aucun logo n'est déformé, tronqué ou noyé dans les effets.
 - Le rendu reste cohérent sans chargement Instagram et sans animations.
