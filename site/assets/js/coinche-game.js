@@ -442,6 +442,19 @@
     return [0, 1, 2, 3].filter((s) => s !== seat && !played.has(s));
   }
 
+  // Compte les atouts dont la position est connue (dans notre main, ou déjà
+  // joués et donc dans G.seen) pour en déduire combien restent cachés chez
+  // les deux autres sièges. Un vrai comptage de cartes, pas une estimation :
+  // sert à savoir s'il reste encore des atouts adverses à faire tomber
+  // plutôt que de continuer à mener atout par réflexe une fois qu'ils sont
+  // tous sortis (il vaut alors mieux garder ses propres atouts pour
+  // contrôler les derniers plis et jouer ses couleurs longues).
+  function trumpsHiddenCount(hand, atout) {
+    const inHand = hand.filter((c) => c.suit === atout).length;
+    const seenCount = [...G.seen].filter((id) => id.endsWith(atout)).length;
+    return Math.max(0, 8 - inHand - seenCount);
+  }
+
   function botChooseCard(seat) {
     const hand = G.hands[seat];
     const atout = G.contract.atout;
@@ -453,6 +466,13 @@
 
     if (!pli.length) {
       const opponents = [0, 1, 2, 3].filter((s) => teamOf(s) !== myTeam);
+      // Vrai comptage de cartes : combien d'atouts restent cachés (ni dans
+      // notre main, ni déjà vus), et les deux adversaires sont-ils déjà
+      // connus manquants à l'atout (un pli où l'un d'eux a dû fournir une
+      // autre couleur l'a révélé). Sert à juger s'il reste encore des
+      // atouts adverses à faire tomber.
+      const trumpsHidden = trumpsHiddenCount(hand, atout);
+      const opponentsVoidOfTrump = opponents.every((o) => G.void[o][atout]);
 
       // Mener un as n'est vraiment « sûr » que si aucun adversaire n'est
       // connu manquant dans cette couleur (sinon il coupe à l'atout et
@@ -477,8 +497,16 @@
         // rien face à un Valet ou un 9 qui traîne encore chez l'adversaire.
         const amPreneur = seat === G.contract.preneur;
         const soloTrumpControl = trumpHonors.length >= 1 || trumps.length >= 5;
-        if (amPreneur ? (trumps.length >= 4 || (trumps.length >= 2 && trumpHonors.length >= 1)) : soloTrumpControl) {
+        // Inutile de continuer à « faire tomber » l'atout une fois qu'on
+        // sait — cartes vues plus manques constatés, pas une supposition —
+        // qu'il n'en reste plus chez la défense : mieux vaut alors garder
+        // ses propres atouts pour contrôler les derniers plis.
+        const worthDrawing = trumpsHidden > 0 && !opponentsVoidOfTrump;
+        if (worthDrawing && (amPreneur ? (trumps.length >= 4 || (trumps.length >= 2 && trumpHonors.length >= 1)) : soloTrumpControl)) {
           return trumps.slice().sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
+        }
+        if (!worthDrawing && trumps.length && (amPreneur || soloTrumpControl)) {
+          log(`${seatName(seat)} a compté les atouts : plus rien à faire tomber, garde les siens…`);
         }
       } else if (trumpHonors.length && trumps.length <= 2) {
         // La défense n'a presque jamais intérêt à entamer l'atout : ça ne
@@ -491,9 +519,32 @@
       const bySuit = {};
       for (const c of hand) (bySuit[c.suit] = bySuit[c.suit] || []).push(c);
       const suitsPresentInLegal = new Set(legal.map((c) => c.suit));
+      const candidateSuits = [...suitsPresentInLegal].filter((s) => s !== atout);
+      const partner = (seat + 2) % 4;
+
+      // Forcer un ADVERSAIRE à couper avec un atout est une bonne chose —
+      // il n'a que l'embarras du choix minimal, donc c'est souvent son
+      // atout le plus faible qui y passe, un vrai pas vers l'épuisement de
+      // sa réserve. Forcer son PROPRE partenaire à couper est en revanche
+      // en général une mauvaise idée : on lui fait gâcher un atout pour
+      // rien, sauf s'il récupère au passage un as adverse resté dans le
+      // pli — chose qu'on ne peut pas garantir en entamant à l'aveugle, ce
+      // cas n'est donc pas recherché ici. Priorité : une couleur qui pousse
+      // l'adversaire à couper sans risque pour le partenaire ; à défaut,
+      // n'importe quelle couleur sans risque pour lui ; en dernier recours,
+      // ce qu'il reste.
+      const safeForPartner = candidateSuits.filter((s) => !G.void[partner][s]);
+      const forcesOpponentCut = safeForPartner.filter((s) => opponents.some((o) => G.void[o][s]));
+      const suitPool = forcesOpponentCut.length ? forcesOpponentCut
+        : safeForPartner.length ? safeForPartner
+        : candidateSuits;
+      if (forcesOpponentCut.length) {
+        log(`${seatName(seat)} pousse l'adversaire à couper pour user son atout…`);
+      }
+
       let shortestSuit = null;
-      for (const suit of Object.keys(bySuit)) {
-        if (suit === atout || !suitsPresentInLegal.has(suit)) continue;
+      for (const suit of suitPool) {
+        if (!bySuit[suit]) continue;
         if (!shortestSuit || bySuit[suit].length < bySuit[shortestSuit].length) shortestSuit = suit;
       }
       const pool = shortestSuit ? legal.filter((c) => c.suit === shortestSuit) : legal;
