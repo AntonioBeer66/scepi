@@ -29,6 +29,8 @@ Voir la [direction artistique](DIRECTION_ARTISTIQUE.md) pour l'univers SCEP Inva
 
 ### Coinche
 
+Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adaptation du manuel, actions autorisées, cartes jouables, délais et calcul des scores. Les conventions propres à la version en ligne y sont indiquées explicitement.
+
 - Retrouver les règles de l'Amicale avant de programmer le jeu.
 - Publier les règles et un tutoriel pour apprendre à jouer.
 - Développer un jeu de coinche en ligne.

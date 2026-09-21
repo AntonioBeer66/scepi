@@ -153,7 +153,7 @@ La documentation officielle Meta n'a pas pu être consultée lors de ce cadrage 
 
 ### Prérequis fonctionnel
 
-Obtenir et valider les règles de l'Amicale : distribution, annonces, atouts, coinche et surcoinche, obligations de jeu, calcul des points et fin de partie. Écrire des exemples de manches et de scores avant d'implémenter ces règles.
+Le manuel de l'Amicale est adapté en spécification serveur dans [REGLES_COINCHE.md](REGLES_COINCHE.md) : états, actions, cartes légales, délais, reconnexion et scores. Ce fichier est la référence fonctionnelle du moteur. Sa section 1 distingue les conventions V1 des règles explicitement issues du manuel, notamment le mélange automatique à chaque donne, le score du contrat « 80 » et la montée à l'atout. Centraliser ces choix dans un profil de règles versionné, fixé pour toute la partie. La section 11 décrit les cas de validation du moteur.
 
 ### Architecture envisagée
 
