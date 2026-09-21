@@ -4,7 +4,7 @@ Projet de site web de SCEPI
 
 - Faire découvrir l'association, ses membres et ses activités.
 - Mettre en avant nos événements et faciliter la prise de contact.
-- Partager nos découvertes de jeux vidéo et d'animés (ou autre)
+- Partager nos découvertes de jeux vidéo et d'animés (ou autre, peut vite fait remplacer le guide de l'invaders, permet aussi de remplir l'espace vide)
 - Proposer un jeu de coinche en ligne suivant les règles de l'Amicale.
 - Donner accès à nos réseaux : LinkedIn et Instagram.
 
