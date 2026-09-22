@@ -13,12 +13,21 @@
 // ci-dessous resteront valables tels quels.
 
 (function () {
-  const SUITS = ['H', 'D', 'C', 'S'];
-  const RANKS = ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  const SUIT_SYMBOL = { H: '♥', D: '♦', C: '♣', S: '♠' };
-  const SUIT_NAME = { H: 'Cœur', D: 'Carreau', C: 'Trèfle', S: 'Pique' };
-  const RANK_NAME = { 7: '7', 8: '8', 9: '9', 10: '10', J: 'Valet', Q: 'Dame', K: 'Roi', A: 'As' };
-  const RED_SUITS = new Set(['H', 'D']);
+  const SUITS = ["H", "D", "C", "S"];
+  const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
+  const SUIT_SYMBOL = { H: "♥", D: "♦", C: "♣", S: "♠" };
+  const SUIT_NAME = { H: "Cœur", D: "Carreau", C: "Trèfle", S: "Pique" };
+  const RANK_NAME = {
+    7: "7",
+    8: "8",
+    9: "9",
+    10: "10",
+    J: "Valet",
+    Q: "Dame",
+    K: "Roi",
+    A: "As",
+  };
+  const RED_SUITS = new Set(["H", "D"]);
 
   const TRUMP_POINTS = { J: 20, 9: 14, A: 11, 10: 10, K: 4, Q: 3, 8: 0, 7: 0 };
   const PLAIN_POINTS = { A: 11, 10: 10, K: 4, Q: 3, J: 2, 9: 0, 8: 0, 7: 0 };
@@ -31,20 +40,25 @@
   const TRICK_PAUSE_MS = 1100; // le pli reste affiché, carte gagnante en évidence
   const TRICK_COLLECT_MS = 550; // puis il est « ramassé » en animation
 
-  const SEAT_POS = ['Sud', 'Ouest', 'Nord', 'Est']; // position visuelle : 0=vous(bas),1=droite,2=partenaire(haut),3=gauche
+  const SEAT_POS = ["Sud", "Ouest", "Nord", "Est"]; // position visuelle : 0=vous(bas),1=droite,2=partenaire(haut),3=gauche
 
   function bidType(montant) {
-    if (montant === 250) return 'CAPOT';
-    if (montant === 270) return 'CAPOT_BELOTE';
-    return 'NUMERIQUE';
+    if (montant === 250) return "CAPOT";
+    if (montant === 270) return "CAPOT_BELOTE";
+    return "NUMERIQUE";
   }
 
-  function suivant(s) { return (s + 1) % 4; }
-  function teamOf(s) { return s % 2; }
+  function suivant(s) {
+    return (s + 1) % 4;
+  }
+  function teamOf(s) {
+    return s % 2;
+  }
 
   function buildDeck() {
     const deck = [];
-    for (const suit of SUITS) for (const rank of RANKS) deck.push({ suit, rank, id: rank + suit });
+    for (const suit of SUITS)
+      for (const rank of RANKS) deck.push({ suit, rank, id: rank + suit });
     return deck;
   }
 
@@ -59,7 +73,12 @@
 
   function deal(deck, donneur) {
     const hands = [[], [], [], []];
-    const order = [suivant(donneur), suivant(suivant(donneur)), suivant(suivant(suivant(donneur))), donneur];
+    const order = [
+      suivant(donneur),
+      suivant(suivant(donneur)),
+      suivant(suivant(suivant(donneur))),
+      donneur,
+    ];
     let i = 0;
     for (const count of [3, 3, 2]) {
       for (const seat of order) {
@@ -86,21 +105,36 @@
     const couleurDemandee = pli[0].carte.suit;
     let best = pli[0];
     for (const entry of pli.slice(1)) {
-      if (winValue(entry.carte, atout, couleurDemandee) > winValue(best.carte, atout, couleurDemandee)) best = entry;
+      if (
+        winValue(entry.carte, atout, couleurDemandee) >
+        winValue(best.carte, atout, couleurDemandee)
+      )
+        best = entry;
     }
     return best.siege;
   }
 
   function trickPoints(pli, atout) {
-    return pli.reduce((sum, e) => sum + (e.carte.suit === atout ? TRUMP_POINTS[e.carte.rank] : PLAIN_POINTS[e.carte.rank]), 0);
+    return pli.reduce(
+      (sum, e) =>
+        sum +
+        (e.carte.suit === atout
+          ? TRUMP_POINTS[e.carte.rank]
+          : PLAIN_POINTS[e.carte.rank]),
+      0,
+    );
   }
 
   function cardPoints(card, atout) {
-    return card.suit === atout ? TRUMP_POINTS[card.rank] : PLAIN_POINTS[card.rank];
+    return card.suit === atout
+      ? TRUMP_POINTS[card.rank]
+      : PLAIN_POINTS[card.rank];
   }
 
   function forceOf(card, atout) {
-    return card.suit === atout ? TRUMP_FORCE[card.rank] : PLAIN_FORCE[card.rank];
+    return card.suit === atout
+      ? TRUMP_FORCE[card.rank]
+      : PLAIN_FORCE[card.rank];
   }
 
   // cartesLegales(main, pli, atout, siège) — section 6 de REGLES_COINCHE.md.
@@ -112,8 +146,11 @@
 
     if (fournissables.length) {
       if (couleurDemandee === atout) {
-        const maitreForce = TRUMP_FORCE[pli.find((e) => e.siege === maitreSeat).carte.rank];
-        const superieures = fournissables.filter((c) => TRUMP_FORCE[c.rank] > maitreForce);
+        const maitreForce =
+          TRUMP_FORCE[pli.find((e) => e.siege === maitreSeat).carte.rank];
+        const superieures = fournissables.filter(
+          (c) => TRUMP_FORCE[c.rank] > maitreForce,
+        );
         if (superieures.length) return superieures;
       }
       return fournissables;
@@ -126,7 +163,9 @@
 
     const maitreCarte = pli.find((e) => e.siege === maitreSeat).carte;
     if (maitreCarte.suit === atout) {
-      const superieurs = atouts.filter((c) => TRUMP_FORCE[c.rank] > TRUMP_FORCE[maitreCarte.rank]);
+      const superieurs = atouts.filter(
+        (c) => TRUMP_FORCE[c.rank] > TRUMP_FORCE[maitreCarte.rank],
+      );
       if (superieurs.length) return superieurs;
     }
     return atouts;
@@ -135,14 +174,20 @@
   function suitStrength(hand, suit) {
     let score = 0;
     for (const c of hand) {
-      score += c.suit === suit ? TRUMP_POINTS[c.rank] : Math.min(PLAIN_POINTS[c.rank], 4);
+      score +=
+        c.suit === suit
+          ? TRUMP_POINTS[c.rank]
+          : Math.min(PLAIN_POINTS[c.rank], 4);
     }
     score += hand.filter((c) => c.suit === suit).length * 5;
     return score;
   }
 
   function hasBelote(hand, suit) {
-    return hand.some((c) => c.suit === suit && c.rank === 'K') && hand.some((c) => c.suit === suit && c.rank === 'Q');
+    return (
+      hand.some((c) => c.suit === suit && c.rank === "K") &&
+      hand.some((c) => c.suit === suit && c.rank === "Q")
+    );
   }
 
   function bestSuitFor(hand) {
@@ -170,8 +215,13 @@
   // que le simple total de points des cartes.
   function estimateTricks(hand, atout) {
     const trumps = hand.filter((c) => c.suit === atout);
-    const trumpHonors = trumps.filter((c) => c.rank === 'J' || c.rank === '9' || c.rank === 'A').length;
-    let tricks = Math.min(trumps.length, trumps.length * 0.7 + trumpHonors * 0.3);
+    const trumpHonors = trumps.filter(
+      (c) => c.rank === "J" || c.rank === "9" || c.rank === "A",
+    ).length;
+    let tricks = Math.min(
+      trumps.length,
+      trumps.length * 0.7 + trumpHonors * 0.3,
+    );
     for (const s of SUITS) {
       if (s === atout) continue;
       const cards = hand.filter((c) => c.suit === s);
@@ -180,8 +230,9 @@
         continue;
       }
       if (cards.length === 1 && trumps.length >= 4) tricks += 0.5;
-      if (cards.some((c) => c.rank === 'A')) tricks += 1;
-      else if (cards.some((c) => c.rank === 'K') && cards.length >= 2) tricks += 0.5;
+      if (cards.some((c) => c.rank === "A")) tricks += 1;
+      else if (cards.some((c) => c.rank === "K") && cards.length >= 2)
+        tricks += 0.5;
     }
     return tricks;
   }
@@ -205,8 +256,11 @@
   }
 
   function seatName(seat) {
-    if (seat === G.you) return 'Vous';
-    return G.seats[seat].name || (G.seats[seat].type === 'bot' ? 'Ordinateur' : `Siège ${seat}`);
+    if (seat === G.you) return "Vous";
+    return (
+      G.seats[seat].name ||
+      (G.seats[seat].type === "bot" ? "Ordinateur" : `Siège ${seat}`)
+    );
   }
 
   function startNewDonne() {
@@ -221,7 +275,13 @@
     G.plisJoues = 0;
     G.plisGagnes = [0, 0];
     G.pointsPlis = [0, 0];
-    G.belote = { holder: null, kingPlayed: false, queenPlayed: false, beloteDeclared: false, rebeloteDeclared: false };
+    G.belote = {
+      holder: null,
+      kingPlayed: false,
+      queenPlayed: false,
+      beloteDeclared: false,
+      rebeloteDeclared: false,
+    };
     G.resolvingTrick = null;
     G.lastTrick = null;
     // Mémoire de l'IA pour cette donne : cartes déjà vues (les siennes
@@ -232,16 +292,18 @@
     G.seen = new Set();
     G.void = [{}, {}, {}, {}];
     els.showLastTrick = false;
-    clearTimer('collect');
-    clearTimer('sweep');
-    G.phase = 'ENCHERES';
+    clearTimer("collect");
+    clearTimer("sweep");
+    G.phase = "ENCHERES";
     G.joueurActif = suivant(G.donneur);
-    log(`Nouvelle donne (#${G.donneNumero - 1}). ${seatName(G.donneur)} donne.`);
+    log(
+      `Nouvelle donne (#${G.donneNumero - 1}). ${seatName(G.donneur)} donne.`,
+    );
     startTurn();
   }
 
   function clearTurnTimers() {
-    ['turn', 'bot', 'timerWarn', 'timerDanger'].forEach(clearTimer);
+    ["turn", "bot", "timerWarn", "timerDanger"].forEach(clearTimer);
   }
 
   function startTurn() {
@@ -250,7 +312,7 @@
     G.turnTotalDuration = TURN_DURATION_MS;
     G.echeance = Date.now() + G.turnTotalDuration;
     G.timers.turn = setTimeout(() => onTurnTimeout(seat), TURN_DURATION_MS);
-    if (G.seats[seat].type === 'bot') {
+    if (G.seats[seat].type === "bot") {
       G.timers.bot = setTimeout(() => botAct(seat), 600 + Math.random() * 900);
     }
     render();
@@ -258,23 +320,28 @@
 
   function onTurnTimeout(seat) {
     if (G.joueurActif !== seat) return;
-    if (G.phase === 'ENCHERES') {
-      applyAction(seat, { type: 'PASSER' });
-    } else if (G.phase === 'JEU') {
-      const legal = computeLegal(G.hands[seat], G.pliCourant, G.contract.atout, seat);
+    if (G.phase === "ENCHERES") {
+      applyAction(seat, { type: "PASSER" });
+    } else if (G.phase === "JEU") {
+      const legal = computeLegal(
+        G.hands[seat],
+        G.pliCourant,
+        G.contract.atout,
+        seat,
+      );
       const carte = legal[Math.floor(Math.random() * legal.length)];
-      applyAction(seat, { type: 'JOUER', carte });
+      applyAction(seat, { type: "JOUER", carte });
     }
   }
 
   function botAct(seat) {
     if (G.joueurActif !== seat) return;
-    if (G.phase === 'ENCHERES') {
+    if (G.phase === "ENCHERES") {
       const decision = botDecideBid(seat);
       applyAction(seat, decision);
-    } else if (G.phase === 'JEU') {
+    } else if (G.phase === "JEU") {
       const carte = botChooseCard(seat);
-      applyAction(seat, { type: 'JOUER', carte });
+      applyAction(seat, { type: "JOUER", carte });
     }
   }
 
@@ -320,25 +387,34 @@
       // donne pour tout le monde : un peu plus de raisons d'oser une main
       // tout juste limite plutôt que de la gâcher pour rien.
       const lastChance = G.passesConsecutives === 3;
-      const openThreshold = 74 / p.aggr - (bluffing ? 14 : 0) + noise - (lastChance ? 10 : 0) + urgency;
-      if (score < openThreshold) return { type: 'PASSER' };
-      if (lastChance) log(`${seatName(seat)} ouvre en dernier recours pour éviter la redonne…`);
+      const openThreshold =
+        74 / p.aggr -
+        (bluffing ? 14 : 0) +
+        noise -
+        (lastChance ? 10 : 0) +
+        urgency;
+      if (score < openThreshold) return { type: "PASSER" };
+      if (lastChance)
+        log(
+          `${seatName(seat)} ouvre en dernier recours pour éviter la redonne…`,
+        );
       const trumpCount = hand.filter((c) => c.suit === suit).length;
-      if (hasBelote(hand, suit)) log(`${seatName(seat)} sent la belote dans sa main…`);
+      if (hasBelote(hand, suit))
+        log(`${seatName(seat)} sent la belote dans sa main…`);
       if (score >= 132 && trumpCount >= 5 && Math.random() < 0.35 * p.aggr) {
         log(`${seatName(seat)} sent le capot…`);
-        return { type: 'ENCHERIR', montant: 250, atout: suit };
+        return { type: "ENCHERIR", montant: 250, atout: suit };
       }
       // Une main solide ose parfois sauter directement à 100/110 pour
       // impressionner la table plutôt que de monter palier par palier.
       let montant = 80;
       if (score >= 118 && Math.random() < 0.5 * p.aggr) montant = 100;
       else if (score >= 100 && Math.random() < 0.35 * p.aggr) montant = 90;
-      return { type: 'ENCHERIR', montant, atout: suit };
+      return { type: "ENCHERIR", montant, atout: suit };
     }
 
     const partnerIsPreneur = teamOf(current.preneur) === teamOf(seat);
-    if (current.montant >= 270) return { type: 'PASSER' };
+    if (current.montant >= 270) return { type: "PASSER" };
 
     // Une main qui déborde largement le seuil nécessaire pour monter mérite
     // une relance franche, pas un +10 systématique quel que soit l'écart :
@@ -357,8 +433,11 @@
       // deux, huit cartes maximum par couleur) — sa force réelle y est
       // probablement plus faible que l'estimation à plat ne suppose, et
       // inversement si on n'en a aucune.
-      const myTrumpsOfContractSuit = hand.filter((c) => c.suit === current.atout).length;
-      const partnerEstimate = current.montant - 6 + (2 - myTrumpsOfContractSuit) * 4;
+      const myTrumpsOfContractSuit = hand.filter(
+        (c) => c.suit === current.atout,
+      ).length;
+      const partnerEstimate =
+        current.montant - 6 + (2 - myTrumpsOfContractSuit) * 4;
       let combined = score + partnerEstimate * 0.55;
 
       // Raisonnement psychologique : le bot ne voit jamais les cartes des
@@ -368,48 +447,69 @@
       // (11 points, la carte la plus forte de sa couleur) se compte presque
       // toujours, surtout si le partenaire vise déjà un contrat costaud
       // (≥90).
-      const acesHorsAtout = hand.filter((c) => c.rank === 'A' && c.suit !== suit).length;
+      const acesHorsAtout = hand.filter(
+        (c) => c.rank === "A" && c.suit !== suit,
+      ).length;
       if (current.montant >= 90 && acesHorsAtout >= 1) {
-        log(`${seatName(seat)} sent ${acesHorsAtout} as garanti${acesHorsAtout > 1 ? 's' : ''} derrière l'annonce de son partenaire…`);
+        log(
+          `${seatName(seat)} sent ${acesHorsAtout} as garanti${acesHorsAtout > 1 ? "s" : ""} derrière l'annonce de son partenaire…`,
+        );
         combined += acesHorsAtout >= 2 ? 20 : 8;
       }
 
       const raiseThreshold = current.montant + 18 / p.aggr - noise + urgency;
-      if (combined >= raiseThreshold && current.montant < 250 && suit === current.atout) {
+      if (
+        combined >= raiseThreshold &&
+        current.montant < 250 &&
+        suit === current.atout
+      ) {
         // Une main qui, ajoutée à celle déjà annoncée du partenaire, frôle
         // le capot mérite d'être proposée comme telle plutôt que de monter
         // palier par palier jusqu'à 160 — jusqu'ici possible seulement en
         // ouvrant les enchères, jamais en relançant son partenaire.
         const trumpCount = hand.filter((c) => c.suit === suit).length;
-        if (combined >= 205 && trumpCount >= 5 && Math.random() < 0.3 * p.aggr) {
-          log(`${seatName(seat)} voit le capot derrière l'annonce de son partenaire…`);
-          return { type: 'ENCHERIR', montant: 250, atout: current.atout };
+        if (
+          combined >= 205 &&
+          trumpCount >= 5 &&
+          Math.random() < 0.3 * p.aggr
+        ) {
+          log(
+            `${seatName(seat)} voit le capot derrière l'annonce de son partenaire…`,
+          );
+          return { type: "ENCHERIR", montant: 250, atout: current.atout };
         }
         if (current.montant < 160) {
-          const montant = Math.min(160, current.montant + raiseBump(combined - raiseThreshold));
-          return { type: 'ENCHERIR', montant, atout: current.atout };
+          const montant = Math.min(
+            160,
+            current.montant + raiseBump(combined - raiseThreshold),
+          );
+          return { type: "ENCHERIR", montant, atout: current.atout };
         }
       }
-      return { type: 'PASSER' };
+      return { type: "PASSER" };
     }
 
     // L'adversaire est preneur : ne reprendre la main que sur une vraie
     // belle couleur, sans quoi mieux vaut garder la carte de la coinche.
-    const overcallThreshold = current.montant + 30 / p.aggr - (bluffing ? 10 : 0) - noise + urgency;
+    const overcallThreshold =
+      current.montant + 30 / p.aggr - (bluffing ? 10 : 0) - noise + urgency;
     if (score >= overcallThreshold && current.montant < 250) {
       // Même logique de relance directe au capot qu'en soutien du
       // partenaire, côté reprise de la main sur l'adversaire cette fois.
       const trumpCount = hand.filter((c) => c.suit === suit).length;
       if (score >= 205 && trumpCount >= 5 && Math.random() < 0.28 * p.aggr) {
         log(`${seatName(seat)} reprend la main droit sur le capot…`);
-        return { type: 'ENCHERIR', montant: 250, atout: suit };
+        return { type: "ENCHERIR", montant: 250, atout: suit };
       }
       if (current.montant < 160) {
-        const montant = Math.min(160, current.montant + raiseBump(score - overcallThreshold));
-        return { type: 'ENCHERIR', montant, atout: suit };
+        const montant = Math.min(
+          160,
+          current.montant + raiseBump(score - overcallThreshold),
+        );
+        return { type: "ENCHERIR", montant, atout: suit };
       }
     }
-    return { type: 'PASSER' };
+    return { type: "PASSER" };
   }
 
   // Le vrai signal d'une chute programmée, ce n'est pas « j'ai des points »
@@ -420,8 +520,8 @@
     const trumps = hand.filter((c) => c.suit === atout);
     if (!trumps.length) return 0;
     let score = trumps.length * 9;
-    if (trumps.some((c) => c.rank === 'J')) score += 26;
-    if (trumps.some((c) => c.rank === '9')) score += 18;
+    if (trumps.some((c) => c.rank === "J")) score += 26;
+    if (trumps.some((c) => c.rank === "9")) score += 18;
     if (trumps.length >= 3) score += 12;
     return score;
   }
@@ -433,23 +533,29 @@
     const hand = G.hands[seat];
     // Défense = contrôle d'atout imprenable + as latéraux quasi garantis,
     // pas juste un total de points de cartes.
-    const sideAces = hand.filter((c) => c.rank === 'A' && c.suit !== contract.atout).length;
-    if (contract.type !== 'NUMERIQUE') {
+    const sideAces = hand.filter(
+      (c) => c.rank === "A" && c.suit !== contract.atout,
+    ).length;
+    if (contract.type !== "NUMERIQUE") {
       // Capot / capot beloté : un seul pli suffit à faire chuter tout le
       // contrat, donc un simple honneur d'atout gardé ou un as latéral
       // suffisent déjà à tenter la coinche — le calcul n'a rien à voir
       // avec un contrat au nombre. Le seuil reste plus haut qu'un simple
       // pressentiment : il faut une vraie carte de contrôle, pas juste un
       // atout quelconque.
-      const confidence = trumpControlScore(hand, contract.atout) + sideAces * 22;
-      if (confidence < 52 / p.coincheAppetite + scoreUrgencyAdjustment(seat)) return false;
+      const confidence =
+        trumpControlScore(hand, contract.atout) + sideAces * 22;
+      if (confidence < 52 / p.coincheAppetite + scoreUrgencyAdjustment(seat))
+        return false;
       return Math.random() < 0.42 * p.coincheAppetite;
     }
     const confidence = trumpControlScore(hand, contract.atout) + sideAces * 16;
     // Une défense menée au score a plus à gagner à doubler la mise (et
     // moins à perdre si elle se trompe) qu'une défense déjà loin devant —
     // même logique d'urgence que pour les enchères.
-    const threshold = (78 + (contract.montant - 80) * 0.5) / p.coincheAppetite + scoreUrgencyAdjustment(seat);
+    const threshold =
+      (78 + (contract.montant - 80) * 0.5) / p.coincheAppetite +
+      scoreUrgencyAdjustment(seat);
     if (confidence < threshold) return false;
     return Math.random() < 0.4 * p.coincheAppetite;
   }
@@ -459,33 +565,64 @@
     if (!contract || teamOf(seat) !== contract.equipePreneur) return false;
     const p = personality(seat);
     const hand = G.hands[seat];
-    const sideAces = hand.filter((c) => c.rank === 'A' && c.suit !== contract.atout).length;
+    const sideAces = hand.filter(
+      (c) => c.rank === "A" && c.suit !== contract.atout,
+    ).length;
     const confidence = trumpControlScore(hand, contract.atout) + sideAces * 14;
     if (confidence < 92 / p.aggr + scoreUrgencyAdjustment(seat)) return false;
     return Math.random() < 0.6 * p.aggr;
   }
 
   function maybeBotsConsiderCoinche() {
-    if (G.phase !== 'ENCHERES' || !G.contract || G.contract.coinche) return;
+    if (G.phase !== "ENCHERES" || !G.contract || G.contract.coinche) return;
     const contractId = G.contract.id;
     [0, 1, 2, 3].forEach((seat) => {
-      if (teamOf(seat) === G.contract.equipePreneur || G.seats[seat].type !== 'bot') return;
-      setTimeout(() => {
-        if (!G || G.phase !== 'ENCHERES' || !G.contract || G.contract.id !== contractId || G.contract.coinche) return;
-        if (botWantsToCoinche(seat)) applyAction(seat, { type: 'COINCHER' });
-      }, 700 + Math.random() * 2200);
+      if (
+        teamOf(seat) === G.contract.equipePreneur ||
+        G.seats[seat].type !== "bot"
+      )
+        return;
+      setTimeout(
+        () => {
+          if (
+            !G ||
+            G.phase !== "ENCHERES" ||
+            !G.contract ||
+            G.contract.id !== contractId ||
+            G.contract.coinche
+          )
+            return;
+          if (botWantsToCoinche(seat)) applyAction(seat, { type: "COINCHER" });
+        },
+        700 + Math.random() * 2200,
+      );
     });
   }
 
   function maybeBotsConsiderSurcoinche() {
-    if (G.phase !== 'SURCOINCHE' || !G.contract) return;
+    if (G.phase !== "SURCOINCHE" || !G.contract) return;
     const contractId = G.contract.id;
     [0, 1, 2, 3].forEach((seat) => {
-      if (teamOf(seat) !== G.contract.equipePreneur || G.seats[seat].type !== 'bot') return;
-      setTimeout(() => {
-        if (!G || G.phase !== 'SURCOINCHE' || !G.contract || G.contract.id !== contractId || G.contract.surcoinche) return;
-        if (botWantsToSurcoinche(seat)) applyAction(seat, { type: 'SURCOINCHER' });
-      }, 400 + Math.random() * 3200);
+      if (
+        teamOf(seat) !== G.contract.equipePreneur ||
+        G.seats[seat].type !== "bot"
+      )
+        return;
+      setTimeout(
+        () => {
+          if (
+            !G ||
+            G.phase !== "SURCOINCHE" ||
+            !G.contract ||
+            G.contract.id !== contractId ||
+            G.contract.surcoinche
+          )
+            return;
+          if (botWantsToSurcoinche(seat))
+            applyAction(seat, { type: "SURCOINCHER" });
+        },
+        400 + Math.random() * 3200,
+      );
     });
   }
 
@@ -539,14 +676,17 @@
   // décider.
   function contractOutcomeLocked() {
     const preneurTeam = G.contract.equipePreneur;
-    if (G.contract.type !== 'NUMERIQUE') {
+    if (G.contract.type !== "NUMERIQUE") {
       // Capot (et capot beloté) : le contrat tombe dès qu'un seul pli
       // échappe au preneur, quel que soit le nombre de plis encore à jouer.
       return G.plisGagnes[1 - preneurTeam] > 0;
     }
     const seuil = G.contract.montant === 80 ? 82 : G.contract.montant;
     const pointsRestants = 162 - G.pointsPlis[0] - G.pointsPlis[1];
-    return G.pointsPlis[preneurTeam] >= seuil || G.pointsPlis[preneurTeam] + pointsRestants < seuil;
+    return (
+      G.pointsPlis[preneurTeam] >= seuil ||
+      G.pointsPlis[preneurTeam] + pointsRestants < seuil
+    );
   }
 
   function botChooseCard(seat) {
@@ -574,17 +714,27 @@
       // adversaire n'est connu manquant dans cette couleur (sinon il coupe
       // à l'atout et la carte est perdue pour rien) — déduit des manques
       // déjà observés dans les plis précédents, jamais des mains adverses.
-      const safeMasters = legal.filter((c) => c.suit !== atout
-        && isKnownMaster(hand, c, atout)
-        && !opponents.some((o) => G.void[o][c.suit]));
+      const safeMasters = legal.filter(
+        (c) =>
+          c.suit !== atout &&
+          isKnownMaster(hand, c, atout) &&
+          !opponents.some((o) => G.void[o][c.suit]),
+      );
       if (safeMasters.length) {
-        const best = safeMasters.slice().sort((a, b) => cardPoints(b, atout) - cardPoints(a, atout))[0];
-        if (best.rank !== 'A') log(`${seatName(seat)} a compté la couleur : son ${cardLabel(best)} est maître…`);
+        const best = safeMasters
+          .slice()
+          .sort((a, b) => cardPoints(b, atout) - cardPoints(a, atout))[0];
+        if (best.rank !== "A")
+          log(
+            `${seatName(seat)} a compté la couleur : son ${cardLabel(best)} est maître…`,
+          );
         return best;
       }
 
       const trumps = legal.filter((c) => c.suit === atout);
-      const trumpHonors = trumps.filter((c) => c.rank === 'J' || c.rank === '9');
+      const trumpHonors = trumps.filter(
+        (c) => c.rank === "J" || c.rank === "9",
+      );
 
       if (isPreneurTeam) {
         // C'est l'annonce qui dit qui est censé tenir les maîtres d'atout
@@ -603,11 +753,21 @@
         // qu'il n'en reste plus chez la défense : mieux vaut alors garder
         // ses propres atouts pour contrôler les derniers plis.
         const worthDrawing = trumpsHidden > 0 && !opponentsVoidOfTrump;
-        if (worthDrawing && (amPreneur ? (trumps.length >= 4 || (trumps.length >= 2 && trumpHonors.length >= 1)) : soloTrumpControl)) {
-          return trumps.slice().sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
+        if (
+          worthDrawing &&
+          (amPreneur
+            ? trumps.length >= 4 ||
+              (trumps.length >= 2 && trumpHonors.length >= 1)
+            : soloTrumpControl)
+        ) {
+          return trumps
+            .slice()
+            .sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
         }
         if (!worthDrawing && trumps.length && (amPreneur || soloTrumpControl)) {
-          log(`${seatName(seat)} a compté les atouts : plus rien à faire tomber, garde les siens…`);
+          log(
+            `${seatName(seat)} a compté les atouts : plus rien à faire tomber, garde les siens…`,
+          );
         }
 
         // Sans maître sûr ni atout à faire tomber, une couleur longue mais
@@ -621,12 +781,18 @@
         // se protéger d'une coupe pendant l'opération (un peu d'atout en
         // réserve) et qu'il reste assez de plis pour que ça paie.
         const longSuit = SUITS.filter((s) => s !== atout)
-          .map((s) => ({ suit: s, count: hand.filter((c) => c.suit === s).length }))
+          .map((s) => ({
+            suit: s,
+            count: hand.filter((c) => c.suit === s).length,
+          }))
           .filter((e) => e.count >= 3)
           .sort((a, b) => b.count - a.count)[0];
         if (longSuit && trumps.length >= 2 && 8 - G.plisJoues >= 3) {
-          log(`${seatName(seat)} travaille sa longue couleur pour l'affranchir…`);
-          return legal.filter((c) => c.suit === longSuit.suit)
+          log(
+            `${seatName(seat)} travaille sa longue couleur pour l'affranchir…`,
+          );
+          return legal
+            .filter((c) => c.suit === longSuit.suit)
             .sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
         }
       } else if (trumpHonors.length && trumps.length <= 2) {
@@ -634,13 +800,17 @@
         // fait qu'user gratuitement ses propres atouts au profit du
         // preneur. Exception : encaisser tout de suite un maître sûr
         // (Valet/9) qu'on ne rejouera peut-être jamais si on reperd la main.
-        return trumpHonors.sort((a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank])[0];
+        return trumpHonors.sort(
+          (a, b) => TRUMP_FORCE[b.rank] - TRUMP_FORCE[a.rank],
+        )[0];
       }
 
       const bySuit = {};
       for (const c of hand) (bySuit[c.suit] = bySuit[c.suit] || []).push(c);
       const suitsPresentInLegal = new Set(legal.map((c) => c.suit));
-      const candidateSuits = [...suitsPresentInLegal].filter((s) => s !== atout);
+      const candidateSuits = [...suitsPresentInLegal].filter(
+        (s) => s !== atout,
+      );
       const partner = (seat + 2) % 4;
 
       // Forcer un ADVERSAIRE à couper avec un atout est une bonne chose —
@@ -655,21 +825,32 @@
       // n'importe quelle couleur sans risque pour lui ; en dernier recours,
       // ce qu'il reste.
       const safeForPartner = candidateSuits.filter((s) => !G.void[partner][s]);
-      const forcesOpponentCut = safeForPartner.filter((s) => opponents.some((o) => G.void[o][s]));
-      const suitPool = forcesOpponentCut.length ? forcesOpponentCut
-        : safeForPartner.length ? safeForPartner
-        : candidateSuits;
+      const forcesOpponentCut = safeForPartner.filter((s) =>
+        opponents.some((o) => G.void[o][s]),
+      );
+      const suitPool = forcesOpponentCut.length
+        ? forcesOpponentCut
+        : safeForPartner.length
+          ? safeForPartner
+          : candidateSuits;
       if (forcesOpponentCut.length) {
-        log(`${seatName(seat)} pousse l'adversaire à couper pour user son atout…`);
+        log(
+          `${seatName(seat)} pousse l'adversaire à couper pour user son atout…`,
+        );
       }
 
       let shortestSuit = null;
       for (const suit of suitPool) {
         if (!bySuit[suit]) continue;
-        if (!shortestSuit || bySuit[suit].length < bySuit[shortestSuit].length) shortestSuit = suit;
+        if (!shortestSuit || bySuit[suit].length < bySuit[shortestSuit].length)
+          shortestSuit = suit;
       }
-      const pool = shortestSuit ? legal.filter((c) => c.suit === shortestSuit) : legal;
-      return pool.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+      const pool = shortestSuit
+        ? legal.filter((c) => c.suit === shortestSuit)
+        : legal;
+      return pool
+        .slice()
+        .sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
     }
 
     const couleurDemandee = pli[0].carte.suit;
@@ -680,20 +861,30 @@
 
     if (partnerWinning) {
       const partnerCarte = pli.find((e) => e.siege === maitreSeat).carte;
-      const partnerCertain = partnerCarte.suit === atout && (partnerCarte.rank === 'J' || partnerCarte.rank === '9');
+      const partnerCertain =
+        partnerCarte.suit === atout &&
+        (partnerCarte.rank === "J" || partnerCarte.rank === "9");
       if (opponentStillToAct && !partnerCertain) {
         // Le pli n'est pas encore gagné : un adversaire joue encore après
         // nous et peut surcouper notre partenaire. Fournir sans se délester
         // tout de suite de nos meilleures cartes pour rien.
-        return legal.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+        return legal
+          .slice()
+          .sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
       }
       // Plus personne ne peut menacer ce pli (ou notre partenaire tient un
       // maître imprenable) : on peut nourrir sans risque.
-      return legal.slice().sort((a, b) => cardPoints(b, atout) - cardPoints(a, atout))[0];
+      return legal
+        .slice()
+        .sort((a, b) => cardPoints(b, atout) - cardPoints(a, atout))[0];
     }
 
     const maitreCarte = pli.find((e) => e.siege === maitreSeat).carte;
-    const winners = legal.filter((c) => winValue(c, atout, couleurDemandee) > winValue(maitreCarte, atout, couleurDemandee));
+    const winners = legal.filter(
+      (c) =>
+        winValue(c, atout, couleurDemandee) >
+        winValue(maitreCarte, atout, couleurDemandee),
+    );
 
     if (winners.length && winners.length < legal.length) {
       // Vraie liberté de ne pas prendre (uniquement possible hors-atout,
@@ -703,15 +894,27 @@
       // pour un pli qui en vaudra vraiment la peine.
       const endgame = G.plisJoues >= 6;
       const trickValue = trickPoints(pli, atout);
-      const cheapestWinner = winners.slice().sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
-      if (!endgame && !opponentStillToAct && trickValue < 8 && cheapestWinner.rank === 'A' && !contractOutcomeLocked()) {
+      const cheapestWinner = winners
+        .slice()
+        .sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
+      if (
+        !endgame &&
+        !opponentStillToAct &&
+        trickValue < 8 &&
+        cheapestWinner.rank === "A" &&
+        !contractOutcomeLocked()
+      ) {
         const decline = legal.filter((c) => !winners.includes(c));
-        return decline.sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+        return decline.sort(
+          (a, b) => cardPoints(a, atout) - cardPoints(b, atout),
+        )[0];
       }
     }
 
     if (winners.length) {
-      return winners.slice().sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
+      return winners
+        .slice()
+        .sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
     }
 
     // Aucune carte ne peut gagner : défausse. Si le choix s'étend à
@@ -726,12 +929,17 @@
       const nonTrumpSuits = [...legalSuits].filter((s) => s !== atout);
       const candidates = nonTrumpSuits.length ? nonTrumpSuits : [...legalSuits];
       let shortest = candidates[0];
-      for (const s of candidates) if (bySuit[s].length < bySuit[shortest].length) shortest = s;
+      for (const s of candidates)
+        if (bySuit[s].length < bySuit[shortest].length) shortest = s;
       const pool = legal.filter((c) => c.suit === shortest);
-      return pool.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+      return pool
+        .slice()
+        .sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
     }
 
-    return legal.slice().sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
+    return legal
+      .slice()
+      .sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
   }
 
   // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
@@ -741,16 +949,26 @@
   // enseigne, et un bot ne pouvait de toute façon jamais déclarer lui-même
   // avant ce changement.
   function declareBeloteIfNeeded(seat, carte) {
-    if (!G.contract || seat !== G.contract.preneur || carte.suit !== G.contract.atout) return;
-    if (carte.rank !== 'K' && carte.rank !== 'Q') return;
+    if (
+      !G.contract ||
+      seat !== G.contract.preneur ||
+      carte.suit !== G.contract.atout
+    )
+      return;
+    if (carte.rank !== "K" && carte.rank !== "Q") return;
     if (G.belote.holder !== seat) return;
-    if (carte.rank === 'K') G.belote.kingPlayed = true;
-    if (carte.rank === 'Q') G.belote.queenPlayed = true;
-    const count = (G.belote.kingPlayed ? 1 : 0) + (G.belote.queenPlayed ? 1 : 0);
+    if (carte.rank === "K") G.belote.kingPlayed = true;
+    if (carte.rank === "Q") G.belote.queenPlayed = true;
+    const count =
+      (G.belote.kingPlayed ? 1 : 0) + (G.belote.queenPlayed ? 1 : 0);
     if (count === 1 && !G.belote.beloteDeclared) {
       G.belote.beloteDeclared = true;
       log(`${seatName(seat)} annonce Belote.`);
-    } else if (count === 2 && G.belote.beloteDeclared && !G.belote.rebeloteDeclared) {
+    } else if (
+      count === 2 &&
+      G.belote.beloteDeclared &&
+      !G.belote.rebeloteDeclared
+    ) {
       G.belote.rebeloteDeclared = true;
       log(`${seatName(seat)} annonce Rebelote.`);
     }
@@ -761,11 +979,11 @@
     const defense = 1 - preneurs;
     const beloteValide = G.belote.beloteDeclared && G.belote.rebeloteDeclared;
     let reussi;
-    if (G.contract.type === 'NUMERIQUE') {
+    if (G.contract.type === "NUMERIQUE") {
       let seuil = G.contract.montant === 80 ? 82 : G.contract.montant;
       if (beloteValide) seuil = Math.max(81, seuil - 20);
       reussi = G.pointsPlis[preneurs] >= seuil;
-    } else if (G.contract.type === 'CAPOT') {
+    } else if (G.contract.type === "CAPOT") {
       reussi = G.plisGagnes[preneurs] === 8;
     } else {
       reussi = G.plisGagnes[preneurs] === 8 && beloteValide;
@@ -780,32 +998,45 @@
     G.scores[defense] += gainDefense;
 
     G.dernierResultat = {
-      reussi, preneurs, gain: reussi ? gainPreneurs : gainDefense,
-      montant: G.contract.montant, atout: G.contract.atout, multiplicateur: G.multiplicateur,
+      reussi,
+      preneurs,
+      gain: reussi ? gainPreneurs : gainDefense,
+      montant: G.contract.montant,
+      atout: G.contract.atout,
+      multiplicateur: G.multiplicateur,
     };
-    log(reussi
-      ? `Contrat de ${G.contract.montant} ${SUIT_NAME[G.contract.atout]} réussi (${SEAT_POS[visualPos(G.contract.preneur)]}) : +${gainPreneurs} pour ${preneurs === teamOf(G.you) ? 'votre équipe' : "l'adversaire"}.`
-      : `Contrat de ${G.contract.montant} ${SUIT_NAME[G.contract.atout]} chuté : +${gainDefense} pour la défense.`);
+    log(
+      reussi
+        ? `Contrat de ${G.contract.montant} ${SUIT_NAME[G.contract.atout]} réussi (${SEAT_POS[visualPos(G.contract.preneur)]}) : +${gainPreneurs} pour ${preneurs === teamOf(G.you) ? "votre équipe" : "l'adversaire"}.`
+        : `Contrat de ${G.contract.montant} ${SUIT_NAME[G.contract.atout]} chuté : +${gainDefense} pour la défense.`,
+    );
 
-    G.phase = 'SCORE';
+    G.phase = "SCORE";
     render();
 
     if (G.scores[0] >= 1010 || G.scores[1] >= 1010) {
-      G.timers.scoreDisplay = setTimeout(() => { G.phase = 'TERMINEE'; render(); }, 5000);
+      G.timers.scoreDisplay = setTimeout(() => {
+        G.phase = "TERMINEE";
+        render();
+      }, 5000);
     } else {
       G.timers.scoreDisplay = setTimeout(startNewDonne, 5000);
     }
   }
 
   function applyAction(seat, action) {
-    if (!G || G.phase === 'TERMINEE') return;
+    if (!G || G.phase === "TERMINEE") return;
 
-    if (action.type === 'PASSER') {
-      if (G.phase !== 'ENCHERES' || seat !== G.joueurActif) return;
+    if (action.type === "PASSER") {
+      if (G.phase !== "ENCHERES" || seat !== G.joueurActif) return;
       log(`${seatName(seat)} passe.`);
       G.passesConsecutives++;
       if (!G.contract) {
-        if (G.passesConsecutives === 4) { log('Quatre passes : nouvelle donne.'); startNewDonne(); return; }
+        if (G.passesConsecutives === 4) {
+          log("Quatre passes : nouvelle donne.");
+          startNewDonne();
+          return;
+        }
         G.joueurActif = suivant(seat);
         startTurn();
       } else if (G.passesConsecutives >= 3) {
@@ -818,13 +1049,22 @@
       return;
     }
 
-    if (action.type === 'ENCHERIR') {
-      if (G.phase !== 'ENCHERES' || seat !== G.joueurActif) return;
+    if (action.type === "ENCHERIR") {
+      if (G.phase !== "ENCHERES" || seat !== G.joueurActif) return;
       const montant = action.montant;
       if (!ALLOWED_BIDS.includes(montant)) return;
       if (G.contract && montant <= G.contract.montant) return;
       G.contractCounter = (G.contractCounter || 0) + 1;
-      G.contract = { id: G.contractCounter, type: bidType(montant), montant, atout: action.atout, preneur: seat, equipePreneur: teamOf(seat), coinche: false, surcoinche: false };
+      G.contract = {
+        id: G.contractCounter,
+        type: bidType(montant),
+        montant,
+        atout: action.atout,
+        preneur: seat,
+        equipePreneur: teamOf(seat),
+        coinche: false,
+        surcoinche: false,
+      };
       G.passesConsecutives = 0;
       log(`${seatName(seat)} enchérit ${montant} ${SUIT_NAME[action.atout]}.`);
       G.joueurActif = suivant(seat);
@@ -834,26 +1074,29 @@
       return;
     }
 
-    if (action.type === 'COINCHER') {
-      if (G.phase !== 'ENCHERES' || !G.contract || G.contract.coinche) return;
+    if (action.type === "COINCHER") {
+      if (G.phase !== "ENCHERES" || !G.contract || G.contract.coinche) return;
       if (teamOf(seat) === G.contract.equipePreneur) return;
       G.contract.coinche = true;
       G.multiplicateur = 2;
       clearTurnTimers();
-      G.phase = 'SURCOINCHE';
+      G.phase = "SURCOINCHE";
       G.turnTotalDuration = SURCOINCHE_DURATION_MS;
       G.echeance = Date.now() + G.turnTotalDuration;
       log(`${seatName(seat)} coinche !`);
       G.timers.turn = setTimeout(() => {
-        if (G.phase === 'SURCOINCHE') { log('Surcoinche non utilisée.'); startPlayPhase(); }
+        if (G.phase === "SURCOINCHE") {
+          log("Surcoinche non utilisée.");
+          startPlayPhase();
+        }
       }, SURCOINCHE_DURATION_MS);
       render();
       maybeBotsConsiderSurcoinche();
       return;
     }
 
-    if (action.type === 'SURCOINCHER') {
-      if (G.phase !== 'SURCOINCHE' || G.contract.surcoinche) return;
+    if (action.type === "SURCOINCHER") {
+      if (G.phase !== "SURCOINCHE" || G.contract.surcoinche) return;
       if (teamOf(seat) !== G.contract.equipePreneur) return;
       G.contract.surcoinche = true;
       G.multiplicateur = 4;
@@ -863,8 +1106,8 @@
       return;
     }
 
-    if (action.type === 'JOUER') {
-      if (G.phase !== 'JEU' || seat !== G.joueurActif) return;
+    if (action.type === "JOUER") {
+      if (G.phase !== "JEU" || seat !== G.joueurActif) return;
       const hand = G.hands[seat];
       const idx = hand.findIndex((c) => c.id === action.carte.id);
       if (idx === -1) return;
@@ -872,7 +1115,9 @@
       if (!legal.some((c) => c.id === action.carte.id)) return;
 
       const fromRect = captureOrigin(seat, action.carte);
-      const couleurDemandeeAvant = G.pliCourant.length ? G.pliCourant[0].carte.suit : null;
+      const couleurDemandeeAvant = G.pliCourant.length
+        ? G.pliCourant[0].carte.suit
+        : null;
       clearTurnTimers();
       const carte = hand.splice(idx, 1)[0];
       G.pliCourant.push({ siege: seat, carte });
@@ -930,16 +1175,22 @@
   }
 
   function lockContractAndStartPlay() {
-    log(`Contrat verrouillé : ${G.contract.montant} ${SUIT_NAME[G.contract.atout]} par ${seatName(G.contract.preneur)}.`);
+    log(
+      `Contrat verrouillé : ${G.contract.montant} ${SUIT_NAME[G.contract.atout]} par ${seatName(G.contract.preneur)}.`,
+    );
     const preneurHand = G.mainsInitiales[G.contract.preneur];
-    const hasKing = preneurHand.some((c) => c.suit === G.contract.atout && c.rank === 'K');
-    const hasQueen = preneurHand.some((c) => c.suit === G.contract.atout && c.rank === 'Q');
+    const hasKing = preneurHand.some(
+      (c) => c.suit === G.contract.atout && c.rank === "K",
+    );
+    const hasQueen = preneurHand.some(
+      (c) => c.suit === G.contract.atout && c.rank === "Q",
+    );
     G.belote.holder = hasKing && hasQueen ? G.contract.preneur : null;
     startPlayPhase();
   }
 
   function startPlayPhase() {
-    G.phase = 'JEU';
+    G.phase = "JEU";
     G.joueurActif = suivant(G.donneur);
     startTurn();
     render();
@@ -951,44 +1202,71 @@
 
   // ---- Rendu ---------------------------------------------------------
 
-  function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function esc(s) {
+    return String(s).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c],
+    );
+  }
 
   function cardImg(card, extraClass, extraStyle) {
-    return `<img class="card-img ${extraClass || ''}" style="${extraStyle || ''}" src="../assets/images/cards/${card.id}.png" alt="${esc(cardLabel(card))}" data-card="${card.id}">`;
+    return `<img class="card-img ${extraClass || ""}" style="${extraStyle || ""}" src="../assets/images/cards/${card.id}.png" alt="${esc(cardLabel(card))}" data-card="${card.id}">`;
   }
 
   function phaseLabel() {
-    return {
-      ENCHERES: 'Enchères', SURCOINCHE: 'Surcoinche possible', JEU: 'En jeu',
-      SCORE: 'Résultat de la donne', TERMINEE: 'Partie terminée',
-    }[G.phase] || G.phase;
+    return (
+      {
+        ENCHERES: "Enchères",
+        SURCOINCHE: "Surcoinche possible",
+        JEU: "En jeu",
+        SCORE: "Résultat de la donne",
+        TERMINEE: "Partie terminée",
+      }[G.phase] || G.phase
+    );
   }
 
   // La table ovale (#live-table, déjà présente dans la page comme aperçu
   // statique) devient la vraie table de jeu : sièges, jeton donneur, pli
   // central et contrat s'affichent directement dessus.
 
-  const COMPASS_LABEL = { north: 'Nord', south: 'Sud', east: 'Est', west: 'Ouest' };
+  const COMPASS_LABEL = {
+    north: "Nord",
+    south: "Sud",
+    east: "Est",
+    west: "Ouest",
+  };
 
   function seatCardBacks(seat) {
     const remaining = G.hands[seat].length;
-    let imgs = '';
+    let imgs = "";
     for (let i = 0; i < remaining; i++) {
       imgs += `<img class="seat-card-back" src="../assets/images/cards/back.svg" alt="" style="z-index:${i}">`;
     }
-    return `<span class="seat-cardrow" title="${remaining} carte${remaining > 1 ? 's' : ''} restante${remaining > 1 ? 's' : ''}">${imgs}</span>`;
+    return `<span class="seat-cardrow" title="${remaining} carte${remaining > 1 ? "s" : ""} restante${remaining > 1 ? "s" : ""}">${imgs}</span>`;
   }
 
   function renderLiveSeat(compass, seat) {
-    const active = !G.resolvingTrick && G.joueurActif === seat && (G.phase === 'ENCHERES' || G.phase === 'JEU');
+    const active =
+      !G.resolvingTrick &&
+      G.joueurActif === seat &&
+      (G.phase === "ENCHERES" || G.phase === "JEU");
     const isPreneur = G.contract && G.contract.preneur === seat;
     const isDealer = G.donneur === seat;
-    const showsBid = isPreneur && (G.phase === 'ENCHERES' || G.phase === 'SURCOINCHE' || G.phase === 'JEU');
-    return `<span class="seat ${compass}${active ? ' is-active' : ''}${isPreneur ? ' is-preneur' : ''}">
-      ${isDealer ? '<span class="dealer-chip" title="Donneur">D</span>' : ''}
+    const showsBid =
+      isPreneur &&
+      (G.phase === "ENCHERES" || G.phase === "SURCOINCHE" || G.phase === "JEU");
+    return `<span class="seat ${compass}${active ? " is-active" : ""}${isPreneur ? " is-preneur" : ""}">
+      ${isDealer ? '<span class="dealer-chip" title="Donneur">D</span>' : ""}
       <span class="seat-name">${esc(seatName(seat))} <span class="seat-compass">(${COMPASS_LABEL[compass]})</span></span>
-      ${showsBid ? `<span class="seat-bid">${SUIT_SYMBOL[G.contract.atout]} ${G.contract.montant}${G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : ''}</span>` : ''}
-      ${seat === G.you ? '' : seatCardBacks(seat)}
+      ${showsBid ? `<span class="seat-bid">${SUIT_SYMBOL[G.contract.atout]} ${G.contract.montant}${G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : ""}</span>` : ""}
+      ${seat === G.you ? "" : seatCardBacks(seat)}
     </span>`;
   }
 
@@ -996,13 +1274,17 @@
     // Le contrat s'affiche déjà sous le siège du dernier qui a annoncé
     // (badge .seat-bid) : pas besoin d'un doublon flottant au centre, qui
     // ne fait que grignoter la place du pli lui-même.
-    let slots = '';
+    let slots = "";
     for (let pos = 0; pos < 4; pos++) {
       const seat = (G.you + pos) % 4;
       const entry = G.pliCourant.find((e) => e.siege === seat);
-      const collecting = G.resolvingTrick && G.resolvingTrick.collecting ? ' is-collecting' : '';
-      const winner = G.resolvingTrick && G.resolvingTrick.winnerSeat === seat ? ' is-winner' : '';
-      slots += `<div class="trick-slot pos-${pos}${collecting}${winner}" data-seat="${seat}">${entry ? cardImg(entry.carte) : ''}</div>`;
+      const collecting =
+        G.resolvingTrick && G.resolvingTrick.collecting ? " is-collecting" : "";
+      const winner =
+        G.resolvingTrick && G.resolvingTrick.winnerSeat === seat
+          ? " is-winner"
+          : "";
+      slots += `<div class="trick-slot pos-${pos}${collecting}${winner}" data-seat="${seat}">${entry ? cardImg(entry.carte) : ""}</div>`;
     }
     return `<div class="center-trick">${slots}</div>`;
   }
@@ -1015,10 +1297,12 @@
 
   function captureOrigin(seat, carte) {
     if (seat === G.you) {
-      const el = els.root?.querySelector(`.game-hand .card-img[data-card="${carte.id}"]`);
+      const el = els.root?.querySelector(
+        `.game-hand .card-img[data-card="${carte.id}"]`,
+      );
       return el ? el.getBoundingClientRect() : null;
     }
-    const compass = ['south', 'east', 'north', 'west'][(seat - G.you + 4) % 4];
+    const compass = ["south", "east", "north", "west"][(seat - G.you + 4) % 4];
     const el = els.table?.querySelector(`.seat.${compass}`);
     return el ? el.getBoundingClientRect() : null;
   }
@@ -1026,75 +1310,103 @@
   function flyPlayedCard(seat, carte, fromRect) {
     if (!fromRect || !els.table) return;
     const slot = els.table.querySelector(`.trick-slot[data-seat="${seat}"]`);
-    const img = slot?.querySelector('img');
+    const img = slot?.querySelector("img");
     if (!img || !img.animate) return;
     const toRect = img.getBoundingClientRect();
-    const dx = (fromRect.left + fromRect.width / 2) - (toRect.left + toRect.width / 2);
-    const dy = (fromRect.top + fromRect.height / 2) - (toRect.top + toRect.height / 2);
-    const scale = Math.max(0.35, Math.min(1.8, fromRect.width / (toRect.width || 1)));
-    img.animate([
-      { transform: `translate(${dx}px, ${dy}px) scale(${scale}) rotate(-10deg)`, opacity: 0.85 },
-      { transform: 'translate(0, 0) scale(1) rotate(0deg)', opacity: 1 },
-    ], { duration: 380, easing: 'cubic-bezier(.22,.8,.3,1)' });
+    const dx =
+      fromRect.left + fromRect.width / 2 - (toRect.left + toRect.width / 2);
+    const dy =
+      fromRect.top + fromRect.height / 2 - (toRect.top + toRect.height / 2);
+    const scale = Math.max(
+      0.35,
+      Math.min(1.8, fromRect.width / (toRect.width || 1)),
+    );
+    img.animate(
+      [
+        {
+          transform: `translate(${dx}px, ${dy}px) scale(${scale}) rotate(-10deg)`,
+          opacity: 0.85,
+        },
+        { transform: "translate(0, 0) scale(1) rotate(0deg)", opacity: 1 },
+      ],
+      { duration: 380, easing: "cubic-bezier(.22,.8,.3,1)" },
+    );
   }
 
   function renderLiveTable() {
     if (!els.table) return;
     els.table.innerHTML = `
-      ${renderLiveSeat('north', (G.you + 2) % 4)}
-      ${renderLiveSeat('west', (G.you + 3) % 4)}
-      ${renderLiveSeat('east', (G.you + 1) % 4)}
+      ${renderLiveSeat("north", (G.you + 2) % 4)}
+      ${renderLiveSeat("west", (G.you + 3) % 4)}
+      ${renderLiveSeat("east", (G.you + 1) % 4)}
       <div class="table-center is-live">${renderLiveTrick()}</div>
-      ${renderLiveSeat('south', G.you)}
+      ${renderLiveSeat("south", G.you)}
     `;
   }
 
   function renderTimerWrap() {
-    if (G.resolvingTrick) return '';
-    if (G.phase === 'ENCHERES' || G.phase === 'JEU') {
-      const who = G.joueurActif === G.you ? 'à vous de jouer' : `au tour de <b>${esc(seatName(G.joueurActif))}</b>`;
+    if (G.resolvingTrick) return "";
+    if (G.phase === "ENCHERES" || G.phase === "JEU") {
+      const who =
+        G.joueurActif === G.you
+          ? "à vous de jouer"
+          : `au tour de <b>${esc(seatName(G.joueurActif))}</b>`;
       return `<div class="turn-timer-wrap"><span class="turn-dot"></span><span>${who}</span><div class="turn-timer"><div class="turn-timer-fill" id="turn-timer-fill"></div></div></div>`;
     }
-    if (G.phase === 'SURCOINCHE') {
+    if (G.phase === "SURCOINCHE") {
       return `<div class="turn-timer-wrap"><span class="turn-dot"></span><span>Surcoinche possible</span><div class="turn-timer"><div class="turn-timer-fill" id="turn-timer-fill"></div></div></div>`;
     }
-    return '';
+    return "";
   }
 
   function activateTimerBar() {
     if (G.resolvingTrick || !G.echeance) return;
-    if (G.phase !== 'ENCHERES' && G.phase !== 'JEU' && G.phase !== 'SURCOINCHE') return;
-    const fill = document.getElementById('turn-timer-fill');
+    if (G.phase !== "ENCHERES" && G.phase !== "JEU" && G.phase !== "SURCOINCHE")
+      return;
+    const fill = document.getElementById("turn-timer-fill");
     if (!fill) return;
     const total = G.turnTotalDuration || 15000;
     const remaining = Math.max(0, G.echeance - Date.now());
     const fraction = total ? remaining / total : 0;
-    fill.style.transition = 'none';
+    fill.style.transition = "none";
     fill.style.width = `${fraction * 100}%`;
-    fill.classList.toggle('is-warning', fraction < 0.45 && fraction >= 0.2);
-    fill.classList.toggle('is-danger', fraction < 0.2);
+    fill.classList.toggle("is-warning", fraction < 0.45 && fraction >= 0.2);
+    fill.classList.toggle("is-danger", fraction < 0.2);
     // Forcer un reflow pour que le navigateur reparte bien de cette largeur avant d'animer.
     void fill.offsetWidth;
     fill.style.transition = `width ${remaining}ms linear`;
-    requestAnimationFrame(() => { fill.style.width = '0%'; });
+    requestAnimationFrame(() => {
+      fill.style.width = "0%";
+    });
 
-    clearTimer('timerWarn');
-    clearTimer('timerDanger');
+    clearTimer("timerWarn");
+    clearTimer("timerDanger");
     const toWarning = Math.max(0, remaining - total * 0.45);
     const toDanger = Math.max(0, remaining - total * 0.2);
-    G.timers.timerWarn = setTimeout(() => document.getElementById('turn-timer-fill')?.classList.add('is-warning'), toWarning);
+    G.timers.timerWarn = setTimeout(
+      () =>
+        document.getElementById("turn-timer-fill")?.classList.add("is-warning"),
+      toWarning,
+    );
     G.timers.timerDanger = setTimeout(() => {
-      const f = document.getElementById('turn-timer-fill');
-      if (f) { f.classList.remove('is-warning'); f.classList.add('is-danger'); }
+      const f = document.getElementById("turn-timer-fill");
+      if (f) {
+        f.classList.remove("is-warning");
+        f.classList.add("is-danger");
+      }
     }, toDanger);
   }
 
   function bidReadout(value) {
-    return value === 250 ? 'Capot' : value === 270 ? 'Capot Beloté' : String(value);
+    return value === 250
+      ? "Capot"
+      : value === 270
+        ? "Capot Beloté"
+        : String(value);
   }
 
   function renderBiddingPanel() {
-    if (G.phase !== 'ENCHERES' || G.joueurActif !== G.you) return '';
+    if (G.phase !== "ENCHERES" || G.joueurActif !== G.you) return "";
     const min = G.contract ? G.contract.montant : 0;
     const options = ALLOWED_BIDS.filter((b) => b > min);
 
@@ -1106,15 +1418,16 @@
     if (!els.selectedSuit) els.selectedSuit = SUITS[0];
     const index = Math.min(els.selectedBidIndex || 0, options.length - 1);
     const value = options[index];
-    const fill = options.length > 1 ? (index / (options.length - 1)) * 100 : 100;
+    const fill =
+      options.length > 1 ? (index / (options.length - 1)) * 100 : 100;
 
     return `<div class="bidding-panel">
       <div class="bid-suits">
-        ${SUITS.map((s) => `<button type="button" class="bid-suit-swatch ${RED_SUITS.has(s) ? 'red' : ''} ${s === els.selectedSuit ? 'is-selected' : ''}" data-suit="${s}">${SUIT_SYMBOL[s]}</button>`).join('')}
+        ${SUITS.map((s) => `<button type="button" class="bid-suit-swatch ${RED_SUITS.has(s) ? "red" : ""} ${s === els.selectedSuit ? "is-selected" : ""}" data-suit="${s}">${SUIT_SYMBOL[s]}</button>`).join("")}
       </div>
       <div class="bid-slider-wrap">
         <div class="bid-slider-readout"><b>${bidReadout(value)}</b></div>
-        <input type="range" class="bid-amount-slider" style="--fill:${fill}%" min="0" max="${options.length - 1}" step="1" value="${index}" data-options="${options.join(',')}">
+        <input type="range" class="bid-amount-slider" style="--fill:${fill}%" min="0" max="${options.length - 1}" step="1" value="${index}" data-options="${options.join(",")}">
         <div class="bid-slider-scale"><span>${bidReadout(options[0])}</span><span>${bidReadout(options[options.length - 1])}</span></div>
       </div>
       <div class="bid-actions">
@@ -1125,74 +1438,107 @@
   }
 
   function renderCoincheButton() {
-    if (G.phase === 'ENCHERES' && G.contract && !G.contract.coinche && teamOf(G.you) !== G.contract.equipePreneur) {
+    if (
+      G.phase === "ENCHERES" &&
+      G.contract &&
+      !G.contract.coinche &&
+      teamOf(G.you) !== G.contract.equipePreneur
+    ) {
       return `<button type="button" class="button outline" data-action="coincher">Coincher</button>`;
     }
-    if (G.phase === 'SURCOINCHE' && !G.contract.surcoinche && teamOf(G.you) === G.contract.equipePreneur) {
+    if (
+      G.phase === "SURCOINCHE" &&
+      !G.contract.surcoinche &&
+      teamOf(G.you) === G.contract.equipePreneur
+    ) {
       return `<button type="button" class="button primary" data-action="surcoincher">Surcoincher</button>`;
     }
-    return '';
+    return "";
   }
 
   function renderLastTrickButton() {
-    if (!G.lastTrick) return '';
+    if (!G.lastTrick) return "";
     // Bouton ancré à gauche de l'écran, à l'écart des contrôles centraux —
     // symétrique du bouton « Règles » qui vit lui à droite.
-    return `<button type="button" class="last-trick-btn" data-action="toggle-last-trick" aria-expanded="${els.showLastTrick ? 'true' : 'false'}">${els.showLastTrick ? 'Masquer' : 'Voir'} le pli précédent</button>`;
+    return `<button type="button" class="last-trick-btn" data-action="toggle-last-trick" aria-expanded="${els.showLastTrick ? "true" : "false"}">${els.showLastTrick ? "Masquer" : "Voir"} le pli précédent</button>`;
   }
 
   function renderLastTrickPanel() {
-    if (!els.showLastTrick || !G.lastTrick) return '';
+    if (!els.showLastTrick || !G.lastTrick) return "";
     const bySeat = {};
-    G.lastTrick.cards.forEach((e) => { bySeat[e.siege] = e.carte; });
+    G.lastTrick.cards.forEach((e) => {
+      bySeat[e.siege] = e.carte;
+    });
     const order = [G.you, (G.you + 1) % 4, (G.you + 2) % 4, (G.you + 3) % 4];
     return `<div class="last-trick-panel">
       <span class="eyebrow">PLI PRÉCÉDENT</span>
       <div class="last-trick-cards">
-        ${order.map((seat) => `<div class="last-trick-card${seat === G.lastTrick.winnerSeat ? ' is-winner' : ''}">
+        ${order
+          .map(
+            (
+              seat,
+            ) => `<div class="last-trick-card${seat === G.lastTrick.winnerSeat ? " is-winner" : ""}">
           ${cardImg(bySeat[seat])}
           <span>${esc(seatName(seat))}</span>
-        </div>`).join('')}
+        </div>`,
+          )
+          .join("")}
       </div>
     </div>`;
   }
 
   function renderHand() {
     const hand = G.hands[G.you].slice().sort((a, b) => {
-      if (a.suit !== b.suit) return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
+      if (a.suit !== b.suit)
+        return SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
       return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
     });
-    const yourTurnToPlay = G.phase === 'JEU' && G.joueurActif === G.you && !G.resolvingTrick;
-    const legal = yourTurnToPlay && G.contract
-      ? computeLegal(hand, G.pliCourant, G.contract.atout, G.you).map((c) => c.id)
-      : [];
+    const yourTurnToPlay =
+      G.phase === "JEU" && G.joueurActif === G.you && !G.resolvingTrick;
+    const legal =
+      yourTurnToPlay && G.contract
+        ? computeLegal(hand, G.pliCourant, G.contract.atout, G.you).map(
+            (c) => c.id,
+          )
+        : [];
     // L'animation d'apparition ne doit jouer qu'une fois, à la distribution
     // de la donne — pas à chaque re-rendu (annonce d'un adversaire, etc.),
     // sinon les cartes semblent « clignoter » à tout bout de champ.
     const freshDeal = els.dealtDonneNumber !== G.donneNumero;
     els.dealtDonneNumber = G.donneNumero;
-    return `<div class="game-hand">${hand.map((c, i) => {
-      const isLegal = legal.includes(c.id);
-      const clickable = yourTurnToPlay && isLegal;
-      const cls = [clickable ? 'is-legal' : (yourTurnToPlay ? 'is-illegal' : ''), freshDeal ? 'is-dealt' : ''].filter(Boolean).join(' ');
-      const style = freshDeal ? `animation-delay:${i * 35}ms` : '';
-      return cardImg(c, cls, style);
-    }).join('')}${yourTurnToPlay ? '<span class="game-hand-prompt">À vous de jouer — choisissez une carte</span>' : ''}</div>`;
+    return `<div class="game-hand">${hand
+      .map((c, i) => {
+        const isLegal = legal.includes(c.id);
+        const clickable = yourTurnToPlay && isLegal;
+        const cls = [
+          clickable ? "is-legal" : yourTurnToPlay ? "is-illegal" : "",
+          freshDeal ? "is-dealt" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const style = freshDeal ? `animation-delay:${i * 35}ms` : "";
+        return cardImg(c, cls, style);
+      })
+      .join(
+        "",
+      )}${yourTurnToPlay ? '<span class="game-hand-prompt">À vous de jouer — choisissez une carte</span>' : ""}</div>`;
   }
 
   function renderScoreBanner() {
-    if (G.phase !== 'SCORE' || !G.dernierResultat) return '';
+    if (G.phase !== "SCORE" || !G.dernierResultat) return "";
     const r = G.dernierResultat;
-    return `<div class="score-banner ${r.reussi ? 'ok' : 'ko'}">
-      <b>${r.reussi ? 'Contrat réussi' : 'Contrat chuté'}</b>
-      <span>${r.montant} ${SUIT_NAME[r.atout]}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ''} — +${r.gain} points</span>
+    return `<div class="score-banner ${r.reussi ? "ok" : "ko"}">
+      <b>${r.reussi ? "Contrat réussi" : "Contrat chuté"}</b>
+      <span>${r.montant} ${SUIT_NAME[r.atout]}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} — +${r.gain} points</span>
     </div>`;
   }
 
   function renderEndBanner() {
-    if (G.phase !== 'TERMINEE') return '';
-    const youWin = (teamOf(G.you) === 0 ? G.scores[0] : G.scores[1]) >= 1010 && G.scores[teamOf(G.you)] > G.scores[1 - teamOf(G.you)];
-    return `<div class="score-banner ${youWin ? 'ok' : 'ko'}">
+    if (G.phase !== "TERMINEE") return "";
+    const youWin =
+      (teamOf(G.you) === 0 ? G.scores[0] : G.scores[1]) >= 1010 &&
+      G.scores[teamOf(G.you)] > G.scores[1 - teamOf(G.you)];
+    return `<div class="score-banner ${youWin ? "ok" : "ko"}">
       <b>Partie terminée</b>
       <span>Équipe A ${G.scores[0]} — Équipe B ${G.scores[1]}</span>
       <button type="button" class="button primary" data-action="restart">Nouvelle partie</button>
@@ -1204,13 +1550,13 @@
     renderLiveTable();
 
     const yourTeam = teamOf(G.you);
-    const tallyLive = G.contract && (G.phase === 'JEU' || G.resolvingTrick);
+    const tallyLive = G.contract && (G.phase === "JEU" || G.resolvingTrick);
     els.root.innerHTML = `
       <div class="game-panel-header">
         <div><span class="eyebrow green">DONNE #${G.donneNumero - 1} · ${esc(phaseLabel())}</span>
         <div class="scoreboard">
-          <div class="score-tile ${yourTeam === 0 ? 'you' : ''}"><b>${G.scores[0]}</b><span>Équipe A</span>${tallyLive ? `<small class="live-tally">+${G.pointsPlis[0]} cette donne</small>` : ''}</div>
-          <div class="score-tile ${yourTeam === 1 ? 'you' : ''}"><b>${G.scores[1]}</b><span>Équipe B</span>${tallyLive ? `<small class="live-tally">+${G.pointsPlis[1]} cette donne</small>` : ''}</div>
+          <div class="score-tile ${yourTeam === 0 ? "you" : ""}"><b>${G.scores[0]}</b><span>Équipe A</span>${tallyLive ? `<small class="live-tally">+${G.pointsPlis[0]} cette donne</small>` : ""}</div>
+          <div class="score-tile ${yourTeam === 1 ? "you" : ""}"><b>${G.scores[1]}</b><span>Équipe B</span>${tallyLive ? `<small class="live-tally">+${G.pointsPlis[1]} cette donne</small>` : ""}</div>
         </div></div>
         <button type="button" class="button outline" data-action="quit">Quitter la table</button>
       </div>
@@ -1224,65 +1570,66 @@
       ${renderLastTrickButton()}
       ${renderLastTrickPanel()}
       ${renderHand()}
-      <ul class="game-log">${G.log.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+      <ul class="game-log">${G.log.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
     `;
     activateTimerBar();
   }
 
   function bindEvents() {
-    els.root.addEventListener('input', (event) => {
-      const slider = event.target.closest('.bid-amount-slider');
+    els.root.addEventListener("input", (event) => {
+      const slider = event.target.closest(".bid-amount-slider");
       if (!slider) return;
-      const options = slider.dataset.options.split(',').map(Number);
+      const options = slider.dataset.options.split(",").map(Number);
       const index = Number(slider.value);
       els.selectedBidIndex = index;
-      const fill = options.length > 1 ? (index / (options.length - 1)) * 100 : 100;
-      slider.style.setProperty('--fill', `${fill}%`);
-      const readout = els.root.querySelector('.bid-slider-readout b');
+      const fill =
+        options.length > 1 ? (index / (options.length - 1)) * 100 : 100;
+      slider.style.setProperty("--fill", `${fill}%`);
+      const readout = els.root.querySelector(".bid-slider-readout b");
       if (readout) readout.textContent = bidReadout(options[index]);
     });
 
-    els.root.addEventListener('click', (event) => {
-      const cardEl = event.target.closest('.card-img.is-legal');
-      if (cardEl && G.phase === 'JEU' && G.joueurActif === G.you) {
+    els.root.addEventListener("click", (event) => {
+      const cardEl = event.target.closest(".card-img.is-legal");
+      if (cardEl && G.phase === "JEU" && G.joueurActif === G.you) {
         const card = G.hands[G.you].find((c) => c.id === cardEl.dataset.card);
-        if (card) applyAction(G.you, { type: 'JOUER', carte: card });
+        if (card) applyAction(G.you, { type: "JOUER", carte: card });
         return;
       }
 
-      const suitBtn = event.target.closest('.bid-suit-swatch');
+      const suitBtn = event.target.closest(".bid-suit-swatch");
       if (suitBtn) {
         els.selectedSuit = suitBtn.dataset.suit;
         render();
         return;
       }
 
-      const button = event.target.closest('button[data-action]');
+      const button = event.target.closest("button[data-action]");
       if (!button) return;
       const action = button.dataset.action;
 
-      if (action === 'encherir') {
-        const slider = els.root.querySelector('.bid-amount-slider');
-        const options = slider.dataset.options.split(',').map(Number);
+      if (action === "encherir") {
+        const slider = els.root.querySelector(".bid-amount-slider");
+        const options = slider.dataset.options.split(",").map(Number);
         const montant = options[Number(slider.value)];
         const suit = els.selectedSuit || SUITS[0];
-        applyAction(G.you, { type: 'ENCHERIR', montant, atout: suit });
+        applyAction(G.you, { type: "ENCHERIR", montant, atout: suit });
         els.selectedSuit = null;
         els.bidPanelMin = undefined;
-      } else if (action === 'passer') {
-        applyAction(G.you, { type: 'PASSER' });
-      } else if (action === 'coincher') {
-        applyAction(G.you, { type: 'COINCHER' });
-      } else if (action === 'surcoincher') {
-        applyAction(G.you, { type: 'SURCOINCHER' });
-      } else if (action === 'toggle-last-trick') {
+      } else if (action === "passer") {
+        applyAction(G.you, { type: "PASSER" });
+      } else if (action === "coincher") {
+        applyAction(G.you, { type: "COINCHER" });
+      } else if (action === "surcoincher") {
+        applyAction(G.you, { type: "SURCOINCHER" });
+      } else if (action === "toggle-last-trick") {
         els.showLastTrick = !els.showLastTrick;
         render();
-      } else if (action === 'restart') {
+      } else if (action === "restart") {
         G.scores = [0, 0];
         G.donneNumero = 1;
         startNewDonne();
-      } else if (action === 'quit') {
+      } else if (action === "quit") {
         stop();
       }
     });
@@ -1290,22 +1637,34 @@
 
   function stop() {
     if (!G) return;
-    ['turn', 'bot', 'timerWarn', 'timerDanger', 'scoreDisplay', 'collect', 'sweep'].forEach(clearTimer);
-    els.root.innerHTML = '';
+    [
+      "turn",
+      "bot",
+      "timerWarn",
+      "timerDanger",
+      "scoreDisplay",
+      "collect",
+      "sweep",
+    ].forEach(clearTimer);
+    els.root.innerHTML = "";
     els.root.hidden = true;
-    if (els.table) { els.table.innerHTML = els.tableDefaultHTML; els.table.classList.remove('is-live'); }
-    document.body.classList.remove('is-playing');
+    if (els.table) {
+      els.table.innerHTML = els.tableDefaultHTML;
+      els.table.classList.remove("is-live");
+    }
+    document.body.classList.remove("is-playing");
     G = null;
     if (onExit) onExit();
   }
 
   function start(seats, yourSeatIndex, exitCallback) {
-    const root = document.querySelector('#game-view');
-    const table = document.querySelector('#live-table');
+    const root = document.querySelector("#game-view");
+    const table = document.querySelector("#live-table");
     if (!root) return;
     els.root = root;
     els.table = table;
-    if (table && els.tableDefaultHTML === undefined) els.tableDefaultHTML = table.innerHTML;
+    if (table && els.tableDefaultHTML === undefined)
+      els.tableDefaultHTML = table.innerHTML;
     els.selectedSuit = null;
     els.selectedBidIndex = 0;
     els.bidPanelMin = undefined;
@@ -1313,8 +1672,8 @@
     els.dealtDonneNumber = undefined;
     onExit = exitCallback;
     root.hidden = false;
-    if (table) table.classList.add('is-live');
-    document.body.classList.add('is-playing');
+    if (table) table.classList.add("is-live");
+    document.body.classList.add("is-playing");
 
     G = {
       seats, // [{name,type}]
@@ -1337,7 +1696,7 @@
     };
     bindEvents();
     startNewDonne();
-    (table || root).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    (table || root).scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   window.SCEPICoincheGame = { start, isRunning: () => !!G };
