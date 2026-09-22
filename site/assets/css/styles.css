@@ -119,14 +119,13 @@ button:not(:disabled),a{cursor:pointer}
 .pick-copy h3{margin-bottom:10px}
 .pick-copy p{font-size:14px}
 .pill{display:inline-flex;border:1px solid #ffffff24;border-radius:30px;padding:7px 12px;font-size:10px;font-weight:500;letter-spacing:.02em;color:var(--muted)}
-.event-banner{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.event-banner>div:first-child{padding:42px}
+.event-banner{display:block;min-height:430px;background:linear-gradient(rgba(0,0,0,.28),rgba(0,0,0,.28)),linear-gradient(90deg,rgba(18,18,22,.92) 0%,rgba(18,18,22,.58) 20%,transparent 33%),url("../images/events/poker_baniere.JPG") center / cover no-repeat;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.event-banner>div:first-child{max-width:620px;padding:64px 56px}
 .event-banner h3{font-size:2.7rem;margin:0 0 16px}
 .event-banner p{font-size:14px}
+.event-banner p{color:#fff}
 .event-banner .eyebrow{font-size:10px}
-.event-art{position:relative;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,transparent 0 55px,#b59aeb0a 56px 57px),#221335;overflow:hidden}
-.event-art>span{font-size:clamp(2.5rem,5vw,4.5rem);font-weight:900;line-height:.95;letter-spacing:-.07em;transform:rotate(-8deg);color:#bd9dda}
-.event-art>b{position:absolute;right:5%;bottom:-55px;font-size:220px;font-weight:400;color:var(--gold);transform:rotate(-15deg)}
+.event-art{display:none}
 
 /* Coinche : bannière d'accueil et table --------------------------------- */
 
@@ -436,8 +435,8 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
 
 /* Pages secondaires : intro, asso, contact --------------------------------- */
 
-.page-intro{padding:76px 0 52px;max-width:850px}
-.page-intro p{font-size:18px;max-width:610px}
+.page-intro{padding:76px 0 52px;max-width:none}
+.page-intro p{font-size:18px;max-width:none}
 .about-panel{display:grid;grid-template-columns:.8fr 1fr;gap:60px;align-items:center;padding:40px 60px;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 88% -14%,#f4c60016,transparent 55%),var(--surface)}
 .about-emblem{text-align:center}
 .about-emblem img{width:280px}
@@ -546,12 +545,9 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
   .picks{grid-template-columns:1fr;gap:20px}
   .pick-art{height:210px}
   .pick-copy{padding:24px}
-  .event-banner{grid-template-columns:1fr}
-  .event-banner>div:first-child{padding:28px}
+  .event-banner{min-height:430px;background-position:58% center}
+  .event-banner>div:first-child{max-width:none;padding:36px 28px}
   .event-banner h3{font-size:2.3rem}
-  .event-art{height:235px}
-  .event-art>span{font-size:3.7rem}
-  .event-art>b{font-size:170px;right:10px}
   .coinche-banner{grid-template-columns:1fr;padding:30px;margin-top:48px}
   .coinche-banner h2{font-size:2.6rem}
   .playing-cards{min-height:270px;margin-top:20px;transform:scale(.9);transform-origin:center}
