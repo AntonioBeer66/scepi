@@ -160,10 +160,14 @@
   }
 
   // Estimation du nombre de plis gagnables « seul », sans rien savoir des
-  // mains adverses : longueur et honneurs d'atout (affranchissement), plus
-  // les as et rois gardés dans les autres couleurs (contrôle latéral quasi
-  // garanti). Sert à peser les enchères sur autre chose que le simple total
-  // de points des cartes.
+  // mains adverses : longueur et honneurs d'atout (affranchissement), les
+  // as et rois gardés dans les autres couleurs (contrôle latéral quasi
+  // garanti), et la distribution — un vide ou un singleton dans une couleur
+  // n'est pas neutre : c'est une coupe (quasi) certaine dès le premier tour
+  // de cette couleur, un vrai pli de plus que le simple compte de points ne
+  // voit pas. D'autant plus précieux qu'on a de quoi couper à plusieurs
+  // reprises (longueur d'atout). Sert à peser les enchères sur autre chose
+  // que le simple total de points des cartes.
   function estimateTricks(hand, atout) {
     const trumps = hand.filter((c) => c.suit === atout);
     const trumpHonors = trumps.filter((c) => c.rank === 'J' || c.rank === '9' || c.rank === 'A').length;
@@ -171,7 +175,11 @@
     for (const s of SUITS) {
       if (s === atout) continue;
       const cards = hand.filter((c) => c.suit === s);
-      if (!cards.length) continue;
+      if (!cards.length) {
+        if (trumps.length >= 3) tricks += 1;
+        continue;
+      }
+      if (cards.length === 1 && trumps.length >= 4) tricks += 0.5;
       if (cards.some((c) => c.rank === 'A')) tricks += 1;
       else if (cards.some((c) => c.rank === 'K') && cards.length >= 2) tricks += 0.5;
     }
@@ -282,6 +290,22 @@
     return G.personalities[seat];
   }
 
+  // Un même écart de score ne pèse pas pareil selon qu'on mène ou qu'on est
+  // mené : une équipe menée de loin a plus intérêt à tenter sa chance (les
+  // points perdus sur un contrat chuté comptent moins que ceux qu'il faut
+  // rattraper) — seuils abaissés, donc plus facile à enchérir/monter. À
+  // l'inverse, une équipe proche de la victoire (1010 points) n'a rien à
+  // gagner à un pari inutile — seuils relevés. Valeur à ajouter directement
+  // aux seuils d'enchère (même convention partout : plus haut = plus dur à
+  // déclencher).
+  function scoreUrgencyAdjustment(seat) {
+    const mine = G.scores[teamOf(seat)];
+    const theirs = G.scores[1 - teamOf(seat)];
+    if (theirs - mine >= 150) return -10;
+    if (mine >= 800 && mine - theirs >= 150) return 8;
+    return 0;
+  }
+
   function botDecideBid(seat) {
     const hand = G.hands[seat];
     const p = personality(seat);
@@ -289,10 +313,16 @@
     const current = G.contract;
     const noise = (Math.random() - 0.5) * 16; // incertitude psychologique
     const bluffing = Math.random() < p.bluff;
+    const urgency = scoreUrgencyAdjustment(seat);
 
     if (!current) {
-      const openThreshold = 74 / p.aggr - (bluffing ? 14 : 0) + noise;
+      // Si les trois autres ont déjà passé, notre propre passe relance la
+      // donne pour tout le monde : un peu plus de raisons d'oser une main
+      // tout juste limite plutôt que de la gâcher pour rien.
+      const lastChance = G.passesConsecutives === 3;
+      const openThreshold = 74 / p.aggr - (bluffing ? 14 : 0) + noise - (lastChance ? 10 : 0) + urgency;
       if (score < openThreshold) return { type: 'PASSER' };
+      if (lastChance) log(`${seatName(seat)} ouvre en dernier recours pour éviter la redonne…`);
       const trumpCount = hand.filter((c) => c.suit === suit).length;
       if (hasBelote(hand, suit)) log(`${seatName(seat)} sent la belote dans sa main…`);
       if (score >= 132 && trumpCount >= 5 && Math.random() < 0.35 * p.aggr) {
@@ -320,9 +350,15 @@
     }
 
     if (partnerIsPreneur) {
-      // Le partenaire a annoncé : on additionne sa force supposée (déduite
-      // de son enchère) à la nôtre pour juger si on peut monter le contrat.
-      const partnerEstimate = current.montant - 6;
+      // Le partenaire a annoncé cette couleur : on additionne sa force
+      // supposée (déduite de son enchère) à la nôtre. Mais on connaît une
+      // chose qu'il ignore avoir révélée : notre propre nombre d'atouts
+      // dans SA couleur. Plus on en tient, moins il peut lui en rester (à
+      // deux, huit cartes maximum par couleur) — sa force réelle y est
+      // probablement plus faible que l'estimation à plat ne suppose, et
+      // inversement si on n'en a aucune.
+      const myTrumpsOfContractSuit = hand.filter((c) => c.suit === current.atout).length;
+      const partnerEstimate = current.montant - 6 + (2 - myTrumpsOfContractSuit) * 4;
       let combined = score + partnerEstimate * 0.55;
 
       // Raisonnement psychologique : le bot ne voit jamais les cartes des
@@ -338,20 +374,40 @@
         combined += acesHorsAtout >= 2 ? 20 : 8;
       }
 
-      const raiseThreshold = current.montant + 18 / p.aggr - noise;
-      if (combined >= raiseThreshold && current.montant < 160 && suit === current.atout) {
-        const montant = Math.min(160, current.montant + raiseBump(combined - raiseThreshold));
-        return { type: 'ENCHERIR', montant, atout: current.atout };
+      const raiseThreshold = current.montant + 18 / p.aggr - noise + urgency;
+      if (combined >= raiseThreshold && current.montant < 250 && suit === current.atout) {
+        // Une main qui, ajoutée à celle déjà annoncée du partenaire, frôle
+        // le capot mérite d'être proposée comme telle plutôt que de monter
+        // palier par palier jusqu'à 160 — jusqu'ici possible seulement en
+        // ouvrant les enchères, jamais en relançant son partenaire.
+        const trumpCount = hand.filter((c) => c.suit === suit).length;
+        if (combined >= 205 && trumpCount >= 5 && Math.random() < 0.3 * p.aggr) {
+          log(`${seatName(seat)} voit le capot derrière l'annonce de son partenaire…`);
+          return { type: 'ENCHERIR', montant: 250, atout: current.atout };
+        }
+        if (current.montant < 160) {
+          const montant = Math.min(160, current.montant + raiseBump(combined - raiseThreshold));
+          return { type: 'ENCHERIR', montant, atout: current.atout };
+        }
       }
       return { type: 'PASSER' };
     }
 
     // L'adversaire est preneur : ne reprendre la main que sur une vraie
     // belle couleur, sans quoi mieux vaut garder la carte de la coinche.
-    const overcallThreshold = current.montant + 30 / p.aggr - (bluffing ? 10 : 0) - noise;
-    if (score >= overcallThreshold && current.montant < 160) {
-      const montant = Math.min(160, current.montant + raiseBump(score - overcallThreshold));
-      return { type: 'ENCHERIR', montant, atout: suit };
+    const overcallThreshold = current.montant + 30 / p.aggr - (bluffing ? 10 : 0) - noise + urgency;
+    if (score >= overcallThreshold && current.montant < 250) {
+      // Même logique de relance directe au capot qu'en soutien du
+      // partenaire, côté reprise de la main sur l'adversaire cette fois.
+      const trumpCount = hand.filter((c) => c.suit === suit).length;
+      if (score >= 205 && trumpCount >= 5 && Math.random() < 0.28 * p.aggr) {
+        log(`${seatName(seat)} reprend la main droit sur le capot…`);
+        return { type: 'ENCHERIR', montant: 250, atout: suit };
+      }
+      if (current.montant < 160) {
+        const montant = Math.min(160, current.montant + raiseBump(score - overcallThreshold));
+        return { type: 'ENCHERIR', montant, atout: suit };
+      }
     }
     return { type: 'PASSER' };
   }
@@ -386,11 +442,14 @@
       // pressentiment : il faut une vraie carte de contrôle, pas juste un
       // atout quelconque.
       const confidence = trumpControlScore(hand, contract.atout) + sideAces * 22;
-      if (confidence < 52 / p.coincheAppetite) return false;
+      if (confidence < 52 / p.coincheAppetite + scoreUrgencyAdjustment(seat)) return false;
       return Math.random() < 0.42 * p.coincheAppetite;
     }
     const confidence = trumpControlScore(hand, contract.atout) + sideAces * 16;
-    const threshold = (78 + (contract.montant - 80) * 0.5) / p.coincheAppetite;
+    // Une défense menée au score a plus à gagner à doubler la mise (et
+    // moins à perdre si elle se trompe) qu'une défense déjà loin devant —
+    // même logique d'urgence que pour les enchères.
+    const threshold = (78 + (contract.montant - 80) * 0.5) / p.coincheAppetite + scoreUrgencyAdjustment(seat);
     if (confidence < threshold) return false;
     return Math.random() < 0.4 * p.coincheAppetite;
   }
@@ -402,7 +461,7 @@
     const hand = G.hands[seat];
     const sideAces = hand.filter((c) => c.rank === 'A' && c.suit !== contract.atout).length;
     const confidence = trumpControlScore(hand, contract.atout) + sideAces * 14;
-    if (confidence < 92 / p.aggr) return false;
+    if (confidence < 92 / p.aggr + scoreUrgencyAdjustment(seat)) return false;
     return Math.random() < 0.6 * p.aggr;
   }
 
@@ -455,6 +514,41 @@
     return Math.max(0, 8 - inHand - seenCount);
   }
 
+  // Une carte est certainement maîtresse de sa couleur si toutes les cartes
+  // plus fortes qu'elle dans cette couleur sont soit déjà vues (jouées),
+  // soit encore dans notre propre main (donc personne d'autre ne peut les
+  // avoir) — un vrai décompte, pas une supposition. Généralise le cas
+  // trivial de l'as (qui n'a par définition rien au-dessus) au cas d'un Roi
+  // devenu maître parce que l'As est tombé, etc.
+  function isKnownMaster(hand, card, atout) {
+    const table = card.suit === atout ? TRUMP_FORCE : PLAIN_FORCE;
+    const myForce = table[card.rank];
+    return Object.keys(table).every((r) => {
+      if (table[r] <= myForce) return true;
+      const id = r + card.suit;
+      return G.seen.has(id) || hand.some((c) => c.id === id);
+    });
+  }
+
+  // Une fois l'issue du contrat mathématiquement jouée — déjà réussi quels
+  // que soient les plis restants, ou déjà irrattrapable même en gagnant
+  // tout ce qu'il reste — les points des tricks à venir ne changent plus
+  // rien au score de cette donne (montant fixe si réussi, 160 fixe sinon).
+  // Un vrai décompte des points déjà tombés, pas une intuition : inutile de
+  // garder un as « pour plus tard » dans une donne qui n'a plus rien à
+  // décider.
+  function contractOutcomeLocked() {
+    const preneurTeam = G.contract.equipePreneur;
+    if (G.contract.type !== 'NUMERIQUE') {
+      // Capot (et capot beloté) : le contrat tombe dès qu'un seul pli
+      // échappe au preneur, quel que soit le nombre de plis encore à jouer.
+      return G.plisGagnes[1 - preneurTeam] > 0;
+    }
+    const seuil = G.contract.montant === 80 ? 82 : G.contract.montant;
+    const pointsRestants = 162 - G.pointsPlis[0] - G.pointsPlis[1];
+    return G.pointsPlis[preneurTeam] >= seuil || G.pointsPlis[preneurTeam] + pointsRestants < seuil;
+  }
+
   function botChooseCard(seat) {
     const hand = G.hands[seat];
     const atout = G.contract.atout;
@@ -474,13 +568,20 @@
       const trumpsHidden = trumpsHiddenCount(hand, atout);
       const opponentsVoidOfTrump = opponents.every((o) => G.void[o][atout]);
 
-      // Mener un as n'est vraiment « sûr » que si aucun adversaire n'est
-      // connu manquant dans cette couleur (sinon il coupe à l'atout et
-      // l'as est perdu pour rien) — déduit des manques déjà observés dans
-      // les plis précédents, jamais des mains adverses elles-mêmes.
-      const acesHorsAtout = legal.filter((c) => c.rank === 'A' && c.suit !== atout
+      // Mener une carte hors-atout n'est vraiment « sûre » que si elle est
+      // certainement maîtresse (l'as, ou un Roi devenu maître parce que
+      // l'as est déjà tombé, etc. — un vrai décompte) ET qu'aucun
+      // adversaire n'est connu manquant dans cette couleur (sinon il coupe
+      // à l'atout et la carte est perdue pour rien) — déduit des manques
+      // déjà observés dans les plis précédents, jamais des mains adverses.
+      const safeMasters = legal.filter((c) => c.suit !== atout
+        && isKnownMaster(hand, c, atout)
         && !opponents.some((o) => G.void[o][c.suit]));
-      if (acesHorsAtout.length) return acesHorsAtout[Math.floor(Math.random() * acesHorsAtout.length)];
+      if (safeMasters.length) {
+        const best = safeMasters.slice().sort((a, b) => cardPoints(b, atout) - cardPoints(a, atout))[0];
+        if (best.rank !== 'A') log(`${seatName(seat)} a compté la couleur : son ${cardLabel(best)} est maître…`);
+        return best;
+      }
 
       const trumps = legal.filter((c) => c.suit === atout);
       const trumpHonors = trumps.filter((c) => c.rank === 'J' || c.rank === '9');
@@ -507,6 +608,26 @@
         }
         if (!worthDrawing && trumps.length && (amPreneur || soloTrumpControl)) {
           log(`${seatName(seat)} a compté les atouts : plus rien à faire tomber, garde les siens…`);
+        }
+
+        // Sans maître sûr ni atout à faire tomber, une couleur longue mais
+        // pas encore maîtresse vaut la peine d'être travaillée plutôt que
+        // délaissée : mener petit y use la carte adverse qui bloque encore,
+        // les cartes restantes de cette couleur deviennent maîtresses pour
+        // les derniers plis — un vrai affranchissement, pas juste « jouer
+        // ce qui traîne ». Sur une main de 8 cartes en 4 couleurs (2 de
+        // moyenne par couleur), 3 cartes ou plus dans une même couleur hors
+        // atout est déjà une vraie longueur. Seulement si on garde de quoi
+        // se protéger d'une coupe pendant l'opération (un peu d'atout en
+        // réserve) et qu'il reste assez de plis pour que ça paie.
+        const longSuit = SUITS.filter((s) => s !== atout)
+          .map((s) => ({ suit: s, count: hand.filter((c) => c.suit === s).length }))
+          .filter((e) => e.count >= 3)
+          .sort((a, b) => b.count - a.count)[0];
+        if (longSuit && trumps.length >= 2 && 8 - G.plisJoues >= 3) {
+          log(`${seatName(seat)} travaille sa longue couleur pour l'affranchir…`);
+          return legal.filter((c) => c.suit === longSuit.suit)
+            .sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
         }
       } else if (trumpHonors.length && trumps.length <= 2) {
         // La défense n'a presque jamais intérêt à entamer l'atout : ça ne
@@ -583,7 +704,7 @@
       const endgame = G.plisJoues >= 6;
       const trickValue = trickPoints(pli, atout);
       const cheapestWinner = winners.slice().sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
-      if (!endgame && !opponentStillToAct && trickValue < 8 && cheapestWinner.rank === 'A') {
+      if (!endgame && !opponentStillToAct && trickValue < 8 && cheapestWinner.rank === 'A' && !contractOutcomeLocked()) {
         const decline = legal.filter((c) => !winners.includes(c));
         return decline.sort((a, b) => cardPoints(a, atout) - cardPoints(b, atout))[0];
       }
