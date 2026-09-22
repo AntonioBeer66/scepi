@@ -43,6 +43,32 @@ function cleanupEphemeralLobbies(state) {
   return changed;
 }
 
+// D'anciennes données locales (enregistrées avant l'ajout des salons
+// temporaires) peuvent ne pas avoir de champ `number`/`ephemeral` : on les
+// répare plutôt que d'afficher « Table undefined ».
+function normalizeLobbies(state) {
+  let changed = false;
+  let nextNumber = PERMANENT_COUNT;
+  for (let i = 1; i <= PERMANENT_COUNT; i++) {
+    const lobby = state['table-' + i];
+    if (lobby && (lobby.number !== i || lobby.ephemeral !== false)) {
+      lobby.number = i;
+      lobby.ephemeral = false;
+      changed = true;
+    }
+  }
+  for (const [id, lobby] of Object.entries(state)) {
+    if (id.startsWith('table-') && Number(id.slice(6)) <= PERMANENT_COUNT) continue;
+    if (typeof lobby.number !== 'number') {
+      nextNumber = Math.max(nextNumber, ...Object.values(state).map((l) => l.number || 0)) + 1;
+      lobby.number = nextNumber;
+      changed = true;
+    }
+    if (lobby.ephemeral === undefined) { lobby.ephemeral = true; changed = true; }
+  }
+  return changed;
+}
+
 function loadState() {
   let state;
   try {
@@ -51,7 +77,9 @@ function loadState() {
   } catch {
     state = defaultState();
   }
-  if (cleanupEphemeralLobbies(state)) saveState(state);
+  const normalized = normalizeLobbies(state);
+  const cleaned = cleanupEphemeralLobbies(state);
+  if (normalized || cleaned) saveState(state);
   return state;
 }
 
@@ -71,6 +99,14 @@ function createEphemeralLobby(state) {
   return id;
 }
 
+// Le « maître » d'un salon est le premier joueur humain à s'y être assis, ou
+// à défaut le suivant dans l'ordre des sièges s'il est parti entre-temps.
+// Lui seul peut virer un bot d'une place pour la rendre libre.
+function lobbyMasterClientId(lobby) {
+  const humans = lobby.seats.filter((s) => s && s.type === 'human');
+  return humans.length ? humans[0].clientId : null;
+}
+
 function findMySeat(state, clientId) {
   for (const [lobbyId, lobby] of Object.entries(state)) {
     const seatIndex = lobby.seats.findIndex((s) => s && s.clientId === clientId);
@@ -83,10 +119,11 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function seatMarkup(lobbyId, seat, index, clientId, mySeat) {
+function seatMarkup(lobbyId, seat, index, clientId, mySeat, lobby) {
   const label = SEAT_LABELS[index];
   const team = SEAT_TEAM[index];
   const busyElsewhere = mySeat && (mySeat.lobbyId !== lobbyId || mySeat.seatIndex !== index);
+  const isMaster = lobbyMasterClientId(lobby) === clientId;
 
   if (!seat) {
     if (busyElsewhere) {
@@ -110,6 +147,7 @@ function seatMarkup(lobbyId, seat, index, clientId, mySeat) {
       <span class="seat-tag"><b>${label}</b><small>${team}</small></span>
       <span class="seat-occupant cpu">Ordinateur <span class="cpu-badge">CPU</span></span>
       ${busyElsewhere ? '' : '<button type="button" class="button outline seat-btn" data-action="take-over">Prendre cette place</button>'}
+      ${isMaster ? '<button type="button" class="button outline seat-btn seat-kick" data-action="kick" title="Le maître du salon peut libérer cette place">Kick le bot</button>' : ''}
     </li>`;
   }
 
@@ -133,7 +171,7 @@ function render(grid, state, clientId) {
       <span class="eyebrow">SALON ${number}${lobby.ephemeral ? ' <span class="lobby-temp-tag">TEMPORAIRE</span>' : ''}</span>
       <h3>Table ${lobby.number}</h3>
       <ul class="seat-list">
-        ${lobby.seats.map((seat, i) => seatMarkup(lobbyId, seat, i, clientId, mySeat)).join('')}
+        ${lobby.seats.map((seat, i) => seatMarkup(lobbyId, seat, i, clientId, mySeat, lobby)).join('')}
       </ul>
       <p class="caption">${filled}/4 places occupées · 2 équipes</p>
       ${canStart ? `<button type="button" class="button primary seat-btn" data-action="start" data-lobby="${lobbyId}">Lancer la partie</button>` : ''}
@@ -193,6 +231,9 @@ function init() {
 
     if (action === 'bot' && !seat) {
       state[lobbyId].seats[seatIndex] = { type: 'bot' };
+    } else if (action === 'kick' && seat && seat.type === 'bot') {
+      if (lobbyMasterClientId(state[lobbyId]) !== clientId) return;
+      state[lobbyId].seats[seatIndex] = null;
     } else if (action === 'take-over' && seat && seat.type === 'bot') {
       if (findMySeat(state, clientId)) return;
       const pseudo = window.prompt('Votre pseudo pour prendre cette place ?');

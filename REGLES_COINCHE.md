@@ -16,7 +16,7 @@ Les conventions ci-dessous rendent les points incomplets du manuel exécutables.
 | Atout demandé | Monter si possible, même sur son partenaire ; sinon fournir un atout inférieur. Le manuel ne tranche pas explicitement ce cas. |
 | Partenaire maître et couleur demandée absente | Toute carte autorisée, y compris un atout inférieur à celui du partenaire. |
 | Capot beloté | Contrat distinct à 270 ; huit plis ET belote valide, sinon chute sans repli à 250. |
-| Belote | Déclaration volontaire par bouton, dans les 10 secondes suivant chaque carte concernée ; aucune annonce automatique. |
+| Belote | Déclaration automatique : dès que le Roi puis la Dame d'atout du preneur sont joués, Belote puis Rebelote sont annoncées sans action du joueur (humain ou bot). |
 | Délais techniques | 30 s par enchère, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
 
 Le délai de **30 secondes par carte**, avec carte légale aléatoire à expiration, vient du README du projet. Les règles fondamentales de cartes et de score proviennent des articles 5 à 11 et de l'annexe 1 du manuel. Le mélange et la désignation du donneur sont simplifiés pour le jeu en ligne.
@@ -40,7 +40,7 @@ Contrat : type, montant, atout, preneur, equipePreneur | null
 PassesConsecutives, multiplicateur (1, 2 ou 4)
 PliCourant : liste ordonnee de {siege, carte}
 PlisGagnes[2], pointsPlis[2], historiquePlis
-Belote : detenteur, declarations, fenetres, valide
+Belote : detenteur, declarations, valide
 ScoreDonneApplique : booleen
 ```
 
@@ -54,8 +54,7 @@ Chaque carte possède un identifiant unique `(couleur, rang)`. Ne transmettre qu
 | `DISTRIBUTION` | Aucune action de jeu | Distribution terminée → `ENCHERES`. |
 | `ENCHERES` | Passer, enchérir ; coincher hors tour si autorisé | Quatre passes sans contrat → nouvelle donne ; trois passes après contrat → `JEU` ; coinche → `SURCOINCHE`. |
 | `SURCOINCHE` | Surcoincher, uniquement par les preneurs | Surcoinche ou fin des 5 s → `JEU`. |
-| `JEU` | Jouer à son tour ; déclarer belote/rebelote dans sa fenêtre | Huitième pli terminé → `CLOTURE_BELOTE`. |
-| `CLOTURE_BELOTE` | Déclarations encore admissibles seulement | Plus de fenêtre utile → `SCORE`. |
+| `JEU` | Jouer à son tour ; belote/rebelote s'annoncent automatiquement au fil des cartes jouées | Huitième pli terminé → `SCORE`. |
 | `SCORE` | Aucune action de jeu | Score appliqué une fois ; victoire → `TERMINEE`, sinon après 5 s → nouvelle donne. |
 | `TERMINEE` | Quitter ou préparer une revanche | Retour à `ATTENTE`, scores remis à zéro pour la prochaine partie. |
 | `ABANDONNEE` | Quitter | Aucun vainqueur, libération du salon. |
@@ -139,24 +138,20 @@ Fournir reste obligatoire sur son partenaire. Sans couleur demandée, couper sur
 ## 7. Jouer et résoudre un pli
 
 1. Vérifier phase `JEU`, joueur actif, carte présente dans sa main et dans `cartesLegales`.
-2. Retirer cette carte et l'ajouter une seule fois au pli courant. Ouvrir une éventuelle fenêtre de belote.
+2. Retirer cette carte et l'ajouter une seule fois au pli courant. Déclencher l'annonce automatique de belote/rebelote si cette carte y donne droit (section 8).
 3. À moins de quatre cartes, passer au siège suivant et démarrer ses 30 secondes.
 4. À quatre cartes, le plus fort atout gagne ; sans atout, la plus forte carte de la couleur demandée gagne.
 5. Ajouter les points des quatre cartes à l'équipe gagnante et incrémenter son nombre de plis. Archiver le pli et vider le pli courant.
-6. Au huitième pli, ajouter **10 points** au gagnant de ce pli et passer à `CLOTURE_BELOTE`. Sinon, le gagnant entame avec 30 secondes.
+6. Au huitième pli, ajouter **10 points** au gagnant de ce pli et passer à `SCORE` : la belote étant déjà tranchée automatiquement, aucune attente supplémentaire n'est nécessaire. Sinon, le gagnant entame avec 30 secondes.
 
-À expiration d'un tour, le serveur choisit uniformément dans `cartesLegales` et applique la même procédure. Il n'annonce pas belote à la place du joueur. Les animations n'ajoutent pas de temps ni de nouvel état de jeu.
+À expiration d'un tour, le serveur choisit uniformément dans `cartesLegales` et applique la même procédure ; l'annonce de belote reste automatique même dans ce cas. Les animations n'ajoutent pas de temps ni de nouvel état de jeu.
 
 ## 8. Belote et rebelote
 
 - Au verrouillage du contrat, repérer si un même preneur possède dans sa main initiale le roi ET la dame d'atout. Lui seul est admissible au bonus ; la belote défensive ne rapporte rien.
-- La première de ces cartes jouée ouvre une fenêtre de 10 s pour `DECLARER_BELOTE` ; la seconde ouvre 10 s pour `DECLARER_REBELOTE`. L'ordre roi/dame est libre.
-- Chaque fenêtre est liée à la carte et à la donne, et non au joueur actuellement actif. Les fenêtres peuvent se chevaucher sans arrêter le jeu.
-- Accepter uniquement la déclaration du détenteur dans sa fenêtre, une seule fois. Rebelote exige que belote ait déjà été acceptée.
-- Une première déclaration définitivement manquée rend le bonus impossible. Fermer les fenêtres devenues inutiles.
-- Une carte jouée automatiquement ouvre la même fenêtre mais aucune déclaration automatique. Le joueur connecté peut encore déclarer.
-- Le bonus devient valide quand les deux déclarations sont acceptées.
-- Après le dernier pli, attendre la résolution ou l'expiration des fenêtres utiles avant de calculer le score.
+- Déclaration automatique, sans action du joueur : dès que la première de ces deux cartes est jouée, Belote est annoncée ; dès que la seconde est jouée, Rebelote l'est. L'ordre roi/dame est libre. Ce comportement est identique pour un siège humain ou un bot — aucun bouton, aucune fenêtre à guetter.
+- Le bonus devient valide quand les deux cartes ont été jouées (donc les deux annonces faites).
+- Le score peut être calculé dès la résolution du dernier pli : la belote est toujours tranchée au plus tard au moment où la dernière carte concernée est posée.
 
 ## 9. Calcul du score
 
@@ -187,7 +182,6 @@ Appliquer les gains une seule fois par donne. Ne pas ajouter les points de plis,
 - L'horloge serveur est la référence. Une action reçue à l'échéance ou après est tardive : appliquer d'abord l'expiration correspondante.
 - Une carte manuelle et un timeout concurrents ne doivent jamais jouer deux cartes pour un même tour.
 - Un dernier passe traité avant une coinche ferme les enchères ; une coinche traitée d'abord invalide ce passe.
-- Les déclarations de belote visent leur fenêtre propre, même si le tour de carte a changé.
 - Refuser une action invalide sans modifier le jeu ni réinitialiser de délai ; renvoyer un motif (`HORS_TOUR`, `CARTE_INTERDITE`, `ENCHERE_INVALIDE`, `DELAI_EXPIRE`, etc.).
 - Une déconnexion conserve la place et la main. Les délais continuent : passe automatique, absence de surcoinche, carte légale automatique selon la phase.
 - À la reconnexion authentifiée, renvoyer l'état actuel et sa main restante, sans prolonger les délais.
@@ -216,7 +210,7 @@ Appliquer les gains une seule fois par donne. Ne pas ajouter les points de plis,
 | 250 coinché, huit / sept plis | 500 aux preneurs / 320 à la défense. |
 | 270, huit plis sans rebelote valide | Chute selon convention V1. |
 | 270 surcoinché, huit plis avec belote valide | 1 080 aux preneurs ; victoire. |
-| Deuxième carte de belote au dernier pli | Attendre la fenêtre avant le score. |
+| Deuxième carte de belote jouée sur le dernier pli | Rebelote s'annonce avant la résolution du pli ; le score qui suit en tient compte. |
 | Même carte envoyée deux fois, ou après timeout | Un seul jeu, aucune modification rétroactive. |
 | Reconnexion en cours de tour | Main restante et échéance inchangées. |
 | Score traité deux fois | Aucun double ajout. |

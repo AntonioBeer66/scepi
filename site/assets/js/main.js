@@ -47,6 +47,10 @@ function nextSlide() {
 }
 
 function startAutoAdvance() {
+  // Toujours repartir d'un état propre : sans ce clearTimeout, des appels
+  // successifs (survol répété, fin de swipe tactile) empilaient plusieurs
+  // boucles setTimeout en parallèle, ce qui faisait « accélérer » le slider.
+  clearTimeout(autoAdvanceTimeout);
   autoAdvanceTimeout = setTimeout(() => {
     nextSlide();
     startAutoAdvance();
@@ -99,6 +103,20 @@ if (sliderContainer && slides.length > 0) {
       startAutoAdvance();
     });
   });
+
+  // Arrow navigation (boutons latéraux)
+  const prevArrow = document.querySelector('.slider-arrow.prev');
+  const nextArrow = document.querySelector('.slider-arrow.next');
+  prevArrow?.addEventListener('click', () => {
+    goToSlide(slideIndex - 1);
+    stopAutoAdvance();
+    startAutoAdvance();
+  });
+  nextArrow?.addEventListener('click', () => {
+    goToSlide(slideIndex + 1);
+    stopAutoAdvance();
+    startAutoAdvance();
+  });
 }
 
 // Handle visibility change to pause when tab is hidden (slider pages only)
@@ -110,4 +128,20 @@ if (sliderContainer && slides.length > 0) {
       startAutoAdvance();
     }
   });
+}
+
+// Révélation au scroll : les sections apparaissent en douceur à leur entrée
+// dans le champ de vision plutôt que d'être toutes visibles d'un bloc au
+// chargement. Le CSS ne cache ces éléments (opacity:0) que sous .js — sans
+// JavaScript ou sans IntersectionObserver, tout reste visible d'emblée.
+const revealTargets = document.querySelectorAll('.reveal, .reveal-stagger');
+if (revealTargets.length && 'IntersectionObserver' in window) {
+  const revealObserver = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add('is-visible');
+      revealObserver.unobserve(entry.target);
+    }
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+  revealTargets.forEach((el) => revealObserver.observe(el));
 }
