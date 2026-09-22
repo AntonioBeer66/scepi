@@ -12,13 +12,87 @@
 <link rel="apple-touch-icon" href="../assets/images/apple-touch-icon.png">
 <link rel="stylesheet" href="../assets/css/styles.css">
 <script src="../assets/js/main.js" defer></script>
+<style>
+.event-carousel{position:relative;overflow:hidden;aspect-ratio:3 / 2;background:#181127}
+.event-carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:translateX(100%);transition:transform .55s ease-in-out}
+.event-carousel img.is-active{z-index:2;transform:translateX(0)}
+.event-carousel img.is-leaving{z-index:1;transform:translateX(-100%)}
+.event-carousel-dots{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px}
+.event-carousel-dots button{width:8px;height:8px;min-height:8px;padding:0;border:0;border-radius:50%;background:#f7f4fc;opacity:.55;cursor:pointer}
+.event-carousel-dots button.is-active{background:#f4c600;opacity:1}
+.event-carousel-arrow{position:absolute;top:0;z-index:2;display:flex;align-items:center;justify-content:center;width:14%;height:100%;min-height:0;padding:0;border:0;border-radius:0;color:#fff;font-size:32px;line-height:1;opacity:0;cursor:pointer;transition:opacity .35s ease,background .2s ease}
+.event-carousel-arrow--previous,.event-carousel-arrow--next{background:transparent;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.event-carousel-arrow--previous{justify-content:flex-start;padding-left:12px}
+.event-carousel-arrow--next{justify-content:flex-end;padding-right:12px}
+.event-carousel:hover .event-carousel-arrow,.event-carousel-arrow:focus-visible{opacity:.65}
+.event-carousel-arrow--previous:hover,.event-carousel-arrow--next:hover{background:transparent;opacity:1}
+.event-carousel-arrow--previous{left:0}
+.event-carousel-arrow--next{right:0}
+@media (prefers-reduced-motion: reduce){.event-carousel img{transition:none}}
+</style>
 </head>
 <body>
 <a class="skip-link" href="#contenu">Aller au contenu</a>
-<header class="header"><div class="header-inner"><a class="brand" href="../index.html" aria-label="SCEP Invaders, accueil"><img src="../assets/images/logo-white.png" alt="" width="2000" height="2000"><span>SCEP<span class="brand-sub">INVADERS</span></span></a>
-<button class="menu-toggle" aria-expanded="false" aria-controls="navigation">Menu <span aria-hidden="true">☰</span></button>
-<nav id="navigation" aria-label="Navigation principale"><a href="../index.html">Accueil</a><a href="../asso/index.html">L’asso</a><a href="../coinche/index.html">Coinche</a><a href="../evenements/index.html" aria-current="page">Nos événements</a><a href="../contact/index.html">Contact</a></nav><span class="header-tag">ESCP · GAMING CLUB</span></div></header>
-<main id="contenu" class="container"><section class="page-intro"><span class="eyebrow">03 / NOS ÉVÉNEMENTS</span><h1>De bonnes parties.<br><span>De vrais souvenirs.</span></h1><p>Les rendez-vous qui font vivre SCEP Invaders, à l’écran comme sur le campus.</p></section><article class="event-banner reveal"><div><span class="eyebrow">DERNIER TEMPS FORT</span><h3>L’ESCP Poker<br>Championship.</h3><p>Un tournoi de Texas Hold’em en 3 phases (qualifications, demi-finale, finale), gratuit, plus de 1000€ de lots, financé par la CVEC et encadré par une charte de jeu responsable coécrite avec l’Autorité Nationale des Jeux.</p><span class="pill">Prochaine édition à venir</span></div><div class="event-art" aria-hidden="true"><span>MEET.<br>PLAY.<br>REPEAT.</span><b>✳</b></div></article><section class="section"><div class="section-heading"><div><span class="eyebrow">01 / À EXPLORER</span><h2>Ce qui a déjà fait vivre l’asso.</h2></div></div><div class="crew-grid highlight-grid reveal-stagger"><article class="crew-card"><div class="portrait-placeholder" aria-hidden="true"><span>POKER</span><b>♠</b></div><h3>ESCP Poker Championship</h3><p>Notre tournoi phare en 3 phases — qualifications, demi-finale, finale — plus de 100 participants.</p></article><article class="crew-card"><div class="portrait-placeholder" aria-hidden="true"><span>SENSIBILISATION</span><b>◎</b></div><h3>Conférence avec l’ANJ</h3><p>Une soirée d’échange sur le jeu responsable, coécrite avec l’Autorité Nationale des Jeux.</p></article><article class="crew-card"><div class="portrait-placeholder" aria-hidden="true"><span>CAREER FAIR</span><b>✦</b></div><h3>Stand Nintendo</h3><p>Bornes de jeu et rencontres sur le Career Fair de l’ESCP.</p></article><article class="crew-card"><div class="portrait-placeholder" aria-hidden="true"><span>ACA</span><b>✳</b></div><h3>Prêt de la Switch au BDE</h3><p>Notre console mise à disposition pour l’Accueil des Nouveaux Arrivants.</p></article></div><p class="caption">Les photos de ces temps forts trouveront bientôt leur place ici.</p></section></main>
-<footer class="footer"><div class="container footer-inner"><a class="brand" href="../index.html"><img src="../assets/images/logo-white.png" alt="" width="2000" height="2000"><span>SCEP<span class="brand-sub">INVADERS</span></span></a><p>Une même passion. Tout un univers.</p><div class="footer-social"><a href="https://www.instagram.com/scepinvaders/?hl=fr" target="_blank" rel="noopener">Instagram</a><a href="https://www.linkedin.com/company/scep-invaders" target="_blank" rel="noopener">LinkedIn</a></div></div><div class="container footer-bottom"><span>SCEP Invaders · Association étudiante ESCP</span><span>PREMIÈRE ESQUISSE / 2026</span></div></footer>
-</body></html>
+<header class="header"><div class="header-inner"><a class="brand" href="../" aria-label="SCEP Invaders, accueil"><img src="../assets/images/logo-white.png" alt="" width="2000" height="2000"><span>SCEP<span class="brand-sub">INVADERS</span></span></a><button class="menu-toggle" aria-expanded="false" aria-controls="navigation">Menu <span aria-hidden="true">☰</span></button><nav id="navigation" aria-label="Navigation principale"><a href="../">Accueil</a><a href="../asso/">L’asso</a><a href="../coinche/">Coinche</a><a href="../evenements/" aria-current="page">Nos événements</a><a href="../contact/">Contact</a></nav><span class="header-tag">ESCP · GAMING CLUB</span></div></header>
+<main id="contenu" class="container"><section class="page-intro"><span class="eyebrow">03 / NOS ÉVÉNEMENTS</span><h1>Au-delà des jeux . . .<br><span>. . . des moments merveilleux</span></h1><p>Suivez avec nous tous les events organisés par SCEPI.</p></section>
+<article class="event-banner reveal"><div><span class="eyebrow">DERNIER TEMPS FORT</span><h3>L’ESCP Poker<br>Championship.</h3><p>Un tournoi de Texas Hold’em en 3 phases (qualifications, demi-finale, finale), gratuit, plus de 1000€ de lots, financé par la CVEC et encadré par une charte de jeu responsable coécrite avec l’Autorité Nationale des Jeux.</p><span class="pill">Prochaine édition à venir</span></div></article>
+<section class="section"><div class="section-heading"><div><span class="eyebrow">01 / À EXPLORER</span><h2>Ce qui a déjà fait vivre l’asso.</h2></div></div><div class="crew-grid highlight-grid reveal-stagger">
+<article class="crew-card"><div class="event-carousel" data-carousel aria-label="Photos de l’ESCP Poker Championship"><img class="is-active" src="../assets/images/events/Poker%20Championship/poker_1.jpg" alt="Table de poker pendant l’ESCP Poker Championship"><img src="../assets/images/events/Poker%20Championship/poker_2.jpg" alt="Participants autour d’une table de poker"><img src="../assets/images/events/Poker%20Championship/poker_3.jpg" alt="Ambiance du tournoi de poker"><img src="../assets/images/events/Poker%20Championship/poker_4.jpg" alt="Table de poker pendant le tournoi"><div class="event-carousel-dots" aria-label="Choisir une photo"></div></div><h3>ESCP Poker Championship</h3><p>Notre tournoi phare en 3 phases — qualifications, demi-finale, finale — plus de 100 participants.</p></article>
+<article class="crew-card"><div class="event-carousel" data-carousel aria-label="Photos du Week-End Intergé Mai 2026"><img class="is-active" src="../assets/images/wei/wei_1.JPG" alt="Week-End Intergé Mai 2026, photo 1"><img src="../assets/images/wei/wei_2.JPG" alt="Week-End Intergé Mai 2026, photo 2"><img src="../assets/images/wei/wei_3.JPG" alt="Week-End Intergé Mai 2026, photo 3"><img src="../assets/images/wei/wei_4.JPG" alt="Week-End Intergé Mai 2026, photo 4"><img src="../assets/images/wei/wei_5.JPG" alt="Week-End Intergé Mai 2026, photo 5"><img src="../assets/images/wei/wei_6.JPG" alt="Week-End Intergé Mai 2026, photo 6"><div class="event-carousel-dots" aria-label="Choisir une photo"></div></div><h3>Week-End Intergé Mai 2026</h3><p>Bons moments passés ensemble avec les anciens de SCEPI</p></article>
+<article class="crew-card"><div class="event-carousel" data-carousel aria-label="Photos du Nintendo Career Fair"><img class="is-active" src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_1.jpeg" alt="Nintendo Career Fair, photo 1"><img src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_2.jpeg" alt="Nintendo Career Fair, photo 2"><img src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_3.jpg" alt="Nintendo Career Fair, photo 3"><img src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_4.jpg" alt="Nintendo Career Fair, photo 4"><div class="event-carousel-dots" aria-label="Choisir une photo"></div></div><h3>Stand Nintendo</h3><p>Bornes de jeu et rencontres sur le Career Fair de l’ESCP.</p></article>
+<article class="crew-card"><div class="event-carousel" data-carousel aria-label="Photos des activités Extra"><img class="is-active" src="../assets/images/events/Extra/extra_1.jpg" alt="Activité Extra, photo 1"><img src="../assets/images/events/Extra/extra_2.jpg" alt="Activité Extra, photo 2"><img src="../assets/images/events/Extra/extra_3.jpg" alt="Activité Extra, photo 3"><img src="../assets/images/events/Extra/extra_4.JPG" alt="Activité Extra, photo 4"><img src="../assets/images/events/Extra/extra_5.JPEG" alt="Activité Extra, photo 5"><div class="event-carousel-dots" aria-label="Choisir une photo"></div></div><h3>Et bien d'autres activités ensemble</h3><p>Des soirées jeux sur les quais, des randonnées, des restos à volonté...</p></article>
+</div></section></main>
+<footer class="footer"><div class="container footer-inner"><a class="brand" href="../"><img src="../assets/images/logo-white.png" alt="" width="2000" height="2000"><span>SCEP<span class="brand-sub">INVADERS</span></span></a><p>Une même passion. Tout un univers.</p><div class="footer-social"><a href="https://www.instagram.com/scepinvaders/?hl=fr" target="_blank" rel="noopener">Instagram</a><a href="https://www.linkedin.com/company/scep-invaders" target="_blank" rel="noopener">LinkedIn</a></div></div><div class="container footer-bottom"><span>SCEP Invaders · Association étudiante ESCP</span><span>PREMIÈRE ESQUISSE / 2026</span></div></footer>
+<script>
+const carousels = [...document.querySelectorAll('[data-carousel]')].map((carousel) => {
+  const images = [...carousel.querySelectorAll('img')];
+  const dots = carousel.querySelector('.event-carousel-dots');
+  let current = 0;
+  const show = (index) => {
+    const next = (index + images.length) % images.length;
+    if (next === current && images[current].classList.contains('is-active')) return;
+    images[current].classList.remove('is-active');
+    images[current].classList.add('is-leaving');
+    current = next;
+    images[current].classList.remove('is-leaving');
+    images[current].classList.add('is-active');
+    dots.querySelectorAll('button').forEach((dot, i) => dot.classList.toggle('is-active', i === current));
+  };
+  images.forEach((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.ariaLabel = 'Afficher la photo ' + (i + 1);
+    dot.addEventListener('click', () => show(i));
+    dots.append(dot);
+  });
+  const previous = document.createElement('button');
+  previous.type = 'button';
+  previous.className = 'event-carousel-arrow event-carousel-arrow--previous';
+  previous.ariaLabel = 'Photo précédente';
+  previous.innerHTML = '&#8249;';
+  previous.addEventListener('click', () => show(current - 1));
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'event-carousel-arrow event-carousel-arrow--next';
+  next.ariaLabel = 'Photo suivante';
+  next.innerHTML = '&#8250;';
+  next.addEventListener('click', () => show(current + 1));
+  carousel.append(previous, next);
+  images[0].classList.add('is-active');
+  return { carousel, show, get current() { return current; } };
+});
 
+let timer;
+const start = () => {
+  clearInterval(timer);
+  timer = setInterval(() => carousels.forEach(({ show, current }) => show(current + 1)), 4000);
+};
+const stop = () => clearInterval(timer);
+carousels.forEach(({ carousel }) => {
+  carousel.addEventListener('mouseenter', stop);
+  carousel.addEventListener('mouseleave', start);
+});
+start();
+</script>
+</body>
+</html>
