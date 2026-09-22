@@ -14,9 +14,9 @@
 <script src="../assets/js/main.js" defer></script>
 <style>
 .event-carousel{position:relative;overflow:hidden;aspect-ratio:3 / 2;background:#181127}
-.event-carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:translateX(100%);transition:transform .55s ease-in-out}
-.event-carousel img.is-active{z-index:2;transform:translateX(0)}
-.event-carousel img.is-leaving{z-index:1;transform:translateX(-100%)}
+.event-carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity .9s ease .9s,transform .9s ease .9s}
+.event-carousel img.is-active{z-index:2;opacity:1;transform:scale(1);transition:opacity .9s ease,transform 4.9s ease-out}
+.event-carousel img.is-leaving{z-index:1}
 .event-carousel-dots{position:absolute;bottom:12px;left:0;right:0;display:flex;justify-content:center;gap:6px}
 .event-carousel-dots button{width:8px;height:8px;min-height:8px;padding:0;border:0;border-radius:50%;background:#f7f4fc;opacity:.55;cursor:pointer}
 .event-carousel-dots button.is-active{background:#f4c600;opacity:1}
@@ -51,6 +51,7 @@ const carousels = [...document.querySelectorAll('[data-carousel]')].map((carouse
   const show = (index) => {
     const next = (index + images.length) % images.length;
     if (next === current && images[current].classList.contains('is-active')) return;
+    images.forEach((image) => image.classList.remove('is-leaving'));
     images[current].classList.remove('is-active');
     images[current].classList.add('is-leaving');
     current = next;
