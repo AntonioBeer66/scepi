@@ -611,3 +611,11 @@ body.is-playing .seat-bid{font-size:12px;padding:3px 10px}
 .js .reveal-stagger.is-visible>*:nth-child(2){transition-delay:.08s}
 .js .reveal-stagger.is-visible>*:nth-child(3){transition-delay:.16s}
 .js .reveal-stagger.is-visible>*:nth-child(4){transition-delay:.24s}
+
+/* GIF bref à la coinche / surcoinche (voir flashGif dans coinche-game.js).
+   Fond noir dégradé : les bandes noires du GIF s'y fondent. Clics traversants
+   pour pouvoir surcoincher pendant l'affichage. */
+.coinche-flash{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle,#000 35%,#000000b3 75%);animation:coinche-flash-in .18s ease}
+.coinche-flash img{width:min(94vw,760px);height:auto}
+.coinche-flash.is-out{opacity:0;transition:opacity .3s ease}
+@keyframes coinche-flash-in{from{opacity:0}}

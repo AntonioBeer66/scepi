@@ -1272,6 +1272,7 @@
       G.turnTotalDuration = SURCOINCHE_DURATION_MS;
       G.echeance = Date.now() + G.turnTotalDuration;
       log(`${seatName(seat)} coinche !`);
+      flashGif('coinche');
       G.timers.turn = setTimeout(() => {
         if (G.phase === 'SURCOINCHE') { log('Surcoinche non utilisée.'); lockContractAndStartPlay(); }
       }, SURCOINCHE_DURATION_MS);
@@ -1287,6 +1288,7 @@
       G.multiplicateur = 4;
       clearTurnTimers();
       log(`${seatName(seat)} surcoinche !`);
+      flashGif('surcoinche');
       lockContractAndStartPlay();
       return;
     }
@@ -1669,6 +1671,39 @@
     </div>`;
   }
 
+  // GIF plein écran bref à la coinche et à la surcoinche. Chaque GIF est
+  // téléchargé une seule fois ; une nouvelle URL blob par affichage le fait
+  // repartir de la première image. Rien en headless (pas de fetch) ni en
+  // mouvement réduit.
+  const FLASH_GIFS = {
+    coinche: { src: '../assets/images/coinche/coinched.gif', ms: 1600 },
+    surcoinche: { src: '../assets/images/coinche/surcoinched.gif', ms: 2900 },
+  };
+  const flashBlobs = {};
+  function preloadFlashGifs() {
+    if (typeof fetch !== 'function') return; // simulateur headless
+    Object.entries(FLASH_GIFS).forEach(([kind, { src }]) => {
+      if (flashBlobs[kind]) return;
+      flashBlobs[kind] = fetch(src).then((r) => r.blob()).catch(() => null);
+    });
+  }
+  function flashGif(kind) {
+    preloadFlashGifs();
+    if (!els.root || !flashBlobs[kind] || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    flashBlobs[kind].then((blob) => {
+      if (!blob) return;
+      document.querySelector('.coinche-flash')?.remove();
+      const url = URL.createObjectURL(blob);
+      const overlay = document.createElement('div');
+      overlay.className = 'coinche-flash';
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.innerHTML = `<img src="${url}" alt="">`;
+      document.body.append(overlay);
+      setTimeout(() => overlay.classList.add('is-out'), FLASH_GIFS[kind].ms);
+      setTimeout(() => { overlay.remove(); URL.revokeObjectURL(url); }, FLASH_GIFS[kind].ms + 300);
+    });
+  }
+
   function render() {
     if (!els.root || !G) return;
     renderLiveTable();
@@ -1780,6 +1815,7 @@
     if (!root) return;
     els.root = root;
     els.table = table;
+    preloadFlashGifs();
     if (table && els.tableDefaultHTML === undefined) els.tableDefaultHTML = table.innerHTML;
     els.selectedSuit = null;
     els.selectedBidIndex = 0;
