@@ -1,12 +1,14 @@
 // Scénarios de stratégie des bots : une situation, la décision qu'un bon
 // joueur prendrait. Échoue si un réflexe classique se perd en modifiant
-// l'IA.   node tests/coinche-strategies.test.js
+// l'IA. Le jeu de la carte est testé sur les réflexes (heuristicCard), que
+// la simulation Monte-Carlo ne fait qu'affiner.
+//   node tests/coinche-strategies.test.js
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
 const src = fs.readFileSync(path.join(__dirname, '../site/assets/js/coinche-game.js'), 'utf8')
-  .replace('window.SCEPICoincheGame =', 'window.__api = { setG: (g) => { G = g; }, botDecideBid, botChooseCard, botWantsToCoinche, botWantsToSurcoinche }; window.SCEPICoincheGame =');
+  .replace('window.SCEPICoincheGame =', 'window.__api = { setG: (g) => { G = g; }, getG: () => G, botDecideBid, heuristicCard, botWantsToCoinche, botWantsToSurcoinche, contractIsGenerale, noteTrumpObligations, mcWorlds }; window.SCEPICoincheGame =');
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(src, ctx);
@@ -16,17 +18,19 @@ const api = ctx.window.__api;
 const card = (id) => ({ suit: id.slice(-1), rank: id.slice(0, -1), id });
 const cards = (s) => s.split(/\s+/).filter(Boolean).map(card);
 const hands = (...h) => [0, 1, 2, 3].map((i) => cards(h[i] || ''));
-const contract = (preneur, montant, atout, extra = {}) => ({ id: 1, type: montant >= 250 ? 'CAPOT' : 'NUMERIQUE', montant, atout, preneur, equipePreneur: preneur % 2, coinche: false, surcoinche: false, ...extra });
+const contract = (preneur, montant, atout, extra = {}) => ({ id: 1, type: montant === 270 ? 'CAPOT_BELOTE' : montant === 250 ? 'CAPOT' : 'NUMERIQUE', montant, atout, preneur, equipePreneur: preneur % 2, coinche: false, surcoinche: false, ...extra });
 const bid = (b) => (b.type === 'PASSER' ? 'passe' : `${b.montant}${b.atout}`);
 
 // État minimal ; `pli` = [[siège, carte], ...] déjà joués dans le pli en cours.
 function setup(over = {}) {
   const g = {
-    hands: [[], [], [], []], contract: null, donneAnnonces: [], bidMemo: [{}, {}, {}, {}], forced: [false, false],
+    hands: [[], [], [], []], contract: null, donneAnnonces: [], bidMemo: [{}, {}, {}, {}], forced: [0, 0],
     scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0, coincheAppetite: 1 })),
-    seen: new Set(), void: [{}, {}, {}, {}], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
-    pointsPlis: [0, 0], plisGagnes: [0, 0], ...over,
+    seen: new Set(), void: [{}, {}, {}, {}], trumpMax: [8, 8, 8, 8], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
+    pointsPlis: [0, 0], plisGagnes: [0, 0], playedBy: [[], [], [], []], seats: [0, 1, 2, 3].map(() => ({ type: 'bot' })), donneur: 3,
+    belote: { beloteDeclared: false, rebeloteDeclared: false, kingPlayed: false, queenPlayed: false }, ...over,
   };
+  g.bidLog = over.bidLog || g.donneAnnonces.map((a) => ({ ...a, cur: null, passes: 0 }));
   if (over.pli) {
     g.pliCourant = over.pli.map(([siege, id]) => ({ siege, carte: card(id) }));
     const lead = g.pliCourant[0].carte.suit;
@@ -75,10 +79,26 @@ setup({ hands: hands('JS 7H 8H 9H 7D 8D 7C 8C'), contract: contract(1, 250, 'S')
 check('Coincher un capot avec le Valet d’atout', api.botWantsToCoinche(0), true);
 setup({ hands: hands('7H 8H 9H 7S 8S 7D 8D 7C'), contract: contract(0, 90, 'H', { coinche: true }), scores: [300, 400] });
 check('Pas de surcoinche d’une main vide', api.botWantsToSurcoinche(0), false);
+setup({ hands: hands('AH 10H KS 7S AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [600, 950], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
+check('Coinche gratuite : le preneur sort de toute façon s’il réussit', api.botWantsToCoinche(0), true);
+setup({ hands: hands('JS 9S AH 10H AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [900, 300], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
+check('Pas de coinche quand une simple chute nous fait gagner', api.botWantsToCoinche(0), false);
+
+// ---- Générale : les 8 cartes de l'atout en main initiale
+const huitPiques = 'JS 9S AS 10S KS QS 8S 7S';
+setup({ hands: hands(huitPiques) });
+check('Générale : ouvrir directement en capot beloté', bid(api.botDecideBid(0)), '270S');
+setup({ hands: hands('AH AD AC 10H 10D 10C KH KD', huitPiques), mainsInitiales: hands('', huitPiques), contract: contract(1, 270, 'S'),
+  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0, coincheAppetite: 2.5 })) });
+check('Générale : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
+setup({ hands: hands(huitPiques), mainsInitiales: hands(huitPiques), contract: contract(0, 270, 'S', { coinche: true }) });
+check('Générale coinchée : surcoincher d’office', api.botWantsToSurcoinche(0), true);
+check('8 atouts annoncés à 270 : Générale', api.contractIsGenerale(contract(0, 270, 'S')), true);
+check('8 atouts annoncés à 80 : un simple 80, pas une Générale', api.contractIsGenerale(contract(0, 80, 'S')), false);
 
 // ---- Jeu de la carte : atout Cœur, 100 par le siège 0
 const JEU = { contract: contract(0, 100, 'H'), donneAnnonces: [{ seat: 0, montant: 100, atout: 'H' }] };
-const play = (seat) => api.botChooseCard(seat).id;
+const play = (seat) => api.heuristicCard(seat).id;
 setup({ ...JEU, hands: hands('JH 9H 7H AS 8S KD 7D 8C') });
 check('Preneur : tirer l’atout maître', play(0), 'JH');
 setup({ ...JEU, hands: hands('9H 8H 7H AS 8S KD 7D 8C') });
@@ -105,6 +125,33 @@ setup({ ...JEU, hands: hands('7H JH KD 8C 9C 7C 10C QC'), pli: [[1, 'AS'], [2, '
 check('Couper petit', play(0), '7H');
 setup({ ...JEU, hands: hands('7H JH KD 8C 9C 7C 10C QC'), pli: [[1, '7S'], [2, 'AS'], [3, '8S']] });
 check('Ne pas couper le pli sûr du partenaire', play(0).endsWith('H'), false);
+setup({ ...JEU, contract: contract(1, 80, 'H'), hands: hands('AS 9S AD 8D 7C 8C QD 7D'), pli: [[1, '7S'], [2, '10S'], [3, '8S']] });
+check('Jamais l’As par-dessus le 10 maître du partenaire', play(0), '9S');
+
+// ---- Déductions : obligation de couper et de monter (le siège 2 mène, adversaire du 3)
+setup({ ...JEU, pli: [[2, 'AS']] });
+api.noteTrumpObligations(3, card('7D'));
+check('Défausse au lieu de couper le pli adverse : plus d’atout', api.getG().trumpMax[3], 0);
+setup({ ...JEU, pli: [[2, 'AS'], [3, '9H']] });
+api.noteTrumpObligations(0, card('8H'));
+check('Sous-coupe obligée : aucun atout plus fort que le 9', api.getG().trumpMax[0], 6);
+setup({ ...JEU, pli: [[2, 'AS']] });
+api.noteTrumpObligations(0, card('7D'));
+check('Partenaire maître : défausser ne dit rien sur l’atout', api.getG().trumpMax[0], 8);
+
+// ---- Mondes imaginés : le preneur a ouvert « 90 fort » (Valet + 9 promis), les autres ont passé
+{
+  vm.runInContext('Math.random = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', ctx);
+  setup({
+    hands: hands('AS 7S AH 10H KD 8D 7C 8C'), contract: contract(1, 90, 'S'),
+    bidLog: [{ seat: 0, cur: null, passes: 0 }, { seat: 1, montant: 90, atout: 'S', cur: null, passes: 1 },
+      { seat: 2, cur: contract(1, 90, 'S'), passes: 0 }, { seat: 3, cur: contract(1, 90, 'S'), passes: 1 }],
+  });
+  const worlds = api.mcWorlds(0, 48);
+  const both = worlds.filter((w) => ['JS', '9S'].every((id) => w[1].some((c) => c.id === id))).length;
+  check('Mondes compatibles avec un 90 fort (Valet + 9 chez le preneur, ≥ 80 %)', both >= 0.8 * worlds.length, true);
+  vm.runInContext('Math.random = () => 0.99;', ctx);
+}
 
 if (failures.length) {
   console.error(failures.map((f) => `ÉCHEC ${f}`).join('\n'));
