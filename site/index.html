@@ -1,80 +1,365 @@
 <!doctype html>
 <html lang="fr">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0c0914">
-<meta name="description" content="SCEP Invaders, l’association de jeux vidéo, jeux de société et nouvelles technologies de l’ESCP. Découvrez notre univers.">
-<title>Accueil — SCEP Invaders</title>
-<link rel="icon" href="./assets/images/favicon.ico" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="./assets/images/favicon-32.png">
-<link rel="icon" type="image/png" sizes="64x64" href="./assets/images/favicon-64.png">
-<link rel="apple-touch-icon" href="./assets/images/apple-touch-icon.png">
-<link rel="stylesheet" href="./assets/css/styles.css">
-<script src="./assets/js/main.js" defer></script>
-</head>
-<body>
-<a class="skip-link" href="#contenu">Aller au contenu</a>
-<header class="header"><div class="header-inner"><a class="brand" href="./" aria-label="SCEP Invaders, accueil"><img src="./assets/images/logo-white.png" alt="" width="2000" height="2000"><span>SCEP<span class="brand-sub">INVADERS</span></span></a>
-<button class="menu-toggle" aria-expanded="false" aria-controls="navigation">Menu <span aria-hidden="true">☰</span></button>
-<nav id="navigation" aria-label="Navigation principale"><a href="./" aria-current="page">Accueil</a><a href="./asso/">L’asso</a><a href="./coinche/">Coinche</a><a href="./evenements/">Nos événements</a><a href="./contact/">Contact</a></nav><span class="header-tag">ESCP · GAMING CLUB</span></div></header>
-<main id="contenu" class="container">
-<section class="hero-slider">
-  <div class="slider-container">
-    <!-- Slide 1: Gaming -->
-    <div class="slider-slide slide-gaming" style="background-image: url('./assets/images/gaming-hero.svg');">
-      <div class="slider-overlay"></div>
-      <div class="slider-content">
-        <span class="eyebrow">SCEP INVADERS</span>
-        <h1>Le jeu vidéo comme terrain de jeu commun</h1>
-        <p>Tournois Mario Kart et Smash Bros, dernières consoles, rendez-vous entre joueurs de tous niveaux</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c0914" />
+    <meta
+      name="description"
+      content="SCEP Invaders, l’association de jeux vidéo, jeux de société et nouvelles technologies de l’ESCP. Découvrez notre univers."
+    />
+    <title>Accueil — SCEP Invaders</title>
+    <link rel="icon" href="./assets/images/favicon.ico" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="./assets/images/favicon-32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="64x64"
+      href="./assets/images/favicon-64.png"
+    />
+    <link rel="apple-touch-icon" href="./assets/images/apple-touch-icon.png" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+    <script src="./assets/js/main.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="header">
+      <div class="header-inner">
+        <a class="brand" href="./index.html" aria-label="SCEP Invaders, accueil"
+          ><img
+            src="./assets/images/logo-white.png"
+            alt=""
+            width="2000"
+            height="2000"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        >
+        <button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="navigation"
+        >
+          Menu <span aria-hidden="true">☰</span>
+        </button>
+        <nav id="navigation" aria-label="Navigation principale">
+          <a href="./index.html" aria-current="page">Accueil</a
+          ><a href="./asso/index.html">L’asso</a
+          ><a href="./coinche/index.html">Coinche</a
+          ><a href="./evenements/index.html">Nos événements</a
+          ><a href="./contact/index.html">Contact</a>
+        </nav>
+        <span class="header-tag">ESCP · GAMING CLUB</span>
       </div>
-      <div class="slider-cta"><a href="./asso/" class="button primary">Découvrir l'asso</a></div>
-    </div>
+    </header>
+    <main id="contenu" class="container">
+      <section class="hero-slider">
+        <div class="slider-container">
+          <!-- Slide 1: Gaming -->
+          <div
+            class="slider-slide slide-gaming"
+            style="
+              background-image: url(&quot;./assets/images/gaming-hero.svg&quot;);
+            "
+          >
+            <div class="slider-overlay"></div>
+            <div class="slider-content">
+              <span class="eyebrow">SCEP INVADERS</span>
+              <h1>Le jeu vidéo comme terrain de jeu commun</h1>
+              <p>
+                Tournois Mario Kart et Smash Bros, dernières consoles,
+                rendez-vous entre joueurs de tous niveaux
+              </p>
+            </div>
+            <div class="slider-cta">
+              <a href="./asso/index.html" class="button primary">Découvrir l'asso</a>
+            </div>
+          </div>
 
-    <!-- Slide 2: Coinche -->
-    <div class="slider-slide slide-coinche" style="background-image: url('./assets/images/coinche-hero.svg');">
-      <div class="slider-overlay"></div>
-      <div class="slider-content">
-        <span class="eyebrow green">SCEP INVADERS</span>
-        <h1>Les jeux de société, du plateau à la coinche</h1>
-        <p>La coinche et nos soirées jeux de société, entre deux cours ou en tournoi</p>
-      </div>
-      <div class="slider-cta"><a href="./coinche/" class="button primary">Jouer à la coinche</a></div>
-    </div>
+          <!-- Slide 2: Coinche -->
+          <div
+            class="slider-slide slide-coinche"
+            style="
+              background-image: url(&quot;./assets/images/coinche-hero.svg&quot;);
+            "
+          >
+            <div class="slider-overlay"></div>
+            <div class="slider-content">
+              <span class="eyebrow green">SCEP INVADERS</span>
+              <h1>Les jeux de société, du plateau à la coinche</h1>
+              <p>
+                La coinche et nos soirées jeux de société, entre deux cours ou
+                en tournoi
+              </p>
+            </div>
+            <div class="slider-cta">
+              <a href="./coinche/index.html" class="button primary">Jouer à la coinche</a>
+            </div>
+          </div>
 
-    <!-- Slide 3: Events -->
-    <div class="slider-slide slide-events" style="background-image: url('./assets/images/events-hero.svg');">
-      <div class="slider-overlay"></div>
-      <div class="slider-content">
-        <span class="eyebrow">SCEP INVADERS</span>
-        <h1>Des événements qui marquent l'année</h1>
-        <p>Tournoi de poker, conférences, partenariats Career Fair : nos temps forts ESCP</p>
-      </div>
-      <div class="slider-cta"><a href="./evenements/" class="button primary">Voir les événements</a></div>
-    </div>
+          <!-- Slide 3: Events -->
+          <div
+            class="slider-slide slide-events"
+            style="
+              background-image: url(&quot;./assets/images/events-hero.svg&quot;);
+            "
+          >
+            <div class="slider-overlay"></div>
+            <div class="slider-content">
+              <span class="eyebrow">SCEP INVADERS</span>
+              <h1>Des événements qui marquent l'année</h1>
+              <p>
+                Tournoi de poker, conférences, partenariats Career Fair : nos
+                temps forts ESCP
+              </p>
+            </div>
+            <div class="slider-cta">
+              <a href="./evenements/index.html" class="button primary"
+                >Voir les événements</a
+              >
+            </div>
+          </div>
 
-    <!-- Slide 4: Community -->
-    <div class="slider-slide slide-community" style="background-image: url('./assets/images/community-hero.svg');">
-      <div class="slider-overlay"></div>
-      <div class="slider-content">
-        <span class="eyebrow">SCEP INVADERS</span>
-        <h1>Une communauté qui joue ensemble</h1>
-        <p>Plus de 50 membres, un bureau engagé, une asso reconnue « Essential Society » par l'ESCP</p>
+          <!-- Slide 4: Community -->
+          <div
+            class="slider-slide slide-community"
+            style="
+              background-image: url(&quot;./assets/images/community-hero.svg&quot;);
+            "
+          >
+            <div class="slider-overlay"></div>
+            <div class="slider-content">
+              <span class="eyebrow">SCEP INVADERS</span>
+              <h1>Une communauté qui joue ensemble</h1>
+              <p>
+                Plus de 50 membres, un bureau engagé, une asso reconnue «
+                Essential Society » par l'ESCP
+              </p>
+            </div>
+            <div class="slider-cta">
+              <a href="./contact/index.html" class="button primary">Nous contacter</a>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="slider-arrow prev"
+          aria-label="Mise en avant précédente"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          class="slider-arrow next"
+          aria-label="Mise en avant suivante"
+        >
+          ›
+        </button>
+        <div
+          class="slider-dots"
+          role="tablist"
+          aria-label="Choisir une mise en avant"
+        >
+          <button
+            class="slider-dot"
+            type="button"
+            aria-label="Gaming"
+            aria-selected="true"
+          ></button>
+          <button
+            class="slider-dot"
+            type="button"
+            aria-label="Coinche"
+            aria-selected="false"
+          ></button>
+          <button
+            class="slider-dot"
+            type="button"
+            aria-label="Événements"
+            aria-selected="false"
+          ></button>
+          <button
+            class="slider-dot"
+            type="button"
+            aria-label="Communauté"
+            aria-selected="false"
+          ></button>
+        </div>
+      </section>
+      <div class="ticker" aria-label="Nos univers">
+        <span>GAMING</span><i>✦</i><span>JEUX DE SOCIÉTÉ</span><i>✦</i
+        ><span>COINCHE</span><i>✦</i><span>NOUVELLES TECHNOLOGIES</span><i>✦</i
+        ><span>ESCP</span>
       </div>
-      <div class="slider-cta"><a href="./contact/" class="button primary">Nous contacter</a></div>
-    </div>
-  </div>
-  <button type="button" class="slider-arrow prev" aria-label="Mise en avant précédente">‹</button>
-  <button type="button" class="slider-arrow next" aria-label="Mise en avant suivante">›</button>
-  <div class="slider-dots" role="tablist" aria-label="Choisir une mise en avant">
-    <button class="slider-dot" type="button" aria-label="Gaming" aria-selected="true"></button>
-    <button class="slider-dot" type="button" aria-label="Coinche" aria-selected="false"></button>
-    <button class="slider-dot" type="button" aria-label="Événements" aria-selected="false"></button>
-    <button class="slider-dot" type="button" aria-label="Communauté" aria-selected="false"></button>
-  </div>
-</section>
-<div class="ticker" aria-label="Nos univers"><span>GAMING</span><i>✦</i><span>JEUX DE SOCIÉTÉ</span><i>✦</i><span>COINCHE</span><i>✦</i><span>NOUVELLES TECHNOLOGIES</span><i>✦</i><span>ESCP</span></div>
-<section class="section"><div class="section-heading"><div><span class="eyebrow">01 / À EXPLORER</span><h2>Sur notre radar.</h2></div><span class="side-note">Les découvertes de l’équipage</span></div><div class="picks reveal-stagger"><article class="pick"><div class="pick-art game-art" aria-hidden="true"><span class="art-label">PLAYER SELECT_</span><div class="controller"><i></i><b>✚</b><em>●<br>●</em></div><span class="art-index">01 / PLAY</span></div><div class="pick-copy"><span class="eyebrow">LE JEU DU MOMENT</span><h3>Votre prochaine obsession.</h3><p>Nos sélections jeux vidéo et tournois maison, façon Mario Kart et Smash Bros.</p><span class="pill">À découvrir prochainement</span></div></article><article class="pick"><div class="pick-art anime-art"><span class="art-label">GAME NIGHT_</span><div class="anime-orbit" aria-hidden="true"></div><img src="./assets/images/invadachan.png" alt="Invadachan, la mascotte de SCEP Invaders" width="631" height="544"><span class="art-index">02 / SHARE</span></div><div class="pick-copy"><span class="eyebrow">JEUX DE SOCIÉTÉ</span><h3>Cartes et plateaux, entre deux cours.</h3><p>Coinche, soirées jeux et retrouvailles conviviales : la face non-écran de l’asso.</p><span class="pill">Prochaine session à venir</span></div></article></div></section><section class="section"><div class="section-heading"><div><span class="eyebrow">02 / À EXPLORER</span><h2>Le prochain point de rencontre.</h2></div></div><article class="event-banner reveal"><div><span class="eyebrow">DERNIER TEMPS FORT</span><h3>L’ESCP Poker<br>Championship.</h3><p>Qualifications, demi-finale et finale : plus de 100 participants pour notre événement phare, gratuit et encadré par une charte de jeu responsable coécrite avec l’Autorité Nationale des Jeux.</p><span class="pill">Prochaine édition à venir</span></div><div class="event-art" aria-hidden="true"><span>MEET.<br>PLAY.<br>REPEAT.</span><b>✳</b></div></article></section><section class="coinche-banner reveal"><div><span class="eyebrow green">LE COIN DES JOUEURS</span><h2>À vous de<br><span class="green">distribuer.</span></h2><p>La coinche, bientôt en ligne.<br>Quatre joueurs, deux équipes, votre prochain rendez-vous.</p><a class="button outline" href="./coinche/">Explorer la coinche <span aria-hidden="true">↗</span></a></div><div class="playing-cards" aria-hidden="true"><img class="playing-card back" src="./assets/images/cards/back.svg" alt=""><img class="playing-card" src="./assets/images/cards/AS.png" alt=""><img class="playing-card red" src="./assets/images/cards/KH.png" alt=""></div></section><section class="section instagram"><div class="section-heading"><div><span class="eyebrow">03 / À EXPLORER</span><h2>Au-delà de l’écran.</h2></div><span class="side-note">Le fil de publications arrive bientôt ici</span></div><a class="instagram-card reveal" href="https://www.instagram.com/scepinvaders/?hl=fr" target="_blank" rel="noopener"><img class="instagram-avatar" src="./assets/images/logo-color.png" alt="" width="3141" height="2815"><div class="instagram-card-copy"><span class="eyebrow">@scepinvaders</span><h3>Les coulisses de SCEP Invaders.</h3><p>Les moments, les rencontres et tout ce qui se passe entre deux parties.</p></div><span class="instagram-card-cta">Voir le profil <span aria-hidden="true">↗</span></span></a></section></main>
-<footer class="footer"><div class="container footer-inner"><a class="brand" href="./"><img src="./assets/images/logo-white.png" alt="" width="2000" height="2000"><span>SCEP<span class="brand-sub">INVADERS</span></span></a><p>Une même passion. Tout un univers.</p><div class="footer-social"><a href="https://www.instagram.com/scepinvaders/?hl=fr" target="_blank" rel="noopener">Instagram</a><a href="https://www.linkedin.com/company/scep-invaders" target="_blank" rel="noopener">LinkedIn</a></div></div><div class="container footer-bottom"><span>SCEP Invaders · Association étudiante ESCP</span><span>PREMIÈRE ESQUISSE / 2026</span></div></footer>
-</body></html>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">01 / À EXPLORER</span>
+            <h2>Sur notre radar.</h2>
+          </div>
+          <span class="side-note">Les découvertes de l’équipage</span>
+        </div>
+        <div class="picks reveal-stagger">
+          <article class="pick">
+            <div class="pick-art game-art" aria-hidden="true">
+              <span class="art-label">PLAYER SELECT_</span>
+              <div class="controller">
+                <i></i><b>✚</b><em>●<br />●</em>
+              </div>
+              <span class="art-index">01 / PLAY</span>
+            </div>
+            <div class="pick-copy">
+              <span class="eyebrow">LE JEU DU MOMENT</span>
+              <h3>Votre prochaine obsession.</h3>
+              <p>
+                Nos sélections jeux vidéo et tournois maison, façon Mario Kart
+                et Smash Bros.
+              </p>
+              <span class="pill">À découvrir prochainement</span>
+            </div>
+          </article>
+          <article class="pick">
+            <div class="pick-art anime-art">
+              <span class="art-label">GAME NIGHT_</span>
+              <div class="anime-orbit" aria-hidden="true"></div>
+              <img
+                src="./assets/images/invadachan.png"
+                alt="Invadachan, la mascotte de SCEP Invaders"
+                width="631"
+                height="544"
+              /><span class="art-index">02 / SHARE</span>
+            </div>
+            <div class="pick-copy">
+              <span class="eyebrow">JEUX DE SOCIÉTÉ</span>
+              <h3>Cartes et plateaux, entre deux cours.</h3>
+              <p>
+                Coinche, soirées jeux et retrouvailles conviviales : la face
+                non-écran de l’asso.
+              </p>
+              <span class="pill">Prochaine session à venir</span>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">02 / À EXPLORER</span>
+            <h2>Le prochain point de rencontre.</h2>
+          </div>
+        </div>
+        <article class="event-banner reveal">
+          <div>
+            <span class="eyebrow">DERNIER TEMPS FORT</span>
+            <h3>L’ESCP Poker<br />Championship.</h3>
+            <p>
+              Qualifications, demi-finale et finale : plus de 100 participants
+              pour notre événement phare, gratuit et encadré par une charte de
+              jeu responsable coécrite avec l’Autorité Nationale des Jeux.
+            </p>
+            <span class="pill">Prochaine édition à venir</span>
+          </div>
+          <div class="event-art" aria-hidden="true">
+            <span>MEET.<br />PLAY.<br />REPEAT.</span><b>✳</b>
+          </div>
+        </article>
+      </section>
+      <section class="coinche-banner reveal">
+        <div>
+          <span class="eyebrow green">LE COIN DES JOUEURS</span>
+          <h2>À vous de<br /><span class="green">distribuer.</span></h2>
+          <p>
+            La coinche, bientôt en ligne.<br />Quatre joueurs, deux équipes,
+            votre prochain rendez-vous.
+          </p>
+          <a class="button outline" href="./coinche/index.html"
+            >Explorer la coinche <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <div class="playing-cards" aria-hidden="true">
+          <img
+            class="playing-card back"
+            src="./assets/images/cards/back.svg"
+            alt=""
+          /><img
+            class="playing-card"
+            src="./assets/images/cards/AS.png"
+            alt=""
+          /><img
+            class="playing-card red"
+            src="./assets/images/cards/KH.png"
+            alt=""
+          />
+        </div>
+      </section>
+      <section class="section instagram">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">03 / À EXPLORER</span>
+            <h2>Au-delà de l’écran.</h2>
+          </div>
+          <span class="side-note"
+            >Le fil de publications arrive bientôt ici</span
+          >
+        </div>
+        <a
+          class="instagram-card reveal"
+          href="https://www.instagram.com/scepinvaders/?hl=fr"
+          target="_blank"
+          rel="noopener"
+          ><img
+            class="instagram-avatar"
+            src="./assets/images/logo-color.png"
+            alt=""
+            width="3141"
+            height="2815"
+          />
+          <div class="instagram-card-copy">
+            <span class="eyebrow">@scepinvaders</span>
+            <h3>Les coulisses de SCEP Invaders.</h3>
+            <p>
+              Les moments, les rencontres et tout ce qui se passe entre deux
+              parties.
+            </p>
+          </div>
+          <span class="instagram-card-cta"
+            >Voir le profil <span aria-hidden="true">↗</span></span
+          ></a
+        >
+      </section>
+    </main>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <a class="brand" href="./index.html"
+          ><img
+            src="./assets/images/logo-white.png"
+            alt=""
+            width="2000"
+            height="2000"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        >
+        <p>Une même passion. Tout un univers.</p>
+        <div class="footer-social">
+          <a
+            href="https://www.instagram.com/scepinvaders/?hl=fr"
+            target="_blank"
+            rel="noopener"
+            >Instagram</a
+          ><a
+            href="https://www.linkedin.com/company/scep-invaders"
+            target="_blank"
+            rel="noopener"
+            >LinkedIn</a
+          >
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <span>SCEP Invaders · Association étudiante ESCP</span
+        ><span>PREMIÈRE ESQUISSE / 2026</span>
+      </div>
+    </footer>
+  </body>
+</html>
