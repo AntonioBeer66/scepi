@@ -268,8 +268,11 @@
   //     valent jamais ce risque.
   //   Capot quand les As annoncés (« clefs ») couvrent les fausses cartes
   //     de l'ouvreur.
-  //   Compétition : intervenir si la main ou la ligne le vaut, « forcer » de
-  //     10, deux fois au plus par ligne.
+  //   Compétition : soutenir le partenaire en « forçant » de 10, deux fois au
+  //     plus par ligne ; au-dessus de l'adversaire, surenchérir seulement si
+  //     la donne simulée le vaut mieux que le laisser jouer (voir étape 4).
+  //   Ouverture au barème, sauf contrat que la simulation voit chuter une
+  //     fois sur deux ; 80 hors barème s'il réussit 7 fois sur 10.
   //   Ces barèmes ont été calibrés en simulation (parties bots contre bots
   //     sur les mêmes donnes) : le système d'origine surenchérissait.
   //   Coinche : jouer la donne sur des mondes compatibles avec les enchères
@@ -421,6 +424,8 @@
 
     const partnerBid = lastBidOf(partner);
     const myBid = lastBidOf(seat);
+    // Réussite simulée d'un contrat que je prendrais (voir makeProbability).
+    const pMake = (montant, atout) => makeProbability(seat, { id: -1, type: bidType(montant), montant, atout, preneur: seat, equipePreneur: team, coinche: false, surcoinche: false });
 
     // 1. Capot par les clefs : il faut une clef (un As) de plus que de
     // fausses cartes, les plis de l'un devant couvrir les défausses de
@@ -469,13 +474,53 @@
       if (o) return o;
     }
 
-    // 4. Ouvrir, ou intervenir au-dessus de l'adversaire.
+    // 4. Intervenir au-dessus de l'adversaire : par espérance simulée, pas
+    // au barème. Le laisser jouer vaut −P·M + (1−P)·160 (sa réussite P jouée
+    // sur nos mondes, comme pour la coinche) ; surenchérir au minimum dans
+    // notre meilleure couleur vaut p·min − (1−p)·160. On ne surenchérit que
+    // si l'écart dépasse 60 : les probabilités simulées sont trop tranchées
+    // (prédit 7 % → 41 % réels, 93 % → 85 %). Mesuré en duel contre le
+    // barème : marge 0 → +3,8 pts/donne, 30 → +9,8, 60 → +14,3, 90 → +10,7 ;
+    // les interventions du barème non retenues ici coûtaient des points.
+    if (cur && !ours && !capotOnTable && min <= 160) {
+      const pOpp = makeProbability(seat, cur);
+      if (pOpp !== null) {
+        const evPass = -pOpp * cur.montant + (1 - pOpp) * 160;
+        let best = null;
+        for (const s of SUITS) {
+          if (suitCards(hand, s).length < 3) continue;
+          // Main forte : le palier du barème est candidat aussi (130 plutôt
+          // que 90, +1,9 pt/donne), il renseigne le partenaire.
+          const sys = Math.min(160, openingBid(hand, s, false));
+          for (const L of sys > min ? [min, sys] : [min]) {
+            const pm = pMake(L, s);
+            const ev = pm * L - (1 - pm) * 160;
+            if (!best || ev > best.ev) best = { ev, s, L };
+          }
+        }
+        if (best && best.ev > evPass + 60) return offer(best.L, best.s);
+        return PASS;
+      }
+    }
+
+    // 5. Ouvrir au barème (il renseigne le partenaire : l'ouverture « à
+    // l'espérance » seule perdait 1,7 pt/donne), mais pas un contrat que la
+    // simulation voit chuter une fois sur deux (+2,3 pts/donne) ; et ouvrir
+    // 80 hors barème quand la simulation le réussit 7 fois sur 10 (+1,5).
     if (!ours && !capotOnTable) {
       const light = (!cur && G.passesConsecutives === 3) || Math.random() < p.bluff;
       const own = bestOpening(hand, light);
       if (own) {
         const o = offer(own.montant, own.atout) || (cur && own.montant + 10 >= min ? force(own.atout) : null);
-        if (o) return o;
+        if (o && (o.montant >= 250 || pMake(o.montant, o.atout) >= 0.5)) return o;
+      } else if (!cur) {
+        let best = null;
+        for (const s of SUITS) {
+          if (suitCards(hand, s).length < 3) continue;
+          const pm = pMake(80, s);
+          if (!best || pm > best.pm) best = { pm, s };
+        }
+        if (best && best.pm >= 0.7) return offer(80, best.s);
       }
     }
     return PASS;
@@ -535,6 +580,9 @@
     // Le preneur qui tient les 8 atouts (sa propre main, rien d'autre) gagne à coup sûr.
     if (seat === contract.preneur && suitCards(hand, atout).length === 8) return true;
     if (contract.type !== 'NUMERIQUE') return false;
+    // Réussite simulée quasi certaine (+0,8 pt/donne en duel).
+    const pm = makeProbability(seat, contract);
+    if (pm !== null && pm >= 0.9) return true;
     return holds(hand, atout, 'J') && holds(hand, atout, '9') && suitCards(hand, atout).length >= 4
       && sideAces(hand, atout) >= 2 && Math.random() < 0.8 * personality(seat).aggr;
   }
@@ -881,7 +929,12 @@
   // vu des enchères et des appels (voir bidFits), joue la fin de la donne
   // dans chacune avec les réflexes ci-dessus pour les quatre joueurs, et
   // garde la carte qui rapporte le plus en moyenne au score de la donne. À
-  // égalité, le réflexe l'emporte.
+  // égalité, le réflexe l'emporte. Les trois derniers plis de chaque monde
+  // sont joués parfaitement (voir exactEnd).
+  // Pistes mesurées sans gain : pondérer les mondes par « le réflexe
+  // aurait-il joué cette carte ? » (le Monte-Carlo s'écarte du réflexe près
+  // d'une fois sur deux en début de donne : signal trop bruité, −1,1 pt) ;
+  // ne quitter le réflexe qu'au-delà d'un écart moyen de 5 pts (−1,5 pt).
   // En simulation (bots contre bots, mêmes donnes), 16 mondes gagnaient 64 %
   // des parties contre les réflexes seuls, et 48 mondes 59 % contre 16 ; le
   // temps de réflexion reste plafonné pour les appareils lents.
@@ -1085,23 +1138,80 @@
     G = sim;
     try {
       let next = card ? simPlay(sim, seat, card) : suivant(real.donneur);
-      while (sim.plisJoues < 8) next = simPlay(sim, next, heuristicCard(next));
+      while (sim.plisJoues < 8) {
+        if (exactTeam !== null && 8 - sim.plisJoues <= EXACT_TRICKS) {
+          sim.exactValue = exactEnd(sim, next, bel, exactTeam);
+          break;
+        }
+        next = simPlay(sim, next, heuristicCard(next));
+      }
     } finally {
       G = real;
     }
     return { sim, bel };
   }
 
-  // Score de la donne vu de l'équipe du siège après `card` (plus un soupçon
-  // de points de plis pour départager).
-  function mcValue(seat, card, world) {
-    const { sim, bel } = playOut(seat, world, card);
-    const c = sim.contract;
-    const reussi = contratReussi(c, sim.pointsPlis, sim.plisGagnes, bel);
-    const team = teamOf(seat);
-    const gain = (reussi ? c.montant : 160) * sim.multiplicateur;
+  // Score de la donne vu d'une équipe, plus un soupçon de points de plis
+  // pour départager.
+  function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team) {
+    const reussi = contratReussi(c, pointsPlis, plisGagnes, bel);
+    const gain = (reussi ? c.montant : 160) * multiplicateur;
     return ((reussi ? c.equipePreneur : 1 - c.equipePreneur) === team ? gain : -gain)
-      + (sim.pointsPlis[team] - sim.pointsPlis[1 - team]) * 0.01;
+      + (pointsPlis[team] - pointsPlis[1 - team]) * 0.01;
+  }
+
+  // Dans un monde imaginé les quatre mains sont connues : les derniers plis
+  // s'y jouent parfaitement (minimax alpha-bêta, chaque camp maximise son
+  // score de donne) au lieu des réflexes. Trois plis au plus : douze cartes,
+  // quelques centaines de positions. Mesuré : +2,5 pts/donne ; quatre plis
+  // coûtaient dix fois plus de temps.
+  const EXACT_TRICKS = 3;
+  let exactTeam = null; // équipe qui évalue, le temps d'un mcValue
+  function exactEnd(sim, first, bel, team) {
+    const { atout } = sim.contract;
+    const h = sim.hands.map((x) => x.slice());
+    const pts = sim.pointsPlis.slice();
+    const tricks = sim.plisGagnes.slice();
+    const pli = sim.pliCourant.slice();
+    let done = sim.plisJoues;
+    function rec(seat, alpha, beta) {
+      if (done === 8) return donneValue(sim.contract, pts, tricks, bel, sim.multiplicateur, team);
+      const hand = h[seat];
+      const max = teamOf(seat) === team;
+      let v = max ? -Infinity : Infinity;
+      for (const card of computeLegal(hand, pli, atout, seat)) {
+        const i = hand.indexOf(card);
+        hand.splice(i, 1);
+        pli.push({ siege: seat, carte: card });
+        let r;
+        if (pli.length < 4) r = rec(suivant(seat), alpha, beta);
+        else {
+          const full = pli.splice(0, 4);
+          const win = trickWinnerSeat(full, atout);
+          const p = trickPoints(full, atout) + (done === 7 ? 10 : 0);
+          pts[teamOf(win)] += p; tricks[teamOf(win)]++; done++;
+          r = rec(win, alpha, beta);
+          done--; tricks[teamOf(win)]--; pts[teamOf(win)] -= p;
+          pli.push(...full);
+        }
+        pli.pop();
+        hand.splice(i, 0, card);
+        if (max) { v = Math.max(v, r); alpha = Math.max(alpha, v); } else { v = Math.min(v, r); beta = Math.min(beta, v); }
+        if (alpha >= beta) break;
+      }
+      return v;
+    }
+    return rec(first, -Infinity, Infinity);
+  }
+
+  // Score de la donne vu de l'équipe du siège après `card`.
+  function mcValue(seat, card, world) {
+    exactTeam = teamOf(seat);
+    let out;
+    try { out = playOut(seat, world, card); } finally { exactTeam = null; }
+    const { sim, bel } = out;
+    if (sim.exactValue !== undefined) return sim.exactValue;
+    return donneValue(sim.contract, sim.pointsPlis, sim.plisGagnes, bel, sim.multiplicateur, teamOf(seat));
   }
 
   // Monde par monde, toutes les cartes sur les mêmes mondes : au-delà du

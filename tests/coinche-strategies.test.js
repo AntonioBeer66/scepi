@@ -12,7 +12,10 @@ const src = fs.readFileSync(path.join(__dirname, '../site/assets/js/coinche-game
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(src, ctx);
-vm.runInContext('Math.random = () => 0.99;', ctx); // ni bluff, ni forcing
+// Hasard reproductible : les enchères jouent la donne sur des mondes tirés
+// au hasard, un hasard constant n'en fabriquerait qu'un seul. Pas de bluff
+// (personnalités à 0).
+vm.runInContext('Math.random = (() => { let s = 42; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', ctx);
 const api = ctx.window.__api;
 
 const card = (id) => ({ suit: id.slice(-1), rank: id.slice(0, -1), id });
