@@ -8,13 +8,13 @@ const path = require('path');
 const vm = require('vm');
 
 const src = fs.readFileSync(path.join(__dirname, '../site/assets/js/coinche-game.js'), 'utf8')
-  .replace('window.SCEPICoincheGame =', 'window.__api = { setG: (g) => { G = g; }, getG: () => G, botDecideBid, heuristicCard, botWantsToCoinche, botWantsToSurcoinche, contractIsGenerale, noteTrumpObligations, mcWorlds }; window.SCEPICoincheGame =');
+  .replace('window.SCEPICoincheGame =', 'window.__api = { setG: (g) => { G = g; }, getG: () => G, botDecideBid, heuristicCard, botWantsToCoinche, botWantsToSurcoinche, contractIsGenerale, noteTrumpObligations, mcWorlds, exactEnd }; window.SCEPICoincheGame =');
 const ctx = { window: {} };
 vm.createContext(ctx);
 vm.runInContext(src, ctx);
 // Hasard reproductible : les enchères jouent la donne sur des mondes tirés
 // au hasard, un hasard constant n'en fabriquerait qu'un seul. Pas de bluff
-// (personnalités à 0).
+// (bluff à 0 dans les personnalités).
 vm.runInContext('Math.random = (() => { let s = 42; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', ctx);
 const api = ctx.window.__api;
 
@@ -154,6 +154,19 @@ check('Partenaire maître : défausser ne dit rien sur l’atout', api.getG().tr
   const both = worlds.filter((w) => ['JS', '9S'].every((id) => w[1].some((c) => c.id === id))).length;
   check('Mondes compatibles avec un 90 fort (Valet + 9 chez le preneur, ≥ 80 %)', both >= 0.8 * worlds.length, true);
   vm.runInContext('Math.random = () => 0.99;', ctx);
+}
+
+// ---- Fin de donne exacte : 80 Cœur du siège 0, deux plis à jouer, 60 à 57.
+// Tirer le Valet d'atout (le réflexe) ne fait que 80 ; jouer le 7 de Pique
+// d'abord laisse l'As adverse passer, puis le Valet coupe le Trèfle et prend
+// le dix de der : 90, contrat réussi.
+{
+  const sim = {
+    contract: contract(0, 80, 'H'), multiplicateur: 1, pliCourant: [], plisJoues: 6, pointsPlis: [60, 57], plisGagnes: [3, 3],
+    hands: [cards('JH 7S'), cards('AS 8C'), cards('7C 8D'), cards('KS 9D')],
+  };
+  check('Fin de donne exacte : le preneur trouve la ligne gagnante', api.exactEnd(sim, 0, false, 0) > 0, true);
+  check('Fin de donne exacte : vue de la défense, le contrat passe', api.exactEnd(sim, 0, false, 1) < 0, true);
 }
 
 if (failures.length) {

@@ -394,7 +394,18 @@
     return best;
   }
 
+  // Une enchère peut enchaîner plusieurs simulations (adversaire, chaque
+  // couleur, chaque palier) : au-delà de ce temps total, celles qui restent
+  // répondent « je ne sais pas » et le barème décide.
+  const BID_DECISION_MS = 400;
+  const COMPETE_MARGIN = 60; // voir l'étape 4
+  let bidDeadline = Infinity;
   function botDecideBid(seat) {
+    bidDeadline = Date.now() + BID_DECISION_MS;
+    try { return decideBid(seat); } finally { bidDeadline = Infinity; }
+  }
+
+  function decideBid(seat) {
     const PASS = { type: 'PASSER' };
     const hand = G.hands[seat];
     const p = personality(seat);
@@ -492,13 +503,14 @@
           // Main forte : le palier du barème est candidat aussi (130 plutôt
           // que 90, +1,9 pt/donne), il renseigne le partenaire.
           const sys = Math.min(160, openingBid(hand, s, false));
-          for (const L of sys > min ? [min, sys] : [min]) {
-            const pm = pMake(L, s);
-            const ev = pm * L - (1 - pm) * 160;
-            if (!best || ev > best.ev) best = { ev, s, L };
+          for (const palier of sys > min ? [min, sys] : [min]) {
+            const pm = pMake(palier, s);
+            if (pm === null) continue; // plus le temps d'y réfléchir
+            const ev = pm * palier - (1 - pm) * 160;
+            if (!best || ev > best.ev) best = { ev, s, palier };
           }
         }
-        if (best && best.ev > evPass + 60) return offer(best.L, best.s);
+        if (best && best.ev > evPass + COMPETE_MARGIN) return offer(best.palier, best.s);
         return PASS;
       }
     }
@@ -511,14 +523,17 @@
       const light = (!cur && G.passesConsecutives === 3) || Math.random() < p.bluff;
       const own = bestOpening(hand, light);
       if (own) {
-        const o = offer(own.montant, own.atout) || (cur && own.montant + 10 >= min ? force(own.atout) : null);
-        if (o && (o.montant >= 250 || pMake(o.montant, o.atout) >= 0.5)) return o;
+        const plain = offer(own.montant, own.atout);
+        const o = plain || (cur && own.montant + 10 >= min ? force(own.atout) : null);
+        const pm = o && o.montant < 250 ? pMake(o.montant, o.atout) : null;
+        if (o && (pm === null || pm >= 0.5)) return o;
+        if (o && !plain) G.forced[team]--; // veto : ce forçage n'a pas servi
       } else if (!cur) {
         let best = null;
         for (const s of SUITS) {
           if (suitCards(hand, s).length < 3) continue;
           const pm = pMake(80, s);
-          if (!best || pm > best.pm) best = { pm, s };
+          if (pm !== null && (!best || pm > best.pm)) best = { pm, s };
         }
         if (best && best.pm >= 0.7) return offer(80, best.s);
       }
@@ -1236,10 +1251,11 @@
   const BID_SAMPLES = 24;
   const BID_BUDGET_MS = 150;
   function makeProbability(seat, contract) {
+    if (Date.now() >= bidDeadline) return null;
     const saved = G.contract;
     G.contract = contract;
     try {
-      const stop = Date.now() + BID_BUDGET_MS;
+      const stop = Math.min(Date.now() + BID_BUDGET_MS, bidDeadline);
       let ok = 0;
       let n = 0;
       for (const w of mcWorlds(seat, BID_SAMPLES)) {
