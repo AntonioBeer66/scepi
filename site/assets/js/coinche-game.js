@@ -1900,7 +1900,8 @@
     }
 
     if (action.type === "JOUER") {
-      if (G.phase !== "JEU" || seat !== G.joueurActif) return;
+      // Pli complet encore affiché : personne ne joue avant qu'il soit ramassé.
+      if (G.phase !== "JEU" || seat !== G.joueurActif || G.resolvingTrick) return;
       const hand = G.hands[seat];
       const idx = hand.findIndex((c) => c.id === action.carte.id);
       if (idx === -1) return;
@@ -2183,15 +2184,17 @@
     const total = G.turnTotalDuration || 15000;
     const remaining = Math.max(0, G.echeance - Date.now());
     const fraction = total ? remaining / total : 0;
+    // transform plutôt que width : le navigateur anime la barre hors du fil
+    // principal, elle ne saccade pas pendant qu'un bot réfléchit.
     fill.style.transition = "none";
-    fill.style.width = `${fraction * 100}%`;
+    fill.style.transform = `scaleX(${fraction})`;
     fill.classList.toggle("is-warning", fraction < 0.45 && fraction >= 0.2);
     fill.classList.toggle("is-danger", fraction < 0.2);
     // Forcer un reflow pour que le navigateur reparte bien de cette largeur avant d'animer.
     void fill.offsetWidth;
-    fill.style.transition = `width ${remaining}ms linear`;
+    fill.style.transition = `transform ${remaining}ms linear, background .3s`;
     requestAnimationFrame(() => {
-      fill.style.width = "0%";
+      fill.style.transform = "scaleX(0)";
     });
 
     clearTimer("timerWarn");
@@ -2222,6 +2225,12 @@
     if (G.phase !== "ENCHERES" || G.joueurActif !== G.you) return "";
     const min = G.contract ? G.contract.montant : 0;
     const options = ALLOWED_BIDS.filter((b) => b > min);
+    // Capot beloté sur la table : plus aucun palier, il ne reste qu'à passer.
+    if (!options.length) {
+      return `<div class="bidding-panel"><div class="bid-actions">
+        <button type="button" class="button outline" data-action="passer">Passer</button>
+      </div></div>`;
+    }
 
     // Nouvelle fenêtre d'enchère (le plancher a changé) : on repart du bas du slider.
     if (els.bidPanelMin !== min) {
@@ -2389,13 +2398,13 @@
     </div>`;
   }
 
-  // GIF plein écran bref à la coinche et à la surcoinche. Chaque GIF est
-  // téléchargé une seule fois ; une nouvelle URL blob par affichage le fait
-  // repartir de la première image. Rien en headless (pas de fetch) ni en
+  // Animation plein écran brève à la coinche et à la surcoinche : de courtes
+  // vidéos muettes (dix fois plus légères que les GIF d'origine), chacune
+  // téléchargée une seule fois. Rien en headless (pas de fetch) ni en
   // mouvement réduit.
   const FLASH_GIFS = {
-    coinche: { src: "../assets/images/coinche/coinched.gif", ms: 1600 },
-    surcoinche: { src: "../assets/images/coinche/surcoinched.gif", ms: 2900 },
+    coinche: { src: "../assets/images/coinche/coinched.mp4", ms: 1600 },
+    surcoinche: { src: "../assets/images/coinche/surcoinched.mp4", ms: 2900 },
   };
   const flashBlobs = {};
   function preloadFlashGifs() {
@@ -2422,7 +2431,7 @@
       const overlay = document.createElement("div");
       overlay.className = "coinche-flash";
       overlay.setAttribute("aria-hidden", "true");
-      overlay.innerHTML = `<img src="${url}" alt="">`;
+      overlay.innerHTML = `<video src="${url}" autoplay muted playsinline></video>`;
       document.body.append(overlay);
       setTimeout(() => overlay.classList.add("is-out"), FLASH_GIFS[kind].ms);
       setTimeout(() => {
@@ -2589,7 +2598,12 @@
         coincheAppetite: 0.7 + Math.random() * 0.7,
       })),
     };
-    bindEvents();
+    // Une seule fois : #game-view survit aux parties, des écouteurs
+    // rajoutés à chaque partie traitaient chaque clic deux fois.
+    if (!els.bound) {
+      bindEvents();
+      els.bound = true;
+    }
     startNewDonne();
     (table || root).scrollIntoView({ behavior: "smooth", block: "start" });
   }

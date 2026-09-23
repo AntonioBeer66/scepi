@@ -137,7 +137,7 @@ function findMySeat(state, clientId) {
 }
 
 function escapeHtml(str) {
-  return str.replace(
+  return String(str).replace(
     /[&<>"']/g,
     (c) =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
@@ -155,12 +155,12 @@ function seatMarkup(lobbyId, seat, index, clientId, mySeat, lobby) {
 
   if (!seat) {
     if (busyElsewhere) {
-      return `<li class="seat-row" data-lobby="${lobbyId}" data-seat="${index}">
+      return `<li class="seat-row" data-lobby="${escapeHtml(lobbyId)}" data-seat="${index}">
         <span class="seat-tag"><b>${label}</b><small>${team}</small></span>
         <span class="seat-empty-note">Libre — quittez votre table actuelle pour rejoindre</span>
       </li>`;
     }
-    return `<li class="seat-row" data-lobby="${lobbyId}" data-seat="${index}">
+    return `<li class="seat-row" data-lobby="${escapeHtml(lobbyId)}" data-seat="${index}">
       <span class="seat-tag"><b>${label}</b><small>${team}</small></span>
       <form class="seat-join-form" data-action="join">
         <input type="text" name="pseudo" maxlength="18" placeholder="Votre pseudo" aria-label="Pseudo pour ${label}" required>
@@ -171,7 +171,7 @@ function seatMarkup(lobbyId, seat, index, clientId, mySeat, lobby) {
   }
 
   if (seat.type === "bot") {
-    return `<li class="seat-row is-taken" data-lobby="${lobbyId}" data-seat="${index}">
+    return `<li class="seat-row is-taken" data-lobby="${escapeHtml(lobbyId)}" data-seat="${index}">
       <span class="seat-tag"><b>${label}</b><small>${team}</small></span>
       <span class="seat-occupant cpu">Ordinateur <span class="cpu-badge">CPU</span></span>
       ${busyElsewhere ? "" : '<button type="button" class="button outline seat-btn" data-action="take-over">Prendre cette place</button>'}
@@ -180,7 +180,7 @@ function seatMarkup(lobbyId, seat, index, clientId, mySeat, lobby) {
   }
 
   const isMe = seat.clientId === clientId;
-  return `<li class="seat-row is-taken" data-lobby="${lobbyId}" data-seat="${index}">
+  return `<li class="seat-row is-taken" data-lobby="${escapeHtml(lobbyId)}" data-seat="${index}">
     <span class="seat-tag"><b>${label}</b><small>${team}</small></span>
     <span class="seat-occupant">${escapeHtml(seat.name)}${isMe ? " <em>(vous)</em>" : ""}</span>
     ${isMe ? '<button type="button" class="button outline seat-btn" data-action="leave">Quitter</button>' : ""}
@@ -193,19 +193,21 @@ function render(grid, state, clientId) {
     (a, b) => (a[1].number || 0) - (b[1].number || 0),
   );
 
+  // Identifiants et numéros viennent du localStorage : échappés à l'affichage.
   grid.innerHTML = ordered
-    .map(([lobbyId, lobby]) => {
+    .map(([lobbyId, rawLobby]) => {
+      const lobby = { ...rawLobby, number: Number(rawLobby.number) || 0 };
       const filled = lobby.seats.filter(Boolean).length;
       const canStart = mySeat && mySeat.lobbyId === lobbyId;
       const number = String(lobby.number).padStart(2, "0");
-      return `<article class="lobby ${lobby.ephemeral ? "is-ephemeral" : ""}" data-lobby="${lobbyId}">
+      return `<article class="lobby ${lobby.ephemeral ? "is-ephemeral" : ""}" data-lobby="${escapeHtml(lobbyId)}">
       <span class="eyebrow">SALON ${number}${lobby.ephemeral ? ' <span class="lobby-temp-tag">TEMPORAIRE</span>' : ""}</span>
       <h3>Table ${lobby.number}</h3>
       <ul class="seat-list">
         ${lobby.seats.map((seat, i) => seatMarkup(lobbyId, seat, i, clientId, mySeat, lobby)).join("")}
       </ul>
       <p class="caption">${filled}/4 places occupées · 2 équipes</p>
-      ${canStart ? `<button type="button" class="button primary seat-btn" data-action="start" data-lobby="${lobbyId}">Lancer la partie</button>` : ""}
+      ${canStart ? `<button type="button" class="button primary seat-btn" data-action="start" data-lobby="${escapeHtml(lobbyId)}">Lancer la partie</button>` : ""}
     </article>`;
     })
     .join("");
@@ -329,9 +331,12 @@ function init() {
     const lobbySection = document.querySelector("#lobby-section");
     if (lobbySection) lobbySection.hidden = true;
 
+    // La partie tourne dans ce seul onglet : un humain assis depuis un autre
+    // onglet n'y a aucune prise, l'IA joue sa place (sinon il ne jouait qu'au
+    // bout des 30 s du minuteur, une carte au hasard).
     const seatsForGame = lobby.seats.map((seat) => ({
       name: seat.type === "bot" ? "Ordinateur" : seat.name,
-      type: seat.type,
+      type: seat.type === "human" && seat.clientId === clientId ? "human" : "bot",
     }));
 
     window.SCEPICoincheGame.start(seatsForGame, mySeat.seatIndex, () => {

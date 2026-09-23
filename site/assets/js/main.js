@@ -81,7 +81,10 @@ if (sliderContainer && slides.length > 0) {
   sliderContainer.addEventListener(
     "touchend",
     () => {
-      setTimeout(startAutoAdvance, 2000); // Resume after 2 seconds of inactivity
+      // Reprise 2 s après le dernier toucher : même minuterie que le
+      // défilement, qu'un nouveau toucher annule (sinon il repartait sous le doigt).
+      clearTimeout(autoAdvanceTimeout);
+      autoAdvanceTimeout = setTimeout(startAutoAdvance, 2000);
     },
     { passive: true },
   );

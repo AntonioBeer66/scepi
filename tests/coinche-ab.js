@@ -18,7 +18,7 @@ const DELEGATE = [
   ['const decision = botDecideBid(seat);', "const decision = __sim.who(seat, 'botDecideBid', G) ?? botDecideBid(seat);"],
   ['const carte = botChooseCard(seat);', "const carte = __sim.who(seat, 'botChooseCard', G) ?? botChooseCard(seat);"],
   ['if (botWantsToCoinche(seat)) applyAction', "if (__sim.who(seat, 'botWantsToCoinche', G) ?? botWantsToCoinche(seat)) applyAction"],
-  ['if (botWantsToSurcoinche(seat)) applyAction', "if (__sim.who(seat, 'botWantsToSurcoinche', G) ?? botWantsToSurcoinche(seat)) applyAction"],
+  ['if (botWantsToSurcoinche(seat))', "if (__sim.who(seat, 'botWantsToSurcoinche', G) ?? botWantsToSurcoinche(seat))"],
 ];
 const mcPatch = (src, n) => (n === undefined ? src : src.replace(/const MC_SAMPLES = \d+;/, `const MC_SAMPLES = ${n};`));
 

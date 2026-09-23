@@ -22,7 +22,16 @@
 }
 body {
   margin: 0;
-  background-color: var(--bg);
+}
+/* Décor du fond : un calque fixe composé une fois pour toutes, au lieu de
+   background-attachment: fixed qui faisait redessiner l'écran à chaque
+   défilement. Le fond uni vient de :root. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     radial-gradient(1px 1px at 40px 60px, #ffffff16, transparent),
     radial-gradient(1px 1px at 160px 20px, #ffffff10, transparent),
@@ -48,7 +57,6 @@ body {
     120px 120px,
     auto,
     auto;
-  background-attachment: fixed;
 }
 a {
   color: inherit;
@@ -887,30 +895,14 @@ a {
     transform: scale(0.55) translateY(-18px);
   }
 }
-@keyframes legalGlow {
+/* Pulsations en opacité seulement : animer box-shadow redessinait la zone à chaque image. */
+@keyframes glowPulse {
   0%,
   100% {
-    box-shadow:
-      0 10px 24px #00000066,
-      0 0 0 0 #f4c60066;
+    opacity: 0.35;
   }
   50% {
-    box-shadow:
-      0 14px 30px #00000077,
-      0 0 26px 6px #f4c60055;
-  }
-}
-@keyframes seatActivePulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 2px #f4c60055,
-      0 0 18px 2px #f4c60033;
-  }
-  50% {
-    box-shadow:
-      0 0 0 2px #f4c600aa,
-      0 0 26px 6px #f4c60066;
+    opacity: 1;
   }
 }
 @keyframes bannerIn {
@@ -947,8 +939,18 @@ a {
 .table-preview .seat.is-active {
   border-color: var(--gold);
   background: #241d10;
-  animation: seatActivePulse 1.6s ease-in-out infinite;
   z-index: 3;
+}
+.table-preview .seat.is-active:after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 2px #f4c600aa,
+    0 0 26px 6px #f4c60066;
+  pointer-events: none;
+  animation: glowPulse 1.6s ease-in-out infinite;
 }
 .table-preview .seat.is-preneur {
   border-color: #5c7948;
@@ -1152,7 +1154,7 @@ a {
   border-radius: 50%;
   background: var(--gold);
   flex-shrink: 0;
-  animation: seatActivePulse 1s ease-in-out infinite;
+  animation: glowPulse 1s ease-in-out infinite;
 }
 .turn-timer {
   flex: 1;
@@ -1165,6 +1167,7 @@ a {
 .turn-timer-fill {
   height: 100%;
   width: 100%;
+  transform-origin: left;
   background: linear-gradient(90deg, var(--gold), #ffdc40);
   transition: background 0.3s;
 }
@@ -1173,7 +1176,7 @@ a {
 }
 .turn-timer-fill.is-danger {
   background: linear-gradient(90deg, #c23a3a, #ff5b5b);
-  animation: seatActivePulse 0.8s ease-in-out infinite;
+  animation: glowPulse 0.8s ease-in-out infinite;
 }
 
 .score-banner {
@@ -1359,16 +1362,12 @@ a {
 .game-hand .card-img.is-legal {
   cursor: pointer;
   transform: translateY(-22px);
-  animation: legalGlow 1.9s ease-in-out infinite;
+  box-shadow:
+    0 12px 28px #00000077,
+    0 0 22px 5px #f4c60055;
   z-index: 1;
 }
-.game-hand .card-img.is-legal.is-dealt {
-  animation:
-    cardIn 0.32s ease both,
-    legalGlow 1.9s ease-in-out 0.32s infinite;
-}
 .game-hand .card-img.is-legal:hover {
-  animation-play-state: paused;
   transform: translateY(-38px) scale(1.08);
   z-index: 2;
 }
@@ -1472,6 +1471,88 @@ a {
 .last-trick-card.is-winner .card-img {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
+}
+.history-btn {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 30px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.history-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.history-panel {
+  width: min(360px, 100%);
+  max-height: min(360px, 50vh);
+  overflow-y: auto;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: var(--surface);
+  box-shadow: 0 16px 40px #000a;
+  animation: bannerIn 0.2s ease both;
+}
+.history-panel .eyebrow {
+  color: #a7bb9f;
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+.history-score {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.history-score-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+}
+.history-score-tile b {
+  font-size: 20px;
+  color: var(--gold);
+}
+.history-score-tile span,
+.history-empty {
+  font-size: 11px;
+  color: var(--muted);
+}
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.history-list li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 11.5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border-left: 3px solid #5c7948;
+  background: #ffffff08;
+}
+.history-list li.ko {
+  border-left-color: #c23a3a;
+}
+.history-donne {
+  color: var(--muted);
+}
+.history-points {
+  font-weight: 700;
 }
 @media (max-width: 760px) {
   .last-trick-btn {
@@ -2709,7 +2790,7 @@ body.is-playing .seat-bid {
   background: radial-gradient(circle, #000 35%, #000000b3 75%);
   animation: coinche-flash-in 0.18s ease;
 }
-.coinche-flash img {
+.coinche-flash video {
   width: min(94vw, 760px);
   height: auto;
 }

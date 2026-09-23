@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 cd /d "C:\Users\anton\Documents\ChatGPT\site scepi"
 echo Démarrage du serveur local pour SCEP Invaders...
 echo Servant le site depuis le dossier 'site' sur http://127.0.0.1:8000

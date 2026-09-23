@@ -285,14 +285,11 @@
                 alt="Table de poker pendant l’ESCP Poker Championship"
               /><img
                 src="../assets/images/events/Poker%20Championship/poker_2.jpg"
-                alt="Participants autour d’une table de poker"
-              /><img
+                alt="Participants autour d’une table de poker" loading="lazy" /><img
                 src="../assets/images/events/Poker%20Championship/poker_3.jpg"
-                alt="Ambiance du tournoi de poker"
-              /><img
+                alt="Ambiance du tournoi de poker" loading="lazy" /><img
                 src="../assets/images/events/Poker%20Championship/poker_4.jpg"
-                alt="Table de poker pendant le tournoi"
-              />
+                alt="Table de poker pendant le tournoi" loading="lazy" />
               <div
                 class="event-carousel-dots"
                 aria-label="Choisir une photo"
@@ -316,20 +313,15 @@
                 alt="Week-End Intergé Mai 2026, photo 1"
               /><img
                 src="../assets/images/events/WEI/wei_2.JPG"
-                alt="Week-End Intergé Mai 2026, photo 2"
-              /><img
+                alt="Week-End Intergé Mai 2026, photo 2" loading="lazy" /><img
                 src="../assets/images/events/WEI/wei_3.JPG"
-                alt="Week-End Intergé Mai 2026, photo 3"
-              /><img
+                alt="Week-End Intergé Mai 2026, photo 3" loading="lazy" /><img
                 src="../assets/images/events/WEI/wei_4.JPG"
-                alt="Week-End Intergé Mai 2026, photo 4"
-              /><img
+                alt="Week-End Intergé Mai 2026, photo 4" loading="lazy" /><img
                 src="../assets/images/events/WEI/wei_5.JPG"
-                alt="Week-End Intergé Mai 2026, photo 5"
-              /><img
+                alt="Week-End Intergé Mai 2026, photo 5" loading="lazy" /><img
                 src="../assets/images/events/WEI/wei_6.JPG"
-                alt="Week-End Intergé Mai 2026, photo 6"
-              />
+                alt="Week-End Intergé Mai 2026, photo 6" loading="lazy" />
               <div
                 class="event-carousel-dots"
                 aria-label="Choisir une photo"
@@ -350,14 +342,11 @@
                 alt="Nintendo Career Fair, photo 1"
               /><img
                 src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_2.jpeg"
-                alt="Nintendo Career Fair, photo 2"
-              /><img
+                alt="Nintendo Career Fair, photo 2" loading="lazy" /><img
                 src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_3.jpg"
-                alt="Nintendo Career Fair, photo 3"
-              /><img
+                alt="Nintendo Career Fair, photo 3" loading="lazy" /><img
                 src="../assets/images/events/Nintendo%20Career%20Fair/nintendo_4.jpg"
-                alt="Nintendo Career Fair, photo 4"
-              />
+                alt="Nintendo Career Fair, photo 4" loading="lazy" />
               <div
                 class="event-carousel-dots"
                 aria-label="Choisir une photo"
@@ -625,13 +614,27 @@
         },
       );
 
+      // Défilement automatique des seuls diaporamas à l'écran, onglet visible,
+      // et jamais si l'utilisateur a demandé moins d'animations.
+      const onScreen = new Set();
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver((entries) =>
+          entries.forEach((e) =>
+            e.isIntersecting ? onScreen.add(e.target) : onScreen.delete(e.target),
+          ),
+        );
+        carousels.forEach(({ carousel }) => io.observe(carousel));
+      } else carousels.forEach(({ carousel }) => onScreen.add(carousel));
       let timer;
       const start = () => {
         clearInterval(timer);
-        timer = setInterval(
-          () => carousels.forEach(({ show, current }) => show(current + 1)),
-          4000,
-        );
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        timer = setInterval(() => {
+          if (document.hidden) return;
+          carousels.forEach(({ carousel, show, current }) => {
+            if (onScreen.has(carousel)) show(current + 1);
+          });
+        }, 4000);
       };
       const stop = () => clearInterval(timer);
       carousels.forEach(({ carousel }) => {

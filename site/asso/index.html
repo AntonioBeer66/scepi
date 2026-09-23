@@ -707,8 +707,11 @@
       document
         .querySelector(".board-close")
         .addEventListener("click", () => boardDialog.close());
-      // Clic sur le fond flouté (hors de la fenêtre) : on ferme.
+      // Clic sur le fond flouté : cible = le <dialog> lui-même, hors de sa
+      // boîte (un bouton activé au clavier arrive avec des coordonnées 0,0
+      // mais a pour cible le bouton : il ne ferme plus la fenêtre).
       boardDialog.addEventListener("click", (event) => {
+        if (event.target !== boardDialog) return;
         const r = boardDialog.getBoundingClientRect();
         if (
           event.clientX < r.left ||

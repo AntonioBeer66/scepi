@@ -36,7 +36,7 @@ const HOOKS = [
   ['donneur: Math.floor(Math.random() * 4),', 'donneur: Math.floor(__sim.dealRand() * 4),'],
   ['function onTurnTimeout(seat) {', 'function onTurnTimeout(seat) { __sim.on.timeout && __sim.on.timeout(G, seat);'],
   ['const winnerSeat = trickWinnerSeat(G.pliCourant, G.contract.atout);', 'const winnerSeat = trickWinnerSeat(G.pliCourant, G.contract.atout); __sim.on.trick && __sim.on.trick(G, winnerSeat);'],
-  ["    G.phase = 'SCORE';", "    G.phase = 'SCORE'; __sim.on.score && __sim.on.score(G);"],
+  ['    G.phase = "SCORE";', '    G.phase = "SCORE"; __sim.on.score && __sim.on.score(G);'],
   ['window.SCEPICoincheGame =', 'window.__api = { getG: () => G, setG: (g) => { G = g; }, botDecideBid, botChooseCard, botWantsToCoinche, botWantsToSurcoinche }; window.SCEPICoincheGame ='],
 ];
 
