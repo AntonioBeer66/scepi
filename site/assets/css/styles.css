@@ -2117,7 +2117,7 @@ body.is-playing .seat-bid {
 .chess-bot-header h2 { margin: 0; font-size: clamp(20px, 2.4vw, 28px); }
 .chess-bot-conversation { display: flex; align-items: center; gap: 14px; min-height: 150px; padding: 18px 0; }
 .chess-bot-portrait { display: grid; place-items: center; flex: 0 0 82px; height: 82px; border-radius: 50%; color: var(--bg); background: var(--gold); font-size: 52px; }
-.chess-side-panel:not(.is-game-started) .chess-bot-portrait { position: relative; margin-bottom: 22px; }
+.chess-side-panel:not(.is-game-started) .chess-bot-portrait { position: relative; }
 .chess-side-panel:not(.is-game-started) .chess-bot-portrait::after { content: attr(data-rating); position: absolute; right: 0; bottom: -25px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .chess-bot-message { flex: 1; padding: 17px 20px; border-radius: 16px; color: var(--bg); background: #f1dfb2; font-size: 16px; font-weight: 600; line-height: 1.4; }
 .chess-bot-selection { padding: 16px 0; border-top: 1px solid var(--line); }
