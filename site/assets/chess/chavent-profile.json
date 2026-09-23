@@ -1,0 +1,272 @@
+{
+  "username": "chavent",
+  "games": 1866,
+  "own_moves": 55072,
+  "rates_per_own_move": {
+    "captures": 0.2548,
+    "checks": 0.101,
+    "castles": 0.0253,
+    "promotions": 0.004,
+    "pawn_moves": 0.2554
+  },
+  "by_color": {
+    "black": {
+      "games": 923,
+      "wins": 426
+    },
+    "white": {
+      "games": 943,
+      "wins": 528
+    }
+  },
+  "preferred_opening_sequences": [
+    [
+      "e2e4 g1f3 d2d4 f3d4",
+      225
+    ],
+    [
+      "b2b3 c1b2 e2e3 f1b5",
+      54
+    ],
+    [
+      "e2e4 g1f3 d2d4 d4e5",
+      48
+    ],
+    [
+      "e2e4 g1f3 d2d4 d4d5",
+      46
+    ],
+    [
+      "d7d5 g8f6 f6d5 d8d5",
+      43
+    ],
+    [
+      "c7c6 d7d5 c6d5 c8g4",
+      32
+    ],
+    [
+      "d7d5 g8f6 c7c6 b8c6",
+      26
+    ],
+    [
+      "e7e5 b8c6 g8f6 d7d5",
+      22
+    ],
+    [
+      "e2e4 e4d5 b1c3 g1f3",
+      21
+    ],
+    [
+      "e2e4 e4d5 b1c3 d2d4",
+      21
+    ],
+    [
+      "e2e4 g1f3 f1c4 b1c3",
+      19
+    ],
+    [
+      "c7c6 d7d5 c8f5 e7e6",
+      19
+    ],
+    [
+      "e2e4 g1f3 f3e5 e5c6",
+      18
+    ],
+    [
+      "e2e4 c2c3 d2d4 c3d4",
+      18
+    ],
+    [
+      "e7e5 g8f6 d7d5 f6d5",
+      18
+    ],
+    [
+      "d7d5 b8c6 f7f6 e7e5",
+      17
+    ],
+    [
+      "e2e4 d2d4 e4d5 b1c3",
+      14
+    ],
+    [
+      "e2e4 d1h5 f1c4 h5f3",
+      14
+    ],
+    [
+      "b2b3 c1b2 e2e3 f2f4",
+      14
+    ],
+    [
+      "e2e4 e4d5 b1c3 f1e2",
+      11
+    ],
+    [
+      "e2e4 g1f3 f3e5 d2d4",
+      11
+    ],
+    [
+      "e2e4 d2d4 g1f3 b1c3",
+      11
+    ],
+    [
+      "e2e4 g1f3 d2d4 b1c3",
+      11
+    ],
+    [
+      "c7c6 d7d5 c6d5 b8c6",
+      11
+    ],
+    [
+      "d7d5 g8f6 f6d5 d5c3",
+      10
+    ],
+    [
+      "c7c6 d7d5 c6d5 g8f6",
+      10
+    ],
+    [
+      "e2e4 g1f3 c2c3 d2d4",
+      9
+    ],
+    [
+      "d7d5 g8f6 f6d5 b8c6",
+      9
+    ],
+    [
+      "e2e4 d2d4 e4d5 g1f3",
+      9
+    ],
+    [
+      "e2e4 g1f3 b1c3 d2d4",
+      9
+    ]
+  ],
+  "common_second_moves": [
+    [
+      "g1f3",
+      514
+    ],
+    [
+      "g8f6",
+      310
+    ],
+    [
+      "b8c6",
+      207
+    ],
+    [
+      "d7d5",
+      164
+    ],
+    [
+      "d2d4",
+      157
+    ],
+    [
+      "c1b2",
+      92
+    ],
+    [
+      "e4d5",
+      77
+    ],
+    [
+      "d5e4",
+      37
+    ],
+    [
+      "c7c6",
+      36
+    ],
+    [
+      "c7c5",
+      35
+    ],
+    [
+      "c2c3",
+      35
+    ],
+    [
+      "d1h5",
+      30
+    ],
+    [
+      "e7e5",
+      26
+    ],
+    [
+      "d5d4",
+      17
+    ],
+    [
+      "d5c4",
+      16
+    ],
+    [
+      "e7e6",
+      14
+    ],
+    [
+      "b2b4",
+      13
+    ],
+    [
+      "f7f6",
+      10
+    ],
+    [
+      "b1c3",
+      10
+    ],
+    [
+      "e5d4",
+      9
+    ],
+    [
+      "c8f5",
+      9
+    ],
+    [
+      "e4e5",
+      6
+    ],
+    [
+      "f7f5",
+      4
+    ],
+    [
+      "d8d5",
+      4
+    ],
+    [
+      "c8b7",
+      4
+    ],
+    [
+      "e5f4",
+      3
+    ],
+    [
+      "b7b6",
+      2
+    ],
+    [
+      "f8c5",
+      2
+    ],
+    [
+      "f8b4",
+      2
+    ],
+    [
+      "d8h4",
+      2
+    ]
+  ],
+  "bot_usage": {
+    "candidate_move_count": 8,
+    "style_weight": 0.35,
+    "randomness": 0.12,
+    "note": "Initial conservative defaults; tune after playing test games."
+  }
+}
