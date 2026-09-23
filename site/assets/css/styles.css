@@ -2117,8 +2117,24 @@ body.is-playing .seat-bid {
 .chess-bot-header h2 { margin: 0; font-size: clamp(20px, 2.4vw, 28px); }
 .chess-bot-conversation { display: flex; align-items: center; gap: 14px; min-height: 150px; padding: 18px 0; }
 .chess-bot-portrait { display: grid; place-items: center; flex: 0 0 82px; height: 82px; border-radius: 50%; color: var(--bg); background: var(--gold); font-size: 52px; }
+.chess-side-panel:not(.is-game-started) .chess-bot-portrait { position: relative; margin-bottom: 22px; }
+.chess-side-panel:not(.is-game-started) .chess-bot-portrait::after { content: attr(data-rating); position: absolute; right: 0; bottom: -25px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .chess-bot-message { flex: 1; padding: 17px 20px; border-radius: 16px; color: var(--bg); background: #f1dfb2; font-size: 16px; font-weight: 600; line-height: 1.4; }
 .chess-bot-selection { padding: 16px 0; border-top: 1px solid var(--line); }
+.chess-bot-selection .chess-select-label, .chess-bot-selection .chess-profile, .chess-bot-selection .chess-profile-copy { display: none; }
+.chess-bot-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.chess-bot-option { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 3px 9px; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: #0c091426; text-align: left; cursor: pointer; }
+.chess-bot-option.is-selected { border-color: var(--gold); background: #f4c60018; }
+.chess-option-avatar { display: grid; place-items: center; grid-row: span 2; width: 42px; height: 42px; border-radius: 7px; color: var(--bg); background: var(--gold); font-size: 26px; }
+.chess-bot-option strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.chess-bot-option small { color: var(--muted); font-size: 10px; }
+.chess-start-button { width: 100%; margin-top: 14px; }
+.chess-side-panel.is-game-started .chess-bot-selection { display: none; }
+.chess-side-panel:not(.is-game-started) .chess-board-footer { display: none; }
+.chess-side-panel:not(.is-game-started) .chess-move-list { display: none; }
+.chess-side-panel:not(.is-game-started) .chess-bot-selection { display: flex; flex: 1; flex-direction: column; }
+.chess-side-panel:not(.is-game-started) .chess-start-button { margin-top: auto; }
+.chess-selection-description { margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .chess-bot-selection .chess-select-label { margin-top: 0; }
 .chess-side-panel .eyebrow { margin-bottom: 10px; }
 .chess-mode-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 7px; background: #0c091412; }
