@@ -2216,6 +2216,7 @@ body.is-playing .seat-bid {
 .chess-square.is-target::after { content: ""; position: absolute; top: 50%; left: 50%; width: 24%; height: 24%; border-radius: 50%; background: #f4c600c7; transform: translate(-50%, -50%); }
 .chess-square.is-capture::after { content: ""; position: absolute; top: 50%; left: 50%; width: 72%; height: 72%; border: 4px solid #f4c600c7; border-radius: 50%; transform: translate(-50%, -50%); }
 .chess-square.is-check { z-index: 2; background: #d84545 !important; box-shadow: inset 0 0 0 3px #ff6b6bcc, 0 0 14px 5px #e33e3e99; transition: none !important; animation: none !important; }
+.chess-square.is-premove { background: #761d1dcc !important; box-shadow: inset 0 0 0 3px #4b1111, inset 0 0 0 7px #26080866; }
 .chess-square.is-check.is-selected { z-index: 2; box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 8px #24173555, 0 0 14px 5px #e33e3e99; }
 .chess-piece { z-index: 3; display: grid; place-items: center; padding-bottom: 2.5%; box-sizing: border-box; font: clamp(1.65rem, 4.8vw, 3.6rem)/1 Georgia, serif; cursor: grab; transition: left .16s ease, top .16s ease; user-select: none; }
 .chess-piece.is-dragging { z-index: 8; cursor: grabbing; transition: none; }
