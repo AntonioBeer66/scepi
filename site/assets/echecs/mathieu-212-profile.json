@@ -265,8 +265,8 @@
   ],
   "bot_usage": {
     "candidate_move_count": 8,
-    "style_weight": 0.35,
-    "randomness": 0.12,
+    "style_weight": 0.2,
+    "randomness": 0.65,
     "note": "Initial conservative defaults; tune after playing test games."
   }
 }
