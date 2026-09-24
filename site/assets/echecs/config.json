@@ -1,0 +1,37 @@
+{
+  "profiles": [
+    {
+      "id": "lea",
+      "name": "Léa",
+      "selection_dialogue": ["Bonjour ! On joue une partie ?", "Choisis-moi pour une partie calme."],
+      "game_dialogue": ["Je vais essayer de rester concentrée.", "Cette position devient intéressante !", "Je vois déjà quelques idées."],
+      "description": "Un nouveau profil à personnaliser.",
+      "rating": 900,
+      "picture": "../assets/echecs/lea.png",
+      "model": "mathieu-212-model.json",
+      "style": "mathieu-212-profile.json"
+    },
+    {
+      "id": "mathieu",
+      "name": "Mathieu",
+      "selection_dialogue": ["À nous de jouer. Je vais privilégier les plans solides."],
+      "game_dialogue": ["Je préfère construire calmement.", "Chaque détail compte dans cette position.", "Ce plan mérite un peu de patience."],
+      "description": "Un profil positionnel, construit autour des développements calmes et des plans préparés.",
+      "rating": 1000,
+      "picture": "../assets/echecs/mathieu.png",
+      "model": "mathieu-212-model.json",
+      "style": "mathieu-212-profile.json"
+    },
+    {
+      "id": "arno",
+      "name": "Arno",
+      "selection_dialogue": ["Bonjour ! Prêt à jouer ?", "On va bien s'amuser."],
+      "game_dialogue": ["Cette partie promet d'être intéressante.", "Je vais chercher une occasion tactique.", "Il y a peut-être une ouverture ici."],
+      "description": "Un jeu actif, direct, avec une préférence pour les occasions tactiques.",
+      "rating": 1500,
+      "picture": "../assets/echecs/arno.png",
+      "model": "chavent-model.json",
+      "style": "chavent-profile.json"
+    }
+  ]
+}
