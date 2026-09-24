@@ -2086,6 +2086,7 @@ body.is-playing .seat-bid {
 .chess-intro p { max-width: 620px; }
 .chess-arena { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(300px, .82fr); gap: 22px; padding-bottom: 80px; }
 .chess-board-panel, .chess-side-panel { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.chess-board-panel { position: relative; }
 .chess-board-panel { padding: 10px 18px 18px; background: radial-gradient(circle at 10% 0%, #f4c60012, transparent 34%), var(--surface); }
 .chess-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .chess-panel-heading h2 { margin: 0; font-size: clamp(24px, 3vw, 32px); }
@@ -2112,9 +2113,10 @@ body.is-playing .seat-bid {
 .chess-navigation { display: inline-flex; align-items: center; justify-self: center; gap: 6px; }
 .chess-nav-button { display: grid; min-width: 38px; min-height: 38px; place-items: center; padding: 0 10px 2px; font-size: 18px; line-height: 0; }
 .chess-board-footer #chess-reset { justify-self: end; }
+.chess-board-footer #chess-give-up, .chess-board-footer #chess-reset { grid-column: 3; grid-row: 1; justify-self: end; }
 .chess-board-footer #chess-reset { color: var(--bg); border-color: var(--gold); background: var(--gold); }
 .chess-board-footer #chess-reset:hover { color: var(--bg); background: #ffd62e; border-color: #ffd62e; }
-.chess-side-panel { display: flex; flex-direction: column; gap: 14px; min-height: 100%; padding: 10px 18px 18px; }
+.chess-side-panel { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden; padding: 10px 18px 18px; }
 .chess-bot-header { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 76px; margin: -28px -28px 0; padding: 16px 22px; border-radius: 13px 13px 0 0; background: #100c19c9; }
 .chess-bot-header span { font-size: 28px; }
 .chess-bot-header h2 { margin: 0; font-size: clamp(20px, 2.4vw, 28px); }
@@ -2134,16 +2136,37 @@ body.is-playing .seat-bid {
 .chess-option-avatar { display: grid; place-items: center; grid-row: span 2; width: 42px; height: 42px; border-radius: 7px; color: var(--bg); background-color: var(--gold); background-position: center; background-size: cover; font-size: 26px; }
 .chess-bot-option strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .chess-bot-option small { color: var(--muted); font-size: 10px; }
-.chess-start-button { width: 100%; margin-top: 14px; color: var(--bg); border-color: var(--gold); background: var(--gold); }
+.chess-start-button { width: 100%; margin-top: 0; color: var(--bg); border-color: var(--gold); background: var(--gold); }
 .chess-start-button:hover { color: var(--bg); border-color: #ffd62e; background: #ffd62e; }
-.chess-color-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.chess-color-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: auto; }
 .chess-color-mode { display: grid; min-height: 42px; place-items: center; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); background: #0c091426; font-size: 23px; cursor: pointer; }
 .chess-color-mode:hover, .chess-color-mode.is-selected { border-color: var(--gold); color: var(--gold); background: #f4c60018; }
 .chess-side-panel.is-game-started .chess-bot-selection { display: none; }
 .chess-side-panel:not(.is-game-started) .chess-board-footer { display: none; }
 .chess-side-panel:not(.is-game-started) .chess-move-list { display: none; }
 .chess-side-panel:not(.is-game-started) .chess-bot-selection { display: flex; flex: 1; flex-direction: column; }
-.chess-side-panel:not(.is-game-started) .chess-start-button { margin-top: auto; }
+.chess-side-panel:not(.is-game-started) .chess-start-button { margin-top: 0; }
+.chess-side-panel:not(.is-game-started) .chess-color-modes + .chess-start-button { margin-top: 10px; }
+.chess-give-up { justify-self: start; min-height: 38px; padding: 8px 14px; color: #ffb0a8; border-color: #c95c5c; font-size: 11px; }
+.chess-give-up:hover { color: #fff1ed; border-color: #ff7b70; background: #c95c5c22; }
+.chess-side-panel.is-game-started:not(.is-game-ended) #chess-reset { display: none; }
+.chess-side-panel.is-game-started.is-game-ended #chess-give-up { display: none; }
+.chess-game-end-modal { position: absolute; inset: 0; z-index: 30; display: none; place-items: center; padding: 20px; pointer-events: none; }
+.chess-game-end-modal.is-visible { display: grid; }
+.chess-game-end-dialog { position: relative; width: min(500px, 100%); padding: 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 18px 60px #0008; text-align: center; pointer-events: auto; animation: chess-end-popup .35s ease-out both; }
+@keyframes chess-end-popup { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+.chess-game-end-bot { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-align: left; }
+.chess-game-end-portrait { flex: 0 0 92px; width: 92px; height: 108px; background-position: center bottom; background-repeat: no-repeat; background-size: contain; }
+.chess-game-end-message { flex: 1; padding: 14px 16px; border-radius: 12px; color: var(--bg); background: #f1dfb2; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.chess-game-end-dialog h2 { margin: 0 0 8px; color: var(--text); font-size: 22px; }
+.chess-game-end-dialog p { margin: 0 0 20px; color: var(--muted); }
+.chess-game-end-close { position: absolute; top: 10px; right: 13px; border: 0; color: var(--muted); background: none; font-size: 24px; cursor: pointer; }
+.chess-game-end-actions, .chess-game-end-analysis { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.chess-game-end-actions button { flex: 1 1 45%; min-height: 58px !important; color: var(--bg) !important; border-color: var(--gold) !important; background: var(--gold) !important; font-size: 15px; font-weight: 700; }
+.chess-game-end-actions button:hover { border-color: #ffd62e !important; background: #ffd62e !important; }
+.chess-game-end-dialog button:not(.chess-game-end-close) { min-height: 38px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 7px; color: var(--text); background: #0c091426; cursor: pointer; }
+.chess-game-end-dialog button:not(.chess-game-end-close):hover { border-color: var(--gold); color: var(--gold); }
+.chess-game-end-analysis { align-items: center; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .chess-selection-description { margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .chess-bot-selection .chess-select-label { margin-top: 0; }
 .chess-side-panel .eyebrow { margin-bottom: 10px; }
@@ -2191,6 +2214,8 @@ body.is-playing .seat-bid {
 .chess-square.is-selected { box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 8px #24173555; }
 .chess-square.is-target::after { content: ""; position: absolute; top: 50%; left: 50%; width: 24%; height: 24%; border-radius: 50%; background: #f4c600c7; transform: translate(-50%, -50%); }
 .chess-square.is-capture::after { content: ""; position: absolute; top: 50%; left: 50%; width: 72%; height: 72%; border: 4px solid #f4c600c7; border-radius: 50%; transform: translate(-50%, -50%); }
+.chess-square.is-check { z-index: 2; background: #d84545 !important; box-shadow: inset 0 0 0 3px #ff6b6bcc, 0 0 14px 5px #e33e3e99; transition: none !important; animation: none !important; }
+.chess-square.is-check.is-selected { z-index: 2; box-shadow: inset 0 0 0 4px var(--gold), inset 0 0 0 8px #24173555, 0 0 14px 5px #e33e3e99; }
 .chess-piece { z-index: 3; display: grid; place-items: center; padding-bottom: 2.5%; box-sizing: border-box; font: clamp(1.65rem, 4.8vw, 3.6rem)/1 Georgia, serif; cursor: grab; transition: left .16s ease, top .16s ease; user-select: none; }
 .chess-piece.is-dragging { z-index: 8; cursor: grabbing; transition: none; }
 .chess-piece.is-timeline-animating { z-index: 6; will-change: left, top; transition: left .32s ease, top .32s ease !important; }
