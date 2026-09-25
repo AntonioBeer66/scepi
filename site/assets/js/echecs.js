@@ -319,14 +319,19 @@
             const multipv = Number((line.match(/multipv (\d+)/) || [])[1]);
             const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
             const pv = line.split(" pv ")[1].split(" ")[0];
-            if (multipv && scoreMatch && pv)
+            if (multipv && scoreMatch && pv) {
+              const mate = scoreMatch[1] === "mate" ? Number(scoreMatch[2]) : null;
               candidates.set(multipv, {
                 move: pv,
+                mate,
                 score:
-                  scoreMatch[1] === "mate"
-                    ? Number(scoreMatch[2]) * 100000
-                    : Number(scoreMatch[2]),
+                  mate === null
+                    ? Number(scoreMatch[2])
+                    : mate > 0
+                      ? 100000 - mate * 1000
+                      : -100000 + Math.abs(mate) * 1000,
               });
+            }
           }
           if (line.startsWith("bestmove"))
             finish([...candidates.values()].sort((a, b) => b.score - a.score));
@@ -534,8 +539,8 @@
       `[BlackElo "${playerColor === "b" ? "" : current.rating || ""}"]`,
       `[Termination "${termination}"]`,
     ];
-    return `${headers.join("\n")}\n\n${game
-      .history()
+    const pgnMoves = moveHistory.slice(0, timelineIndex);
+    return `${headers.join("\n")}\n\n${pgnMoves
       .map((move, index) =>
         index % 2 === 0 ? `${index / 2 + 1}. ${move}` : `${move}`,
       )
@@ -1030,6 +1035,7 @@
           candidate.score >= bestScore - 120 ? style * 10 * styleWeight : 0;
         return {
           move,
+          mate: candidate.mate,
           score:
             candidate.score +
             styleBonus +
@@ -1044,11 +1050,39 @@
       ranked.length,
       rating < 1100 ? 5 : rating < 1300 ? 3 : 2,
     );
+    const positionKey = game.fen().split(" ").slice(0, 2).join(" ");
+    const learnedMoves = Array.isArray(model?.positions?.[positionKey])
+      ? model.positions[positionKey]
+      : [];
+    const learnedCandidates = ranked
+      .map((candidate) => {
+        const learned = learnedMoves.find(
+          ([move]) =>
+            move ===
+            candidate.move.from + candidate.move.to + candidate.move.promotion,
+        );
+        return { candidate, frequency: learned?.[1] || 0 };
+      })
+      .filter(({ frequency }) => frequency > 0);
+    const learnedTotal = learnedCandidates.reduce(
+      (total, item) => total + item.frequency,
+      0,
+    );
+    let learnedChoice = null;
+    if (learnedTotal) {
+      let roll = Math.random() * learnedTotal;
+      learnedChoice =
+        learnedCandidates.find(({ frequency }) => (roll -= frequency) < 0)
+          ?.candidate || learnedCandidates[0].candidate;
+    }
+    const trainedMoveWeight = profile.bot_usage?.training_move_weight ?? 0.75;
     const chosen =
-      ranked[Math.floor(Math.pow(Math.random(), 1 + weakness) * poolSize)]
-        ?.move ||
-      ranked[0]?.move ||
-      legalMoves[0];
+      learnedChoice && Math.random() < trainedMoveWeight
+        ? learnedChoice.move
+        : ranked[Math.floor(Math.pow(Math.random(), 1 + weakness) * poolSize)]
+            ?.move ||
+          ranked[0]?.move ||
+          legalMoves[0];
     if (!chosen) return;
     beginMove();
     game.move(chosen);
