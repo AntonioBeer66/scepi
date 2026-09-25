@@ -4,13 +4,14 @@ Statut : première proposition, à faire évoluer lors du développement.
 
 ## 1. Périmètre
 
-Créer le site de l'association de jeux vidéo de l'ESCP avec cinq onglets :
+Créer le site de l'association de jeux vidéo de l'ESCP avec six onglets :
 
 | Onglet | Contenu prévu |
 | --- | --- |
 | Accueil | Présentation courte, actualités, jeu du moment, prochain événement, aperçu Instagram |
 | L'asso | Histoire, bureau, jeux pratiqués et modalités pour rejoindre l'association |
 | Coinche | Règles de l'Amicale, tutoriel, puis accès au jeu multijoueur |
+| Échecs | Partie locale contre des profils de bots, avec choix du profil et de la couleur |
 | Nos événements | Prochain événement, inscriptions et archives des éditions précédentes |
 | Contact | Coordonnées, partenariats, liens LinkedIn et Instagram |
 
@@ -28,7 +29,7 @@ Les informations essentielles restent lisibles sans JavaScript. Le jeu multijoue
 
 ## 3. Organisation proposée des fichiers
 
-Les cinq pages HTML, les styles communs, le menu mobile et les copies des logos sont créés dans `site/` pour une première ébauche visuelle. Le module Instagram reste une cible ultérieure ; il n'est pas encore créé et aucun service externe n'est chargé.
+Les six pages HTML, les styles communs, le menu mobile et les copies des logos sont créés dans `site/` pour une première ébauche visuelle. Le module Instagram reste une cible ultérieure ; il n'est pas encore créé et aucun service externe n'est chargé.
 
 ```text
 README.md
@@ -39,6 +40,7 @@ site/
   index.html
   asso/index.html
   coinche/index.html
+  echecs/index.html
   evenements/index.html
   contact/index.html
   assets/
@@ -94,7 +96,7 @@ Prévoir des titres géométriques, un corps de texte de 16 à 18 px avec un int
 - Concevoir d'abord pour le mobile : marges de 20 à 24 px, largeur maximale de 1 200 px et absence de débordement horizontal.
 - Utiliser Grid ou Flexbox pour placer le logo et le texte côte à côte sur grand écran, puis les empiler sur petit écran.
 - Sur l'accueil : présentation et grand logo, deux cartes « Jeu du moment » (jeux vidéo / jeux de société), actualités et prochain événement, coinche, puis Instagram.
-- Conserver les cinq onglets et l'identité commune sur toutes les pages. Présenter le bureau avec des portraits, les événements avec une mise en avant et des archives, et le contact dans une composition sobre.
+- Conserver les six onglets et l'identité commune sur toutes les pages. Présenter le bureau avec des portraits, les événements avec une mise en avant et des archives, le contact dans une composition sobre et l'échiquier dans une interface lisible.
 - Pour la coinche, garder les cartes, annonces, atout et scores prioritaires sur la décoration ; conserver les symboles et couleurs usuels des cartes.
 - Prévoir des cibles interactives d'au moins 44 px, des états de focus visibles et un menu mobile utilisable au clavier.
 - Créer les décors spatiaux avec des formes originales CSS/SVG : étoiles, grille légère et halo discret, sans gêner les textes.
@@ -181,12 +183,12 @@ La conservation des parties après redémarrage du serveur reste à définir. Le
 - Titres de pages et descriptions adaptés à chaque rubrique.
 - Aucun lien d'inscription ou de contact fictif présenté comme fonctionnel.
 - Site utilisable lorsque le composant Instagram est indisponible.
-- Vérification des liens, des cinq pages et du rendu mobile avant publication.
+- Vérification des liens, des six pages et du rendu mobile avant publication.
 - Vérification des droits sur les visuels et préparation des informations légales et de confidentialité selon les fonctions réellement déployées.
 
 ## 8. Ordre de réalisation
 
-1. Créer les cinq pages et la navigation commune.
+1. Créer les six pages et la navigation commune.
 2. Appliquer la direction artistique intégrée en section 3 et intégrer les contenus disponibles, dont le jeu du moment.
 3. Ajouter les liens sociaux et essayer l'intégration Instagram avec le vrai compte.
 4. Choisir l'hébergement, préparer le déploiement et le raccordement de `scepinvaders.com`, puis vérifier le site sur cet environnement en préservant les réglages de messagerie existants.

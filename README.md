@@ -2,7 +2,7 @@ Projet de site web de SCEPI
 
 ## Aperçu de l'interface
 
-Une première ébauche statique des cinq pages se trouve dans `site/`. Elle applique la direction artistique SCEP Invaders : violet/or, logos existants, mascotte et accents verts pour la coinche. Les illustrations complémentaires sont réalisées en CSS et en SVG, sans images tierces.
+Une première ébauche statique des six pages se trouve dans `site/`. Elle applique la direction artistique SCEP Invaders : violet/or, logos existants, mascotte et accents verts pour la coinche. Les illustrations complémentaires sont réalisées en CSS et en SVG, sans images tierces.
 
 La page d'accueil s'ouvre sur un diaporama plein écran inspiré du style Tesla : une image par thème (gaming, jeux de société/coinche, événements, communauté), un texte minimal centré, un seul bouton d'action et des points de pagination en bas d'écran. Les visuels de ce diaporama (`site/assets/images/*-hero.svg`) sont des illustrations vectorielles génériques tenant lieu de placeholders, à remplacer par de vraies photos/illustrations de l'association.
 
@@ -30,7 +30,7 @@ Voir la [direction artistique](DIRECTION_ARTISTIQUE.md) pour l'univers SCEP Inva
 - Proposer un jeu de coinche en ligne suivant les règles de l'Amicale.
 - Donner accès à nos réseaux : LinkedIn et Instagram.
 
-## Les cinq onglets
+## Les six onglets
 
 ### Accueil
 
@@ -54,6 +54,13 @@ Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adap
 - Développer un jeu de coinche en ligne.
 - avoir 4-5 lobbys de 4 qu'on peut rejoindre librement, on doit juste choisir un nom quand on rentre
 - chaque joueur a 30s pour jouer une carte (ou enchérir), s'il ne le fait pas une carte jouable est jouée au hasard
+
+### Échecs
+
+- Partie locale contre des profils de bots aux styles différents.
+- Échiquier interactif avec sélection ou glisser-déposer des pièces blanches.
+- Choix du profil adverse et de la couleur jouée.
+- Historique des coups, indications de partie et possibilité de recommencer.
 
 ### Nos événements
 

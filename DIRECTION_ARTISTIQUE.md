@@ -64,7 +64,7 @@ Privilégier les surfaces sombres et réserver les couleurs vives à quelques é
 
 - Largeur de lecture maximale d'environ 1 200 px, avec des marges latérales de 20 à 24 px sur mobile.
 - Espacements généreux, basés sur des multiples de 8 px ; distinguer nettement les sections.
-- Navigation commune avec les cinq intitulés : Accueil, L'asso, Coinche, Nos événements, Contact.
+- Navigation commune avec les six intitulés : Accueil, L'asso, Coinche, Échecs, Nos événements, Contact.
 - En-tête sombre, éventuellement fixe si sa hauteur reste raisonnable ; menu mobile accessible et facilement refermable.
 - Boutons nets, hauteur minimale visée de 44 px, coins légèrement arrondis. Une action principale par zone et des actions secondaires moins marquées.
 - Cartes avec visuel, titre, court texte et lien clair ; bordures fines et rayons de 12 à 16 px. Les longs textes restent sur des surfaces simples.
@@ -88,6 +88,10 @@ Mettre en scène l'emblème, une présentation humaine et des photos de l'équip
 ### Coinche
 
 Conserver la navigation et l'identité globale, avec un accent arcade vert. Pour la table de jeu, privilégier la lisibilité des cartes, de l'atout, des annonces et du score. Les couleurs et symboles des cartes gardent leur sens habituel ; la décoration ne doit pas gêner la partie.
+
+### Échecs
+
+Présenter l'échiquier comme une arène locale claire et concentrée. Donner la priorité à la lisibilité des cases, des pièces, des coups joués et du profil adverse. Les panneaux de sélection des bots et de couleur doivent rester accessibles sans alourdir l'espace de jeu.
 
 ### Nos événements
 
@@ -114,7 +118,7 @@ Page sobre : contact de l'association, partenariats, LinkedIn et Instagram. Gard
 - Le logo SCEP Invaders est identifiable dès l'arrivée sur le site, sur mobile comme sur ordinateur.
 - L'ensemble évoque le spatial et l'arcade tout en restant moderne, aéré et lisible.
 - Le violet et l'or structurent l'identité ; le vert reste un accent ciblé.
-- Les cinq onglets sont immédiatement compréhensibles et accessibles au clavier.
+- Les six onglets sont immédiatement compréhensibles et accessibles au clavier.
 - Le jeu vidéo et les jeux de société du moment disposent chacun d'une vraie mise en avant.
 - Les textes restent lisibles sur tous les fonds et les états de focus sont visibles.
 - Aucun logo n'est déformé, tronqué ou noyé dans les effets.
