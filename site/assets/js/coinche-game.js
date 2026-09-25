@@ -1901,7 +1901,8 @@
 
     if (action.type === "JOUER") {
       // Pli complet encore affiché : personne ne joue avant qu'il soit ramassé.
-      if (G.phase !== "JEU" || seat !== G.joueurActif || G.resolvingTrick) return;
+      if (G.phase !== "JEU" || seat !== G.joueurActif || G.resolvingTrick)
+        return;
       const hand = G.hands[seat];
       const idx = hand.findIndex((c) => c.id === action.carte.id);
       if (idx === -1) return;

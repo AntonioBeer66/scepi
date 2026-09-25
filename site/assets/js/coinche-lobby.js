@@ -336,7 +336,8 @@ function init() {
     // bout des 30 s du minuteur, une carte au hasard).
     const seatsForGame = lobby.seats.map((seat) => ({
       name: seat.type === "bot" ? "Ordinateur" : seat.name,
-      type: seat.type === "human" && seat.clientId === clientId ? "human" : "bot",
+      type:
+        seat.type === "human" && seat.clientId === clientId ? "human" : "bot",
     }));
 
     window.SCEPICoincheGame.start(seatsForGame, mySeat.seatIndex, () => {
