@@ -1,5 +1,163 @@
 <!doctype html>
-<html lang="fr"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="theme-color" content="#0c0914" /><meta name="description" content="Affrontez les profils d’échecs de SCEP Invaders." /><title>Échecs — SCEP Invaders</title><link rel="icon" href="../assets/images/favicon.ico" sizes="any" /><link rel="stylesheet" href="../assets/css/styles.css" /><script src="../assets/echecs/chess.min.js" defer></script><script src="../assets/js/main.js" defer></script><script src="../assets/js/echecs.js" defer></script></head>
-<body><a class="skip-link" href="#contenu">Aller au contenu</a><header class="header"><div class="header-inner"><a class="brand" href="../index.html" aria-label="SCEP Invaders, accueil"><img src="../assets/images/logo-white.png" alt="" width="2000" height="2000" /><span>SCEP<span class="brand-sub">INVADERS</span></span></a><button class="menu-toggle" aria-expanded="false" aria-controls="navigation">Menu <span aria-hidden="true">☰</span></button><nav id="navigation" aria-label="Navigation principale"><a href="../index.html">Accueil</a><a href="../asso/index.html">L’asso</a><a href="../coinche/index.html">Coinche</a><a href="../echecs/index.html" aria-current="page">Échecs</a><a href="../evenements/index.html">Nos événements</a><a href="../contact/index.html">Contact</a></nav><span class="header-tag">ESCP · GAMING CLUB</span></div></header>
-<main id="contenu" class="container chess-page"><section class="page-intro chess-intro"><span class="eyebrow">03 / ÉCHECS · STYLE BOTS</span><h1>À vous de jouer.<br /><span>Le bot a son style.</span></h1><p>Affrontez des profils inspirés de parties publiques, entraînés pour choisir leurs coups comme leurs modèles.</p></section><section class="chess-arena" aria-label="Arène d’échecs"><div class="chess-board-panel"><div class="chess-panel-heading"><div><span class="eyebrow">ARENA · LOCAL</span><h2 id="chess-position-title">Nouvelle partie</h2></div><span class="chess-live"><i></i> Profil actif</span></div><div class="chess-board-shell"><div id="chess-board" class="chess-board" role="grid" aria-label="Échiquier interactif"><svg id="chess-arrows" aria-hidden="true"></svg></div><div class="chess-coordinates chess-files" aria-hidden="true"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div><div class="chess-ranks" aria-hidden="true"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div></div><div class="chess-board-footer"><p id="chess-status"><strong>À vous de jouer</strong><br /><small>Les blancs commencent</small></p><button class="button outline chess-reset" id="chess-reset" type="button">Nouvelle partie</button></div></div>
-<aside class="chess-side-panel"><div class="chess-mode-block"><span class="eyebrow">CHOISIR UN PROFIL</span><label class="chess-select-label" for="chess-profile">Adversaire</label><select id="chess-profile" class="chess-profile"><option value="chavent">Chavent</option><option value="mathieu_212">Mathieu 212</option></select><p id="chess-profile-copy" class="chess-profile-copy">Un jeu actif, direct, avec une préférence pour les occasions tactiques.</p></div><div class="chess-bot-card"><div class="chess-bot-avatar" aria-hidden="true">♞</div><div><span class="eyebrow">ADVERSAIRE</span><h3 id="chess-bot-name">Chavent</h3><p>Profil d’imitation · coups appris</p></div></div><div class="chess-tip"><span class="chess-tip-icon" aria-hidden="true">i</span><p>Cliquez ou faites glisser une pièce blanche. Sélectionnez une pièce pour afficher ses coups légaux.</p></div><div class="chess-stats" aria-label="Statistiques de la partie"><div><strong id="chess-moves">0</strong><span>demi-coups</span></div><div><strong id="chess-level">style</strong><span>mode</span></div><div><strong id="chess-turn">♙</strong><span>à jouer</span></div></div><div class="chess-move-list"><div class="chess-list-heading"><span class="eyebrow">PARTIE EN COURS</span><span id="chess-move-count">0 coups</span></div><div id="chess-moves-list" class="chess-moves-list"><p class="chess-empty">Aucun coup pour le moment.</p></div></div></aside></section></main><footer class="footer"><div class="container footer-inner"><a class="brand" href="../index.html"><img src="../assets/images/logo-white.png" alt="" width="2000" height="2000" /><span>SCEP<span class="brand-sub">INVADERS</span></span></a><p>Une même passion. Tout un univers.</p></div></footer></body></html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c0914" />
+    <meta
+      name="description"
+      content="Affrontez les profils d’échecs de SCEP Invaders."
+    />
+    <title>Échecs — SCEP Invaders</title>
+    <link rel="icon" href="../assets/images/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <script src="../assets/echecs/chess.min.js" defer></script>
+    <script src="../assets/js/main.js" defer></script>
+    <script src="../assets/js/echecs.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Aller au contenu</a>
+    <header class="header">
+      <div class="header-inner">
+        <a
+          class="brand"
+          href="../index.html"
+          aria-label="SCEP Invaders, accueil"
+          ><img
+            src="../assets/images/logo-white.png"
+            alt=""
+            width="2000"
+            height="2000"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        ><button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="navigation"
+        >
+          Menu <span aria-hidden="true">☰</span>
+        </button>
+        <nav id="navigation" aria-label="Navigation principale">
+          <a href="../index.html">Accueil</a
+          ><a href="../asso/index.html">L’asso</a
+          ><a href="../coinche/index.html">Coinche</a
+          ><a href="../echecs/index.html" aria-current="page">Échecs</a
+          ><a href="../evenements/index.html">Nos événements</a
+          ><a href="../contact/index.html">Contact</a>
+        </nav>
+        <span class="header-tag">ESCP · GAMING CLUB</span>
+      </div>
+    </header>
+    <main id="contenu" class="container chess-page">
+      <section class="page-intro chess-intro">
+        <span class="eyebrow">03 / ÉCHECS · STYLE BOTS</span>
+        <h1>À vous de jouer.<br /><span>Le bot a son style.</span></h1>
+        <p>
+          Affrontez des profils inspirés de parties publiques, entraînés pour
+          choisir leurs coups comme leurs modèles.
+        </p>
+      </section>
+      <section class="chess-arena" aria-label="Arène d’échecs">
+        <div class="chess-board-panel">
+          <div class="chess-panel-heading">
+            <div>
+              <span class="eyebrow">ARENA · LOCAL</span>
+              <h2 id="chess-position-title">Nouvelle partie</h2>
+            </div>
+            <span class="chess-live"><i></i> Profil actif</span>
+          </div>
+          <div class="chess-board-shell">
+            <div
+              id="chess-board"
+              class="chess-board"
+              role="grid"
+              aria-label="Échiquier interactif"
+            >
+              <svg id="chess-arrows" aria-hidden="true"></svg>
+            </div>
+            <div class="chess-coordinates chess-files" aria-hidden="true">
+              <span>a</span><span>b</span><span>c</span><span>d</span
+              ><span>e</span><span>f</span><span>g</span><span>h</span>
+            </div>
+            <div class="chess-ranks" aria-hidden="true">
+              <span>8</span><span>7</span><span>6</span><span>5</span
+              ><span>4</span><span>3</span><span>2</span><span>1</span>
+            </div>
+          </div>
+          <div class="chess-board-footer">
+            <p id="chess-status">
+              <strong>À vous de jouer</strong><br /><small
+                >Les blancs commencent</small
+              >
+            </p>
+            <button
+              class="button outline chess-reset"
+              id="chess-reset"
+              type="button"
+            >
+              Nouvelle partie
+            </button>
+          </div>
+        </div>
+        <aside class="chess-side-panel">
+          <div class="chess-mode-block">
+            <span class="eyebrow">CHOISIR UN PROFIL</span
+            ><label class="chess-select-label" for="chess-profile"
+              >Adversaire</label
+            ><select id="chess-profile" class="chess-profile">
+              <option value="chavent">Chavent</option>
+              <option value="mathieu_212">Mathieu 212</option>
+            </select>
+            <p id="chess-profile-copy" class="chess-profile-copy">
+              Un jeu actif, direct, avec une préférence pour les occasions
+              tactiques.
+            </p>
+          </div>
+          <div class="chess-bot-card">
+            <div class="chess-bot-avatar" aria-hidden="true">♞</div>
+            <div>
+              <span class="eyebrow">ADVERSAIRE</span>
+              <h3 id="chess-bot-name">Chavent</h3>
+              <p>Profil d’imitation · coups appris</p>
+            </div>
+          </div>
+          <div class="chess-tip">
+            <span class="chess-tip-icon" aria-hidden="true">i</span>
+            <p>
+              Cliquez ou faites glisser une pièce blanche. Sélectionnez une
+              pièce pour afficher ses coups légaux.
+            </p>
+          </div>
+          <div class="chess-stats" aria-label="Statistiques de la partie">
+            <div>
+              <strong id="chess-moves">0</strong><span>demi-coups</span>
+            </div>
+            <div><strong id="chess-level">style</strong><span>mode</span></div>
+            <div><strong id="chess-turn">♙</strong><span>à jouer</span></div>
+          </div>
+          <div class="chess-move-list">
+            <div class="chess-list-heading">
+              <span class="eyebrow">PARTIE EN COURS</span
+              ><span id="chess-move-count">0 coups</span>
+            </div>
+            <div id="chess-moves-list" class="chess-moves-list">
+              <p class="chess-empty">Aucun coup pour le moment.</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <a class="brand" href="../index.html"
+          ><img
+            src="../assets/images/logo-white.png"
+            alt=""
+            width="2000"
+            height="2000"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        >
+        <p>Une même passion. Tout un univers.</p>
+      </div>
+    </footer>
+  </body>
+</html>
