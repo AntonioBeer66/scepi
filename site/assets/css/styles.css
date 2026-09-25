@@ -2844,6 +2844,12 @@ body.is-playing .seat-bid {
   letter-spacing: -3px;
   line-height: 1;
 }
+.chess-captures .chess-piece-svg {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
 .chess-material {
   color: var(--muted);
   font-size: 16px;
@@ -2971,7 +2977,7 @@ body.is-playing .seat-bid {
   z-index: 3;
   display: grid;
   place-items: center;
-  padding-bottom: 2.5%;
+  padding-bottom: 0;
   box-sizing: border-box;
   font:
     clamp(1.65rem, 4.8vw, 3.6rem) / 1 Georgia,
@@ -2986,6 +2992,15 @@ body.is-playing .seat-bid {
   z-index: 8;
   cursor: grabbing;
   transition: none;
+}
+.chess-piece-svg {
+  display: block;
+  width: 84%;
+  height: 84%;
+  overflow: visible;
+  fill: currentColor;
+  pointer-events: none;
+  transform: translateY(-1%);
 }
 .chess-drag-ghost {
   pointer-events: none;
@@ -3024,6 +3039,10 @@ body.is-playing .seat-bid {
   transition:
     background 0.12s ease,
     color 0.12s ease;
+}
+.chess-promotion-chooser .chess-piece-svg {
+  width: 84%;
+  height: 84%;
 }
 .chess-promotion-chooser.is-black button {
   color: #151020;

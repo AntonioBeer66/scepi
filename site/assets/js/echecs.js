@@ -2,7 +2,8 @@
   const board = document.querySelector("#chess-board");
   if (!board || typeof Chess !== "function") return;
   const files = "abcdefgh",
-    glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" };
+    glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" },
+    pieceSvg = (type, color = "w") => `<img class="chess-piece-svg" src="../assets/echecs/cburnett/${color}${type.toUpperCase()}.svg" alt="" draggable="false">`;
   let profiles = {},
     suppressNextBoardClick = false;
   let game = new Chess(),
@@ -231,9 +232,9 @@
     const topCaptures = $("#chess-top-captures"),
       bottomCaptures = $("#chess-bottom-captures");
     if (topCaptures)
-      topCaptures.textContent = top.map((type) => glyphs[type]).join(" ");
+    topCaptures.innerHTML = top.map((type) => pieceSvg(type, playerColor)).join("");
     if (bottomCaptures)
-      bottomCaptures.textContent = bottom.map((type) => glyphs[type]).join(" ");
+    bottomCaptures.innerHTML = bottom.map((type) => pieceSvg(type, botSide)).join("");
     const topMaterial = $("#chess-top-material"),
       bottomMaterial = $("#chess-bottom-material"),
       difference = score(botSide) - score(playerColor);
@@ -652,7 +653,7 @@
           const element = document.createElement("div");
           element.dataset.square = square;
           element.className = `chess-piece ${piece.color === "w" ? "white" : "black"}`;
-          element.textContent = glyphs[piece.type];
+          element.innerHTML = pieceSvg(piece.type, piece.color);
           element.style.left = `${file * 12.5}%`;
           element.style.top = `${rank * 12.5}%`;
           if (piece.color !== playerColor)
@@ -825,7 +826,7 @@
       ["q", "n", "r", "b"]
         .map(
           (type) =>
-            `<button type="button" data-promotion="${type}" aria-label="Promouvoir en ${type === "q" ? "dame" : type === "n" ? "cavalier" : type === "r" ? "tour" : "fou"}">${glyphs[type]}</button>`,
+            `<button type="button" data-promotion="${type}" aria-label="Promouvoir en ${type === "q" ? "dame" : type === "n" ? "cavalier" : type === "r" ? "tour" : "fou"}">${pieceSvg(type, playerColor)}</button>`,
         )
         .join("") +
       '<button type="button" class="chess-promotion-cancel" aria-label="Annuler">×</button>';
