@@ -148,6 +148,10 @@
   const originalBotMove = botMove;
   const originalEndGame = endGame;
   endGame = function (title) { playSound("game_end"); originalEndGame(title); };
+  const endGameWithSounds = endGame, originalShowGameEndModal = showGameEndModal, originalUpdateEndDialogue = updateEndDialogue;
+  endGame = function (title) { endGameWithSounds(title === "Partie terminée" ? "Égalité" : title); };
+  showGameEndModal = function (title) { originalShowGameEndModal(title); if (title === "Égalité") { const winner = document.querySelector(".chess-game-end-winner"); if (winner) winner.textContent = "Égalité"; } };
+  updateEndDialogue = function (title) { if (title !== "Égalité") return originalUpdateEndDialogue(title); const current = profiles[$("#chess-profile").value] || {}, lines = current.draw_dialogue; if (Array.isArray(lines) && lines.length) $(".chess-game-end-message").textContent = lines[Math.floor(Math.random() * lines.length)]; };
   const soundMove = move;
   move = function (from, to, animate = true) { const before = game.history().length; const result = soundMove(from, to, animate); if (result && game.history().length > before) { const played = game.history({ verbose: true }).at(-1); playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); if (!game.game_over() && game.in_check()) playSound("check"); } return result; };
   botMove = async function () { botThinking = true; const originalTurn = game.turn.bind(game); let firstTurnCheck = true; if (playerColor === "b") game.turn = () => firstTurnCheck ? (firstTurnCheck = false, "b") : originalTurn(); try { await originalBotMove(); } finally { game.turn = originalTurn; botThinking = false; if (premoves?.length) queueMicrotask(playPremove); else premoveFrom = null; } };
