@@ -2643,6 +2643,8 @@ body.is-playing .seat-bid {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
+  text-align: justify;
+  white-space: pre-wrap;
 }
 .chess-bot-selection .chess-select-label {
   margin-top: 0;
