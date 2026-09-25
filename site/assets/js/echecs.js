@@ -157,7 +157,7 @@
       select.addEventListener("change", () => {
         const current = profiles[select.value];
         if (!current) return;
-        $("#chess-bot-message").textContent = current.dialogue || "";
+        $("#chess-bot-message").textContent = randomDialogue(current.selection_dialogue || current.dialogue);
         $("#chess-selection-description").textContent =
           current.description || "";
         $("#chess-top-player").textContent = current.name;
@@ -366,6 +366,10 @@
       }),
     );
   }
+  function randomDialogue(lines) {
+    const choices = (Array.isArray(lines) ? lines : [lines]).filter(Boolean);
+    return choices[Math.floor(Math.random() * choices.length)] || "";
+  }
   function showBotDialogue(lines) {
     const choices = lines
       .filter(Boolean)
@@ -548,9 +552,8 @@
         game.in_checkmate() &&
         game.turn() === playerColor);
     const lines = botWon ? current.bot_win_dialogue : current.bot_loss_dialogue;
-    if (Array.isArray(lines) && lines.length)
-      $(".chess-game-end-message").textContent =
-        lines[Math.floor(Math.random() * lines.length)];
+    const message = randomDialogue(lines);
+    if (message) $(".chess-game-end-message").textContent = message;
   }
   function drawArrows(preview) {
     const svg = $("#chess-arrows");
@@ -1785,9 +1788,8 @@
     if (title !== "Égalité") return originalUpdateEndDialogue(title);
     const current = profiles[$("#chess-profile").value] || {},
       lines = current.draw_dialogue;
-    if (Array.isArray(lines) && lines.length)
-      $(".chess-game-end-message").textContent =
-        lines[Math.floor(Math.random() * lines.length)];
+    const message = randomDialogue(lines);
+    if (message) $(".chess-game-end-message").textContent = message;
   };
   botMove = async function () {
     botThinking = true;
@@ -1886,8 +1888,9 @@
         profile.dialogue = profile.selection_dialogue;
       });
       applyProfileConfig(config);
-      $("#chess-bot-message").textContent =
-        profiles[config.profiles[0].id].selection_dialogue[0] || "";
+      $("#chess-bot-message").textContent = randomDialogue(
+        profiles[config.profiles[0].id].selection_dialogue,
+      );
       loadProfile(config.profiles[0].id);
     })
     .catch(() =>
