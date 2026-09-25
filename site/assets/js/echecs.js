@@ -2,8 +2,6 @@
   const board = document.querySelector("#chess-board");
   if (!board || typeof Chess !== "function") return;
   const files = "abcdefgh", glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" };
-  const soundFiles = { game_start: "game_start.wav", move: "move.wav", capture: "capture.wav", check: "check.wav", game_end: "game_end.wav", castle: "castle.wav" };
-  const playSound = (name) => { const file = soundFiles[name]; if (!file) return; const audio = new Audio(`../assets/echecs/sounds/${file}`); audio.volume = 0.55; audio.play().catch(() => {}); };
   let profiles = {}, suppressNextBoardClick = false;
   let game = new Chess(), selected = null, drag = null, animation = null, visualAnimation = null, arrows = [], circles = [], timeline = [], timelineIndex = 0, moveHistory = [], gameStarted = false, gameEnded = false, playerColor = "w", selectedColorMode = "w", lastDialogue = "", nextDialoguePly = 0, pendingAnnotations = null, rightDrag = null, model = null, styleProfile = null, botTimer, botThinking = false, engine;
   const $ = (id) => document.querySelector(id);
@@ -113,8 +111,6 @@
   finishMove = function (movePlayed) { if (!gameStarted) { game = new Chess(); return; } originalFinishMove(movePlayed); const notation = game.history().pop(); moveHistory = moveHistory.slice(0, Math.max(0, timelineIndex - 1)); if (notation) moveHistory.push(notation); };
   const originalReset = reset;
   reset = function () { moveHistory = []; originalReset(); };
-  const soundReset = reset;
-  reset = function () { const started = gameStarted; soundReset(); if (started) playSound("game_start"); };
   renderMoves = function () { const history = moveHistory; $("#chess-moves").textContent = history.length; $("#chess-move-count").textContent = `${timelineIndex} / ${history.length} coups`; const list = $("#chess-moves-list"); if (!history.length) { list.innerHTML = '<p class="chess-empty">Aucun coup pour le moment.</p>'; return; } list.innerHTML = ""; for (let i = 0; i < history.length; i += 2) { const row = document.createElement("div"); row.className = "chess-move-row"; if (i < timelineIndex) row.classList.add("is-played"); row.innerHTML = `<span>${i / 2 + 1}.</span><strong>${history[i]}</strong><strong>${history[i + 1] || ""}</strong>`; list.appendChild(row); } list.scrollTop = list.scrollHeight; };
   renderMoves = function () {
     const history = moveHistory;
@@ -146,17 +142,11 @@
     list.scrollTop = list.scrollHeight;
   };
   const originalBotMove = botMove;
-  const originalEndGame = endGame;
-  endGame = function (title) { playSound("game_end"); originalEndGame(title); };
-  const endGameWithSounds = endGame, originalShowGameEndModal = showGameEndModal, originalUpdateEndDialogue = updateEndDialogue;
-  endGame = function (title) { endGameWithSounds(title === "Partie terminée" ? "Égalité" : title); };
+  const endGameWithDraws = endGame, originalShowGameEndModal = showGameEndModal, originalUpdateEndDialogue = updateEndDialogue;
+  endGame = function (title) { endGameWithDraws(title === "Partie terminée" ? "Égalité" : title); };
   showGameEndModal = function (title) { originalShowGameEndModal(title); if (title === "Égalité") { const winner = document.querySelector(".chess-game-end-winner"); if (winner) winner.textContent = "Égalité"; } };
   updateEndDialogue = function (title) { if (title !== "Égalité") return originalUpdateEndDialogue(title); const current = profiles[$("#chess-profile").value] || {}, lines = current.draw_dialogue; if (Array.isArray(lines) && lines.length) $(".chess-game-end-message").textContent = lines[Math.floor(Math.random() * lines.length)]; };
-  const soundMove = move;
-  move = function (from, to, animate = true) { const before = game.history().length; const result = soundMove(from, to, animate); if (result && game.history().length > before) { const played = game.history({ verbose: true }).at(-1); playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); if (!game.game_over() && game.in_check()) playSound("check"); } return result; };
   botMove = async function () { botThinking = true; const originalTurn = game.turn.bind(game); let firstTurnCheck = true; if (playerColor === "b") game.turn = () => firstTurnCheck ? (firstTurnCheck = false, "b") : originalTurn(); try { await originalBotMove(); } finally { game.turn = originalTurn; botThinking = false; if (premoves?.length) queueMicrotask(playPremove); else premoveFrom = null; } };
-  const soundBotMove = botMove;
-  botMove = async function () { const before = game.history().length; await soundBotMove(); if (game.history().length > before) { const played = game.history({ verbose: true }).at(-1); playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); if (!game.game_over() && game.in_check()) playSound("check"); } };
   document.addEventListener("click", (event) => { if (botThinking && event.target.closest("#chess-first, #chess-previous, #chess-next, #chess-last, .chess-move-button")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
   document.addEventListener("click", (event) => { const action = event.target.closest?.("[data-end-action]"); if (!action || !["chess", "lichess"].includes(action.dataset.endAction)) return; event.preventDefault(); event.stopImmediatePropagation(); const encoded = encodeURIComponent(gamePgn()); const url = action.dataset.endAction === "chess" ? `https://www.chess.com/analysis?tab=analysis&pgn=${encoded}` : `https://lichess.org/analysis/pgn/${encoded}`; const opened = window.open(url, "_blank"); if (!opened) window.location.assign(url); }, true);
   document.addEventListener("keydown", (event) => { if (botThinking && (event.key === "ArrowLeft" || event.key === "ArrowRight")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
