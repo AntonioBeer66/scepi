@@ -4,6 +4,14 @@
   const files = "abcdefgh",
     glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" },
     pieceSvg = (type, color = "w") => `<img class="chess-piece-svg" src="../assets/echecs/cburnett/${color}${type.toUpperCase()}.svg" alt="" draggable="false">`;
+  const soundFiles = { move: "move.wav", capture: "capture.wav", checkmate: "checkmate.wav", castle: "castle.wav" };
+  const playSound = (name) => {
+    const file = soundFiles[name];
+    if (!file) return;
+    const audio = new Audio(`../assets/echecs/sounds/${file}`);
+    audio.volume = 0.55;
+    audio.play().catch(() => {});
+  };
   let profiles = {},
     suppressNextBoardClick = false;
   let game = new Chess(),
@@ -1842,6 +1850,10 @@
       else premoveFrom = null;
     }
   };
+  const soundMove = move;
+  move = function (from, to, animate = true) { const before = game.history().length; const result = soundMove(from, to, animate); if (result && game.history().length > before) { const played = game.history({ verbose: true }).at(-1); if (game.game_over() && isCheckmate()) playSound("checkmate"); else playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); } return result; };
+  const soundBotMove = botMove;
+  botMove = async function () { const before = game.history().length; await soundBotMove(); if (game.history().length > before) { const played = game.history({ verbose: true }).at(-1); if (game.game_over() && isCheckmate()) playSound("checkmate"); else playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); } };
   document.addEventListener(
     "click",
     (event) => {
