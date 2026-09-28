@@ -2,52 +2,36 @@
 // version B arbitre la partie, les sièges d'une équipe délèguent leurs
 // décisions (enchère, carte, coinche, surcoinche) au moteur A. Chaque donne
 // est jouée deux fois, équipes échangées : la chance des cartes s'annule.
-//   node tests/coinche-ab.js <A.js> <B.js> [parties par processus] [mondes MC, défaut 48]
+//   node tests/coinche-ab.js <A/engine.js> <B/engine.js> [parties par processus] [mondes MC, défaut 48]
 // Les fichiers sont copiés au lancement : on peut modifier le jeu pendant un duel.
-const { execFile } = require('child_process');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const vm = require('vm');
-const { createSim, rng } = require('./coinche-sim');
+import { execFile } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import { play } from './coinche-sim.js';
 
 const WORKERS = Math.max(1, os.cpus().length - 2);
 
-// Points de branchement : chaque appel de décision d'un bot passe par __sim.who.
-const DELEGATE = [
-  ['const decision = botDecideBid(seat);', "const decision = __sim.who(seat, 'botDecideBid', G) ?? botDecideBid(seat);"],
-  ['const carte = botChooseCard(seat);', "const carte = __sim.who(seat, 'botChooseCard', G) ?? botChooseCard(seat);"],
-  ['if (botWantsToCoinche(seat)) applyAction', "if (__sim.who(seat, 'botWantsToCoinche', G) ?? botWantsToCoinche(seat)) applyAction"],
-  ['if (botWantsToSurcoinche(seat))', "if (__sim.who(seat, 'botWantsToSurcoinche', G) ?? botWantsToSurcoinche(seat))"],
-];
-const mcPatch = (src, n) => (n === undefined ? src : src.replace(/const MC_SAMPLES = \d+;/, `const MC_SAMPLES = ${n};`));
-
-function loadApi(file, mc, seed) {
-  const src = mcPatch(fs.readFileSync(file, 'utf8'), mc)
-    .replace('window.SCEPICoincheGame =', 'window.__api = { setG: (g) => { G = g; }, botDecideBid, botChooseCard, botWantsToCoinche, botWantsToSurcoinche }; window.SCEPICoincheGame =');
-  const ctx = vm.createContext({ window: {}, Date: { now: () => 0 }, setTimeout() {}, clearTimeout() {}, __rand: rng(seed) });
-  vm.runInContext(`Math.random = () => __rand();\n${src}`, ctx);
-  return ctx.window.__api;
+async function load(file, mc) {
+  const engine = await import(pathToFileURL(file).href);
+  if (mc !== undefined) engine.tuning.mcSamples = mc;
+  engine.tuning.now = () => 0;
+  return engine;
 }
 
-function worker(fileA, fileB, start, n, mc) {
-  const tmp = `${fileB}.${start}.js`;
-  fs.writeFileSync(tmp, mcPatch(fs.readFileSync(fileB, 'utf8'), mc));
-  const { play, sim } = createSim(DELEGATE, tmp);
-  const A = loadApi(fileA, mc, 99 + start);
+async function worker(fileA, fileB, start, n, mc) {
+  const A = await load(fileA, mc);
+  const B = await load(fileB, mc);
   const res = { games: 0, winsB: 0, pairs: 0, diff: 0, diff2: 0, stats: { A: {}, B: {} } };
   const bump = (v, k, x = 1) => { res.stats[v][k] = (res.stats[v][k] || 0) + x; };
   for (let g = start; g < start + n; g++) {
     const runs = [];
     for (const teamA of [0, 1]) {
       const byDonne = new Map();
-      sim.who = (seat, fn, G) => {
-        if (seat % 2 !== teamA) return undefined;
-        A.setG(G);
-        return A[fn](seat);
-      };
-      const G = play({
+      const G = play(B, {
         dealSeed: 1000 + g, botSeed: 5000 + g,
+        decide: (seat) => (seat % 2 === teamA ? A.bots : B.bots),
         on: {
           score(G) {
             const c = G.contract;
@@ -73,13 +57,12 @@ function worker(fileA, fileB, start, n, mc) {
       res.pairs++; res.diff += x; res.diff2 += x * x;
     }
   }
-  fs.unlinkSync(tmp);
   return res;
 }
 
 if (process.argv[2] === '--worker') {
   const [, , , a, b, start, n, mc] = process.argv;
-  process.stdout.write(JSON.stringify(worker(a, b, +start, +n, mc === '' ? undefined : +mc)));
+  process.stdout.write(JSON.stringify(await worker(a, b, +start, +n, mc === '' ? undefined : +mc)));
 } else {
   const [a, b, per = '20', mc = ''] = process.argv.slice(2);
   const stamp = Date.now();
@@ -88,7 +71,7 @@ if (process.argv[2] === '--worker') {
   const fb = snap(b, 'B');
   const t0 = Date.now();
   const jobs = Array.from({ length: WORKERS }, (_, w) => new Promise((res, rej) => execFile(process.execPath,
-    [__filename, '--worker', fa, fb, String(w * +per), per, mc], { maxBuffer: 1e8 }, (e, out, err) => (e ? rej(new Error(err || e.message)) : res(JSON.parse(out))))));
+    [import.meta.filename, '--worker', fa, fb, String(w * +per), per, mc], { maxBuffer: 1e8 }, (e, out, err) => (e ? rej(new Error(err || e.message)) : res(JSON.parse(out))))));
   Promise.all(jobs).then((parts) => {
     const r = parts.reduce((x, y) => {
       for (const k of ['games', 'winsB', 'pairs', 'diff', 'diff2']) x[k] += y[k];

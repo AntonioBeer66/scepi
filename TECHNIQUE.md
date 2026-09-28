@@ -155,13 +155,32 @@ La documentation officielle Meta n'a pas pu être consultée lors de ce cadrage 
 
 Le manuel de l'Amicale est adapté en spécification serveur dans [REGLES_COINCHE.md](REGLES_COINCHE.md) : états, actions, cartes légales, délais, reconnexion et scores. Ce fichier est la référence fonctionnelle du moteur. Sa section 1 distingue les conventions V1 des règles explicitement issues du manuel, notamment le mélange automatique à chaque donne, le score du contrat « 80 » et la montée à l'atout. Centraliser ces choix dans un profil de règles versionné, fixé pour toute la partie. La section 11 décrit les cas de validation du moteur.
 
-### Architecture envisagée
+### Architecture retenue
 
-- Interface dans le navigateur en JavaScript.
-- Serveur Node.js, sous réserve de compatibilité de l'hébergement retenu.
-- Échanges en temps réel via WebSocket sécurisé en production.
-- Le serveur distribue les cartes, contrôle les actions et calcule les scores.
-- Chaque joueur ne reçoit que les informations auxquelles il a droit, notamment sa propre main.
+Le jeu est écrit dans `src/coinche/` et compilé par Vite dans `site/assets/js/coinche/` (fichiers enregistrés dans Git : le site reste un dossier statique).
+
+| Fichier | Rôle |
+| --- | --- |
+| `src/coinche/engine.js` | Règles, score et IA des bots (enchères par système + Monte-Carlo). État en JSON pur, sans minuteur ni affichage ; un délai écoulé est une action `TIMEOUT`. |
+| `src/coinche/game.js` | Partie [boardgame.io](https://boardgame.io) : coups validés par le moteur, chaque joueur ne reçoit que sa main (`playerView`). |
+| `src/coinche/host.js` | Hôte de table : fait jouer les bots et envoie les `TIMEOUT`. Tourne dans le navigateur du premier humain assis (il voit donc les mains des bots) ; si l'hôte se déconnecte, un autre humain reprend le rôle. |
+| `src/coinche/client/` | Salons (HTML), commandes (HTML accessible) et table [Phaser](https://phaser.io) (WebGL/Canvas, animations). Phaser n'est chargé qu'au lancement d'une partie. |
+| `server/index.js` | Serveur Node.js boardgame.io : salons, WebSocket, 4 tables permanentes, nettoyage des tables abandonnées, plafond de 40 tables. |
+
+- Solo contre trois bots : la partie tourne entièrement dans l'onglet, sans serveur.
+- Les parties vivent en mémoire du serveur : un redémarrage les efface.
+- Déconnexion : la place est gardée, les délais continuent (l'hôte joue d'office à 30 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
+
+Commandes (Node.js 22 ou plus) :
+
+```sh
+npm install
+npm run build     # recompiler le jeu après une modification de src/
+npm run server    # serveur de jeu sur le port 8001
+npm test          # moteur, stratégies des bots, parties de bots, partie boardgame.io
+```
+
+Hébergement du serveur à choisir : il faut un processus Node.js permanent, WebSocket et HTTPS (Render, Fly.io, VPS…). Le lancer avec `PORT` et `ORIGINS=https://scepinvaders.com`, puis compiler le site avec `VITE_COINCHE_SERVER=https://adresse-du-serveur npm run build`. Sans variable, le client vise le port 8001 de la même machine que la page.
 
 ### Première version jouable proposée
 

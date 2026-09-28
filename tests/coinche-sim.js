@@ -1,15 +1,11 @@
-// Moteur de test headless : le vrai coinche-game.js tourne dans une VM, sans
-// rendu HTML ni animation (plus de la moitié du temps d'une partie), avec une
-// horloge virtuelle (délais des bots, pauses de pli et affichage du score
-// passent instantanément) et un hasard reproductible, séparé pour les donnes
-// et pour les bots. Un seul contexte sert à toutes les parties.
-const vm = require('vm');
-const fs = require('fs');
-const path = require('path');
+// Simulateur headless : le vrai moteur (src/coinche/engine.js) et le vrai
+// hôte de table (host.js, qui fait jouer les bots et envoie les TIMEOUT)
+// tournent sans rendu, avec une horloge virtuelle (délais des bots, pauses
+// de pli et affichage du score passent instantanément) et un hasard
+// reproductible, séparé pour les donnes et pour les bots.
+import { createHost } from '../src/coinche/host.js';
 
-const GAME = path.join(__dirname, '../site/assets/js/coinche-game.js');
-
-function rng(seed) {
+export function rng(seed) {
   let s = seed | 0;
   return () => {
     s = (s + 0x6D2B79F5) | 0;
@@ -19,7 +15,7 @@ function rng(seed) {
   };
 }
 
-function shuffle(deck, rand) {
+export function shuffle(deck, rand) {
   const a = deck.slice();
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -28,50 +24,50 @@ function shuffle(deck, rand) {
   return a;
 }
 
-// [ancre, remplacement] : chaque ancre doit figurer une seule fois dans le jeu.
-const HOOKS = [
-  ['function render() {', 'function render() { return;'],
-  ['function captureOrigin(seat, carte) {', 'function captureOrigin(seat, carte) { return null;'],
-  ['G.hands = deal(shuffle(buildDeck()), G.donneur);', 'G.hands = (__sim.deal && __sim.deal(G, buildDeck())) || deal(__sim.shuffle(buildDeck()), G.donneur);'],
-  ['donneur: Math.floor(Math.random() * 4),', 'donneur: Math.floor(__sim.dealRand() * 4),'],
-  ['function onTurnTimeout(seat) {', 'function onTurnTimeout(seat) { __sim.on.timeout && __sim.on.timeout(G, seat);'],
-  ['const winnerSeat = trickWinnerSeat(G.pliCourant, G.contract.atout);', 'const winnerSeat = trickWinnerSeat(G.pliCourant, G.contract.atout); __sim.on.trick && __sim.on.trick(G, winnerSeat);'],
-  ['    G.phase = "SCORE";', '    G.phase = "SCORE"; __sim.on.score && __sim.on.score(G);'],
-  ['window.SCEPICoincheGame =', 'window.__api = { getG: () => G, setG: (g) => { G = g; }, botDecideBid, botChooseCard, botWantsToCoinche, botWantsToSurcoinche }; window.SCEPICoincheGame ='],
-];
-
-function createSim(patches = [], file = GAME) {
-  let src = fs.readFileSync(file, 'utf8');
-  for (const [a, b] of [...HOOKS, ...patches]) {
-    const n = src.split(a).length - 1;
-    if (n !== 1) throw new Error(`ancre trouvée ${n} fois : ${a.slice(0, 80)}`);
-    src = src.replace(a, () => b);
-  }
+// engine : module du moteur (import de engine.js ou d'une copie).
+// Une partie de quatre bots jusqu'au bout ; renvoie l'état final (G).
+// deal(G, paquet) peut imposer une donne (4 mains de 8 cartes).
+// on.trick(G, gagnant) après chaque pli, on.score(G) à chaque résultat,
+// on.timeout(G) si une fenêtre expire (un bot n'a pas agi), on.refus(G,
+// siège, action, motif) si le moteur refuse l'action d'un bot.
+// decide : décisions des bots par siège, (seat) => objet bots (duels A/B).
+export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, decide = null } = {}) {
+  const { createGame, actOn, bots, tuning } = engine;
   let now = 0;
   let seq = 0;
-  const timers = new Map(); // ordre d'insertion = ordre des id
-  const sim = { on: {}, deal: null, rand: Math.random, dealRand: Math.random };
-  sim.shuffle = (deck) => shuffle(deck, sim.dealRand);
-  const root = { hidden: false, addEventListener() {}, scrollIntoView() {} };
-  const ctx = vm.createContext({
+  const timers = new Map();
+  const clock = {
     setTimeout: (fn, ms = 0) => { timers.set(++seq, { id: seq, at: now + ms, fn }); return seq; },
     clearTimeout: (id) => timers.delete(id),
-    Date: { now: () => now },
-    document: { querySelector: (s) => (s === '#game-view' ? root : null), body: { classList: { add() {}, remove() {} } } },
-    window: {},
-    console,
-    __sim: sim,
-  });
-  vm.runInContext(`Math.random = () => __sim.rand();\n${src}`, ctx);
-  const api = ctx.window.__api;
-
-  // Une partie de quatre bots jusqu'au bout ; renvoie l'état final (G).
-  // deal(G, paquet) peut imposer une donne (mains de 8 cartes) ; on.* observe.
-  function play({ dealSeed = 1, botSeed = 2, deal = null, on = {} } = {}) {
-    timers.clear();
-    now = 0;
-    Object.assign(sim, { on, deal, rand: rng(botSeed), dealRand: rng(dealSeed) });
-    ctx.window.SCEPICoincheGame.start([0, 1, 2, 3].map(() => ({ type: 'bot' })), 0, () => {});
+  };
+  const botRand = rng(botSeed);
+  const dealRand = rng(dealSeed);
+  const saved = [Math.random, tuning.now];
+  Math.random = botRand; // les bots tirent leurs mondes avec Math.random
+  tuning.now = () => 0; // réflexion jamais interrompue : reproductible
+  try {
+    const G = createGame([0, 1, 2, 3].map(() => ({ type: 'bot', name: 'Ordinateur' })), dealRand, deal);
+    const pick = (seat) => (decide ? decide(seat) : bots);
+    const decider = {
+      turnAction: (g, s) => pick(s).turnAction(g, s),
+      wantsToCoinche: (g, s) => pick(s).wantsToCoinche(g, s),
+      wantsToSurcoinche: (g, s) => pick(s).wantsToSurcoinche(g, s),
+    };
+    const host = createHost({
+      timers: clock,
+      random: botRand,
+      decide: decider,
+      send(seat, action) {
+        if (action.type === 'TIMEOUT' && on.timeout && G.phase !== 'SCORE' && G.phase !== 'SURCOINCHE') on.timeout(G);
+        const before = { plis: G.plisJoues, phase: G.phase };
+        const error = actOn(G, seat, action, dealRand, deal);
+        if (error) { if (on.refus) on.refus(G, seat, action, error); return; }
+        if (G.plisJoues > before.plis && on.trick) on.trick(G, G.lastTrick.winnerSeat);
+        if (G.phase === 'SCORE' && before.phase !== 'SCORE' && on.score) on.score(G);
+        host.update(G);
+      },
+    });
+    host.update(G);
     for (let steps = 0; timers.size; steps++) {
       if (steps > 1e5) throw new Error('partie sans fin');
       let next = null;
@@ -80,10 +76,8 @@ function createSim(patches = [], file = GAME) {
       now = next.at;
       next.fn();
     }
-    return api.getG();
+    return G;
+  } finally {
+    [Math.random, tuning.now] = saved;
   }
-
-  return { api, play, sim };
 }
-
-module.exports = { createSim, rng, shuffle, GAME };

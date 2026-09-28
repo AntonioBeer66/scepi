@@ -1,6 +1,6 @@
-// Parties 100 % bots en accéléré (moteur headless : coinche-sim.js). Échoue
+// Parties 100 % bots en accéléré (moteur et hôte headless : coinche-sim.js). Échoue
 // si un bot joue une carte illégale, fait une enchère invalide ou reste
-// bloqué (le moteur ignore alors l'action et le délai de 30 s expire), si
+// bloqué (le moteur refuse alors l'action et le délai de 30 s expire), si
 // une partie ne se termine pas, ou si une donne est mal arbitrée. Chaque donne
 // est recomptée ici indépendamment du moteur : gagnant et points des plis,
 // belote/rebelote (le preneur seul, Roi et Dame d'atout en main initiale),
@@ -10,8 +10,9 @@
 // Le Monte-Carlo du jeu de la carte coûte cher : réflexes seuls pour la
 // plupart des parties, Monte-Carlo réduit à 2 mondes pour les dernières.
 //   node tests/coinche-bots.test.js
-const assert = require('assert');
-const { createSim, rng, shuffle } = require('./coinche-sim');
+import assert from 'assert';
+import * as engine from '../src/coinche/engine.js';
+import { play, rng, shuffle } from './coinche-sim.js';
 
 const GAMES = 200;
 const MC_GAMES = 10;
@@ -20,14 +21,12 @@ const POINTS = { atout: { J: 20, 9: 14, A: 11, 10: 10, K: 4, Q: 3 }, plain: { A:
 const team = (seat) => seat % 2;
 
 // La coinche simulée joue aussi des mondes : 4 suffisent pour vérifier les règles.
-const mondes = (n) => [['const MC_SAMPLES = ', `const MC_SAMPLES = ${n}; const __mc = `], ['const BID_SAMPLES = 24;', 'const BID_SAMPLES = 4;']];
-const reflexes = createSim(mondes(0));
-const mc = createSim(mondes(2));
+engine.tuning.bidSamples = 4;
 const stats = { donnes: 0, belotes: 0, generales: 0, imposees: 0, capots: 0, coinches: 0 };
 const t0 = Date.now();
 
 for (let game = 0; game < GAMES + MC_GAMES; game++) {
-  const { play } = game < GAMES ? reflexes : mc;
+  engine.tuning.mcSamples = game < GAMES ? 0 : 2;
   let pts = [0, 0];
   let plis = [0, 0];
   let prev = [0, 0];
@@ -44,15 +43,17 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
   };
 
   const on = {
-    timeout(G, seat) { throw new Error(`${where()} : bot bloqué (siège ${seat}, ${G.phase})`); },
+    timeout(G) { throw new Error(`${where()} : bot bloqué (siège ${G.joueurActif}, ${G.phase})`); },
+    refus(G, seat, action, motif) { throw new Error(`${where()} : action refusée (siège ${seat}, ${action.type}, ${motif})`); },
     trick(G, winner) {
       const { atout } = G.contract;
-      const lead = G.pliCourant[0].carte.suit;
+      const pli = G.lastTrick.cards;
+      const lead = pli[0].carte.suit;
       const force = (c) => (c.suit === atout ? 100 + ORDER.atout.indexOf(c.rank) : c.suit === lead ? ORDER.plain.indexOf(c.rank) : -1);
-      const best = G.pliCourant.reduce((a, b) => (force(b.carte) > force(a.carte) ? b : a));
+      const best = pli.reduce((a, b) => (force(b.carte) > force(a.carte) ? b : a));
       assert.strictEqual(winner, best.siege, `${where()} : mauvais gagnant de pli`);
       plis[team(winner)]++;
-      pts[team(winner)] += G.pliCourant.reduce((s, e) => s + ((e.carte.suit === atout ? POINTS.atout : POINTS.plain)[e.carte.rank] || 0), 0)
+      pts[team(winner)] += pli.reduce((s, e) => s + ((e.carte.suit === atout ? POINTS.atout : POINTS.plain)[e.carte.rank] || 0), 0)
         + (plis[0] + plis[1] === 8 ? 10 : 0);
     },
     score(G) {
@@ -90,7 +91,7 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
     },
   };
 
-  const G = play({ dealSeed: 1000 + game, botSeed: 5000 + game, deal: generale, on });
+  const G = play(engine, { dealSeed: 1000 + game, botSeed: 5000 + game, deal: generale, on });
   assert.strictEqual(G.phase, 'TERMINEE', `partie ${game} non terminée`);
   assert(Math.max(...G.scores) >= 1010, `partie ${game} : aucun camp à 1010`);
 }

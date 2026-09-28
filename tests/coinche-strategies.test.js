@@ -3,20 +3,26 @@
 // l'IA. Le jeu de la carte est testé sur les réflexes (heuristicCard), que
 // la simulation Monte-Carlo ne fait qu'affiner.
 //   node tests/coinche-strategies.test.js
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+import { bots } from '../src/coinche/engine.js';
 
-const src = fs.readFileSync(path.join(__dirname, '../site/assets/js/coinche-game.js'), 'utf8')
-  .replace('window.SCEPICoincheGame =', 'window.__api = { setG: (g) => { G = g; }, getG: () => G, botDecideBid, heuristicCard, botWantsToCoinche, botWantsToSurcoinche, contractIsGenerale, noteTrumpObligations, mcWorlds, exactEnd }; window.SCEPICoincheGame =');
-const ctx = { window: {} };
-vm.createContext(ctx);
-vm.runInContext(src, ctx);
 // Hasard reproductible : les enchères jouent la donne sur des mondes tirés
 // au hasard, un hasard constant n'en fabriquerait qu'un seul. Pas de bluff
 // (bluff à 0 dans les personnalités).
-vm.runInContext('Math.random = (() => { let s = 42; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', ctx);
-const api = ctx.window.__api;
+const seed = (n) => { let s = n; Math.random = () => (s = (s * 16807) % 2147483647) / 2147483647; };
+seed(42);
+let cur = null;
+const api = {
+  setG: (g) => { cur = g; },
+  getG: () => cur,
+  botDecideBid: (s) => bots.decideBid(cur, s),
+  heuristicCard: (s) => bots.heuristicCard(cur, s),
+  botWantsToCoinche: (s) => bots.wantsToCoinche(cur, s),
+  botWantsToSurcoinche: (s) => bots.wantsToSurcoinche(cur, s),
+  contractIsGenerale: (c) => bots.contractIsGenerale(cur, c),
+  noteTrumpObligations: (s, c) => bots.noteTrumpObligations(cur, s, c),
+  mcWorlds: (s, n) => bots.mcWorlds(cur, s, n),
+  exactEnd: bots.exactEnd,
+};
 
 const card = (id) => ({ suit: id.slice(-1), rank: id.slice(0, -1), id });
 const cards = (s) => s.split(/\s+/).filter(Boolean).map(card);
@@ -29,7 +35,7 @@ function setup(over = {}) {
   const g = {
     hands: [[], [], [], []], contract: null, donneAnnonces: [], bidMemo: [{}, {}, {}, {}], forced: [0, 0],
     scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0, coincheAppetite: 1 })),
-    seen: new Set(), void: [{}, {}, {}, {}], trumpMax: [8, 8, 8, 8], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
+    seen: {}, void: [{}, {}, {}, {}], trumpMax: [8, 8, 8, 8], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
     pointsPlis: [0, 0], plisGagnes: [0, 0], playedBy: [[], [], [], []], seats: [0, 1, 2, 3].map(() => ({ type: 'bot' })), donneur: 3,
     belote: { beloteDeclared: false, rebeloteDeclared: false, kingPlayed: false, queenPlayed: false }, ...over,
   };
@@ -37,9 +43,9 @@ function setup(over = {}) {
   if (over.pli) {
     g.pliCourant = over.pli.map(([siege, id]) => ({ siege, carte: card(id) }));
     const lead = g.pliCourant[0].carte.suit;
-    for (const e of g.pliCourant) { g.seen.add(e.carte.id); if (e.carte.suit !== lead) g.void[e.siege][lead] = true; }
+    for (const e of g.pliCourant) { g.seen[e.carte.id] = true; if (e.carte.suit !== lead) g.void[e.siege][lead] = true; }
   }
-  (over.seenIds || []).forEach((id) => g.seen.add(id));
+  (over.seenIds || []).forEach((id) => { g.seen[id] = true; });
   api.setG(g);
 }
 
@@ -144,7 +150,7 @@ check('Partenaire maître : défausser ne dit rien sur l’atout', api.getG().tr
 
 // ---- Mondes imaginés : le preneur a ouvert « 90 fort » (Valet + 9 promis), les autres ont passé
 {
-  vm.runInContext('Math.random = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();', ctx);
+  seed(7);
   setup({
     hands: hands('AS 7S AH 10H KD 8D 7C 8C'), contract: contract(1, 90, 'S'),
     bidLog: [{ seat: 0, cur: null, passes: 0 }, { seat: 1, montant: 90, atout: 'S', cur: null, passes: 1 },
@@ -153,7 +159,7 @@ check('Partenaire maître : défausser ne dit rien sur l’atout', api.getG().tr
   const worlds = api.mcWorlds(0, 48);
   const both = worlds.filter((w) => ['JS', '9S'].every((id) => w[1].some((c) => c.id === id))).length;
   check('Mondes compatibles avec un 90 fort (Valet + 9 chez le preneur, ≥ 80 %)', both >= 0.8 * worlds.length, true);
-  vm.runInContext('Math.random = () => 0.99;', ctx);
+  Math.random = () => 0.99;
 }
 
 // ---- Fin de donne exacte : 80 Cœur du siège 0, deux plis à jouer, 60 à 57.

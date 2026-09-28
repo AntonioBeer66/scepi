@@ -14,9 +14,11 @@ Depuis la racine du dépôt, lancer un serveur local avec Python :
 python -m http.server 8000 --bind 127.0.0.1 --directory site
 ```
 
-Ouvrir ensuite `http://127.0.0.1:8000/`. Aucun téléchargement de dépendances ni compilation n'est nécessaire. Le dossier `site/` est autonome pour l'hébergement statique.
+Ouvrir ensuite `http://127.0.0.1:8000/`. Le dossier `site/` est autonome pour l'hébergement statique : le jeu de coinche y est déjà compilé.
 
-Cette version est uniquement visuelle : navigation et menu mobile opérationnels, mais pas de partie de coinche, formulaire, inscription ou connexion Instagram. Les textes sont une proposition de présentation et les informations non fournies restent signalées comme à venir. Les originaux des logos restent dans `Logos/`, avec des copies de diffusion dans `site/assets/images/`.
+La coinche se joue seul contre l'ordinateur sans rien d'autre. Pour les tables en ligne, lancer aussi le serveur de jeu (`npm install` puis `npm run server`) ; voir le [cadrage technique](TECHNIQUE.md#6-coinche-en-ligne) pour la compilation et l'hébergement.
+
+Pas encore de formulaire, d'inscription ni de connexion Instagram. Les textes sont une proposition de présentation et les informations non fournies restent signalées comme à venir. Les originaux des logos restent dans `Logos/`, avec des copies de diffusion dans `site/assets/images/`.
 
 Voir le [cadrage technique](TECHNIQUE.md) pour l'architecture envisagée, l'hébergement OVH, l'intégration Instagram et la coinche en ligne.
 
