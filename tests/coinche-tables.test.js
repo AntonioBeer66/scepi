@@ -11,6 +11,9 @@ import { createHost } from "../src/coinche/host.js";
 import {
   createTables,
   EMPTY_MS,
+  historyCSV,
+  historyRow,
+  weekOf,
   IDLE_MS,
   MAX_MATCHES,
   PERMANENT_TABLES,
@@ -116,7 +119,8 @@ for (let steps = 0; tables.get(t1).G.phase !== "TERMINEE"; steps++) {
   next.fn();
 }
 table.stop();
-const end = tables.get(t1).G;
+const finished = tables.get(t1);
+const end = finished.G;
 assert.ok(Math.max(...end.scores) >= 1010, "un camp atteint 1010");
 
 // Abandons : partie inactive effacée, salon temporaire jamais rejoint aussi.
@@ -132,6 +136,27 @@ assert.strictEqual(list().length, PERMANENT_TABLES);
 // Plafond de tables.
 while (tables.create());
 assert.strictEqual(tables.all().length, MAX_MATCHES);
+
+// Historique : une ligne par partie terminée, CSV pour Excel (« ; », BOM),
+// pseudos protégés ; semaine qui change le lundi.
+const row = historyRow(finished, Date.UTC(2026, 8, 29, 12));
+assert.deepStrictEqual(row.slice(2, 7), ["Alice<script> & Bob", "Ordinateur & Ordinateur", ...end.scores, end.scores[0] > end.scores[1] ? "Équipe 1" : "Équipe 2"]);
+const csv = historyCSV([row, ["x", "y", "=HYPERLINK(1)", 'a"b;c', 1, 2, "z", 3]]);
+assert.ok(csv.startsWith("﻿\"Date\";"));
+assert.ok(csv.includes(`"'=HYPERLINK(1)";"a""b;c";1;2`), csv);
+assert.strictEqual(csv.trim().split("\r\n").length, 3);
+const coinched = historyRow(
+  {
+    table: 1,
+    players: [{ name: "Alice" }, { name: "Carol" }, { name: null }, { name: null }],
+    G: { scores: [1010, 500], history: [{ coincheur: 1 }, { coincheur: 3 }, { coincheur: 1, surcoincheur: 0 }, {}] },
+  },
+  0,
+);
+assert.deepStrictEqual(coinched.slice(-2), ["Carol ×2, Ordinateur ×1", "Alice ×1"]);
+const monday = Date.UTC(2026, 8, 28);
+assert.strictEqual(weekOf(monday - 1) + 1, weekOf(monday));
+assert.strictEqual(weekOf(monday), weekOf(monday + 7 * 86400000 - 1));
 
 console.log(
   `Salons en ligne : ${end.history.length} donnes jusqu'à ${end.scores.join(" – ")}, places, mains cachées, coups refusés et entretien vérifiés.`,

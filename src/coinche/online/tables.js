@@ -18,6 +18,10 @@ export const EMOTES = new Map([
   ["😳", "Eh beh"],
   ["💪", "Solide"],
   ["🗿", "Built different"],
+  ["💣", "Terroriste"],
+  ["😔", "Sadge"],
+  ["🅰️", "Sous A"],
+  ["❓", "???"],
 ]);
 
 export const PERMANENT_TABLES = 4;
@@ -27,6 +31,49 @@ export const EMPTY_MS = 10 * 60 * 1000; // salon temporaire jamais rejoint
 const INVALID_MOVE = "INVALID_MOVE"; // valeur rendue par les coups refusés
 const MOVES = new Set(Object.keys(Coinche.moves));
 const MAX_ARGS = 3;
+
+// Historique des parties terminées, téléchargeable en CSV (Excel), remis à
+// zéro chaque semaine (lundi 0 h UTC) pour rester petit.
+export const weekOf = (t) => Math.floor((t / 86400000 + 3) / 7); // semaine depuis un lundi
+const HISTORY_HEAD = [
+  "Date", "Table", "Équipe 1", "Équipe 2", "Score 1", "Score 2", "Gagnant", "Donnes",
+  "Coinches", "Surcoinches",
+];
+
+export function historyRow(m, t) {
+  const name = (s) => m.players[s].name || "Ordinateur";
+  const team = (a, b) => `${name(a)} & ${name(b)}`;
+  // « Alice ×2, Ordinateur ×1 » : qui a coinché (ou surcoinché), combien de fois.
+  const who = (key) => {
+    const count = new Map();
+    for (const d of m.G.history)
+      if (d[key] != null) count.set(name(d[key]), (count.get(name(d[key])) || 0) + 1);
+    return [...count].map(([n, k]) => `${n} ×${k}`).join(", ");
+  };
+  const [s1, s2] = m.G.scores;
+  return [
+    new Date(t).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }),
+    m.table ? `Table ${m.table}` : "Salon",
+    team(0, 2),
+    team(1, 3),
+    s1,
+    s2,
+    s1 === s2 ? "Égalité" : s1 > s2 ? "Équipe 1" : "Équipe 2",
+    m.G.history.length,
+    who("coincheur"),
+    who("surcoincheur"),
+  ];
+}
+
+// « ; » et BOM : ce qu'attend Excel en français. Pseudos entre guillemets,
+// et neutralisés s'ils commencent comme une formule (=, +, -, @).
+export function historyCSV(rows) {
+  const cell = (v) => {
+    const s = String(v);
+    return typeof v === "number" ? s : `"${(/^[=+\-@\t\r]/.test(s) ? "'" : "") + s.replaceAll('"', '""')}"`;
+  };
+  return "﻿" + [HISTORY_HEAD, ...rows].map((r) => r.map(cell).join(";")).join("\r\n") + "\r\n";
+}
 
 const newID = () => crypto.randomUUID().slice(0, 11);
 const newCredentials = () => crypto.randomUUID();

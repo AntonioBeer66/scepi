@@ -11,16 +11,24 @@
 //   POST /api/tables/:id/join          { playerID, playerName } → { playerCredentials }
 //   POST /api/tables/:id/leave         { playerID, credentials }
 //   GET  /api/tables/:id/ws            WebSocket de la partie
+//   GET  /api/historique.csv           parties terminées de la semaine
 // WebSocket : le client envoie d'abord { type: "hello", playerID?,
 // credentials? } (sans playerID : spectateur), puis { type: "move", name,
 // args } ; il reçoit { type: "state", G, stateID, players } à chaque
 // changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
 // { type: "emote", emote } → { type: "emote", seat, emote } à toute la table.
 import { DurableObject } from "cloudflare:workers";
-import { createTables, EMOTES } from "../src/coinche/online/tables.js";
+import {
+  createTables,
+  EMOTES,
+  historyCSV,
+  historyRow,
+  weekOf,
+} from "../src/coinche/online/tables.js";
 
 const MAX_MESSAGE = 8 * 1024; // un coup tient en quelques centaines d'octets
 const KEY = (id) => `m:${id}`;
+const HISTORY = "historique"; // { week, rows } : la semaine en cours seulement
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -88,9 +96,30 @@ export class Tables extends DurableObject {
     for (const m of created) await this.save(m.id);
   }
 
+  // Ligne d'historique d'une partie qui vient de se terminer ; la semaine
+  // précédente est oubliée à la première partie de la nouvelle.
+  async record(id) {
+    const t = Date.now();
+    const saved = await this.ctx.storage.get(HISTORY);
+    const rows = saved?.week === weekOf(t) ? saved.rows : [];
+    rows.push(historyRow(this.tables.get(id), t));
+    await this.ctx.storage.put(HISTORY, { week: weekOf(t), rows });
+  }
+
   async fetch(request) {
     const url = new URL(request.url);
     const parts = url.pathname.split("/").filter(Boolean); // api, tables, id, action
+    if (url.pathname === "/api/historique.csv" && request.method === "GET") {
+      const saved = await this.ctx.storage.get(HISTORY);
+      const rows = saved?.week === weekOf(Date.now()) ? saved.rows : [];
+      return new Response(historyCSV(rows), {
+        headers: {
+          "content-type": "text/csv; charset=utf-8",
+          "content-disposition": 'attachment; filename="historique-coinche.csv"',
+          "cache-control": "no-store",
+        },
+      });
+    }
     if (parts[0] !== "api" || parts[1] !== "tables") return json({ error: "INTROUVABLE" }, 404);
     const id = parts[2];
     const action = parts[3];
@@ -186,8 +215,10 @@ export class Tables extends DurableObject {
     if (msg?.type === "move" && att.ready && att.seat != null) {
       // Identifiants revérifiés : la place a pu être libérée entre-temps.
       if (!this.tables.get(id).players[att.seat].credentials) return;
+      const was = this.tables.get(id).G.phase;
       if (this.tables.move(id, att.seat, msg.name, msg.args)) {
         await this.save(id);
+        if (was !== "TERMINEE" && this.tables.get(id).G.phase === "TERMINEE") await this.record(id);
         this.broadcast(id);
       }
     }

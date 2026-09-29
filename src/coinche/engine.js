@@ -1812,6 +1812,8 @@ function computeScore() {
     atout: G.contract.atout,
     multiplicateur: G.multiplicateur,
     generale: !!G.contract.generale,
+    coincheur: G.contract.coincheur ?? null,
+    surcoincheur: G.contract.surcoincheur ?? null,
   });
   // Le résultat reste affiché DURATION_MS.SCORE, puis TIMEOUT enchaîne.
   G.phase = "SCORE";
@@ -1919,6 +1921,7 @@ function act(seat, action) {
       return "HORS_PHASE";
     if (teamOf(seat) === G.contract.equipePreneur) return "COINCHE_INTERDITE";
     G.contract.coinche = true;
+    G.contract.coincheur = seat;
     G.multiplicateur = 2;
     G.phase = "SURCOINCHE";
     startTurn();
@@ -1930,6 +1933,7 @@ function act(seat, action) {
     if (teamOf(seat) !== G.contract.equipePreneur)
       return "SURCOINCHE_INTERDITE";
     G.contract.surcoinche = true;
+    G.contract.surcoincheur = seat;
     G.multiplicateur = 4;
     lockContractAndStartPlay();
     return;
