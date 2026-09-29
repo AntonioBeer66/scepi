@@ -6,10 +6,9 @@
     <meta name="theme-color" content="#0c0914" />
     <meta
       name="description"
-      content="Mentions légales du site SCEP Invaders."
+      content="SCEP Invaders, l’association de jeux vidéo, jeux de société et nouvelles technologies de l’ESCP. Découvrez notre univers."
     />
-    <meta name="robots" content="noindex" />
-    <title>Mentions légales — SCEP Invaders</title>
+    <title>Jeux — SCEP Invaders</title>
     <link rel="icon" href="../assets/images/favicon.ico" sizes="any" />
     <link
       rel="icon"
@@ -52,73 +51,67 @@
         <nav id="navigation" aria-label="Navigation principale">
           <a href="../index.html">Accueil</a
           ><a href="../asso/index.html">L’asso</a
-          ><a href="../jeux/index.html">Jeux</a
+          ><a href="../jeux/index.html" aria-current="page">Jeux</a
           ><a href="../evenements/index.html">Nos événements</a
           ><a href="../contact/index.html">Contact</a>
         </nav>
         <span class="header-tag">ESCP · GAMING CLUB</span>
       </div>
     </header>
-    <main id="contenu" class="container legal">
-      <h1>Mentions légales</h1>
-      <dl>
-        <dt>Éditeur</dt>
-        <dd>
-          SCEP Invaders, association loi 1901 · RNA W751228600<br />8 avenue de
-          la Porte de Champerret, 75017 Paris<br /><a
-            href="mailto:scep.invaders.escp@gmail.com"
-            >scep.invaders.escp@gmail.com</a
-          >
-        </dd>
-        <dt>Directeur de la publication</dt>
-        <dd>Arno Teillon, président</dd>
-        <!-- Hébergeur à confirmer : OVH pressenti. -->
-        <dt>Hébergeur</dt>
-        <dd>OVH SAS, 2 rue Kellermann, 59100 Roubaix · 1007</dd>
-        <dt>Données personnelles</dt>
-        <dd>
-          Ce site ne dépose aucun cookie et ne collecte aucune donnée. Seule la
-          page Coinche garde dans votre navigateur (stockage local) votre pseudo
-          et l’état des tables, sans jamais les transmettre. Les liens vers
-          Instagram et LinkedIn mènent à des services tiers soumis à leurs
-          propres règles.
-        </dd>
-        <dt>Propriété intellectuelle</dt>
-        <dd>
-          Logos, textes et photos appartiennent à SCEP Invaders. Toute
-          reproduction nécessite son accord.
-        </dd>
-      </dl>
+    <main id="contenu" class="container">
+      <section class="page-intro">
+        <span class="eyebrow">03 / JEUX</span>
+        <h1>La ludothèque<br /><span>de SCEP Invaders.</span></h1>
+        <p>
+          Les jeux auxquels on joue entre membres, en ligne ou contre
+          l’ordinateur. On commence par la coinche, avec nos règles.
+        </p>
+      </section>
+      <section class="games-grid reveal-stagger" aria-label="Jeux">
+        <a class="game-card" href="./coinche/index.html">
+          <span class="game-icon" aria-hidden="true">♠</span>
+          <span class="eyebrow">JEU DE CARTES</span>
+          <h2>Coinche</h2>
+          <p>
+            Le jeu de cartes de l’asso, avec les règles SCEPI : enchères,
+            coinche, surcoinche, belote et Générale.
+          </p>
+          <ul class="game-tags">
+            <li>En ligne</li>
+            <li>Solo contre l’ordinateur</li>
+            <li>4 joueurs, 2 équipes</li>
+          </ul>
+          <span class="pill">Jouer <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="game-card" href="./echecs/index.html">
+          <span class="game-icon" aria-hidden="true">♞</span>
+          <span class="eyebrow">JEU DE PLATEAU</span>
+          <h2>Échecs</h2>
+          <p>
+            Affrontez des bots au style inspiré de parties publiques, qui
+            choisissent leurs coups comme leurs modèles.
+          </p>
+          <ul class="game-tags">
+            <li>Contre l’ordinateur</li>
+            <li>Profils de bots</li>
+            <li>1 joueur</li>
+          </ul>
+          <span class="pill">Jouer <span aria-hidden="true">→</span></span>
+        </a>
+      </section>
+      <section class="games-next">
+        <div>
+          <h2>Quel jeu ensuite ?</h2>
+          <p>
+            Belote, tarot, poker, jeu de plateau… Dites-nous ce que vous
+            aimeriez retrouver dans la ludothèque.
+          </p>
+        </div>
+        <a class="button outline" href="../contact/index.html"
+          >Proposer un jeu</a
+        >
+      </section>
     </main>
-    <style>
-      .legal {
-        max-width: 680px;
-        padding-block: 64px 48px;
-      }
-      .legal h1 {
-        font-size: clamp(2rem, 4vw, 2.6rem);
-      }
-      .legal dl {
-        margin: 0;
-        font-size: 14px;
-        line-height: 1.6;
-      }
-      .legal dt {
-        margin-top: 22px;
-        color: var(--gold);
-        font-family: Consolas, "Courier New", monospace;
-        font-size: 11px;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-      }
-      .legal dd {
-        margin: 4px 0 0;
-        color: var(--muted);
-      }
-      .legal a {
-        color: var(--text);
-      }
-    </style>
     <footer class="footer">
       <div class="container footer-inner">
         <a class="brand" href="../index.html"

@@ -10,7 +10,7 @@
       "draw_dialogue": ["Quelle partie équilibrée ! On remet ça ?"],
       "description": "Un nouveau profil à personnaliser.",
       "rating": 900,
-      "picture": "../assets/echecs/lea.png",
+      "picture": "../../assets/echecs/lea.png",
       "model": "mathieu-212-model.json",
       "style": "mathieu-212-profile.json"
     },
@@ -24,7 +24,7 @@
       "draw_dialogue": ["Une partie très équilibrée. Belle défense !"],
       "description": "Un profil positionnel, construit autour des développements calmes et des plans préparés.",
       "rating": 1000,
-      "picture": "../assets/echecs/mathieu.png",
+      "picture": "../../assets/echecs/mathieu.png",
       "model": "mathieu-212-model.json",
       "style": "mathieu-212-profile.json"
     },
@@ -38,7 +38,7 @@
       "draw_dialogue": ["T'as réussi à t'en sortir ; profites-en pour ne jamais retenter avec ce bot. Ça vaut mieux pour toi.", "J'ai pourtant fait de mon mieux pour te laisser des occasions, va falloir que je nerf encore plus le bot...", "Tu t'en sors sur ce jeu, mais va regarder où est placé mon nom sur l'Excel de ranking de la coinche 😌"],
       "description": "Arno – président de l'association en 2026. Assurément le meilleur et le plus investi [btw il s'est barré à Berlin au lieu de gérer son asso].\n\nJoue des trucs chelous et ne maîtrise aucune théorie, mais au moins il sait calculer 2 coups d'avance.\n\nA joué pour la dernière fois sérieusement (et sobre) aux échecs en 2021. Depuis, il s'est perdu sur Clash Royale, des open worlds solo, la coinche et au five. A battu Loïc Montazel et Haiming Lu une fois chacun, et ne les a jamais réaffrontés depuis 🧠.\n\nNe fais pas honte à l'asso et gagne contre son bot au moins, s'il te plaît.",
       "rating": 1500,
-      "picture": "../assets/echecs/arno.png",
+      "picture": "../../assets/echecs/arno.png",
       "model": "chavent-model.json",
       "style": "chavent-profile.json"
     }

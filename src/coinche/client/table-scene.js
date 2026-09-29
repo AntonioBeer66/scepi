@@ -796,8 +796,8 @@ export function createTable(parent, { me, onPlay }) {
   class TableScene extends Phaser.Scene {
     preload() {
       for (const id of CARD_IDS)
-        this.load.image(id, `../assets/images/cards/${id}.png`);
-      this.load.svg("back", "../assets/images/cards/back.svg", {
+        this.load.image(id, `../../assets/images/cards/${id}.png`);
+      this.load.svg("back", "../../assets/images/cards/back.svg", {
         width: CARD_PX.w,
         height: CARD_PX.h,
       });

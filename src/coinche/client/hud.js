@@ -18,8 +18,8 @@ import {
 const RED_SUITS = new Set(["H", "D"]);
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
 const FLASH = {
-  coinche: { src: "../assets/images/coinche/coinched.mp4", ms: 1600 },
-  surcoinche: { src: "../assets/images/coinche/surcoinched.mp4", ms: 2900 },
+  coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1600 },
+  surcoinche: { src: "../../assets/images/coinche/surcoinched.mp4", ms: 2900 },
 };
 const ICONS = {
   history:
@@ -235,7 +235,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
           .map((p) => (anchor + p) % 4)
           .map(
             (s) => `<figure class="${s === G.lastTrick.winnerSeat ? "is-winner" : ""}">
-            <img src="../assets/images/cards/${bySeat[s].id}.png" alt="${esc(cardLabel(bySeat[s]))}">
+            <img src="../../assets/images/cards/${bySeat[s].id}.png" alt="${esc(cardLabel(bySeat[s]))}">
             <figcaption>${esc(seatName(s))}</figcaption></figure>`,
           )
           .join("")}</div>

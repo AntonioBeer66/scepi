@@ -85,7 +85,7 @@ cleanup() {
 trap cleanup INT TERM
 
 sleep 3
-open "http://localhost:8000/coinche/"
+open "http://localhost:8000/jeux/coinche/"
 
 echo
 echo "Tout est lancé : site sur http://localhost:8000"

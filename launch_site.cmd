@@ -24,7 +24,7 @@ echo Demarrage du site (port 8000)...
 start "SCEP - site" cmd /k npx --yes serve site -l 8000
 
 timeout /t 3 /nobreak >nul
-start "" http://localhost:8000/coinche/
+start "" http://localhost:8000/jeux/coinche/
 
 echo.
 echo Tout est lance : site sur http://localhost:8000

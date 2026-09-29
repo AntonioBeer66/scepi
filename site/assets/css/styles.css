@@ -2401,6 +2401,95 @@ a {
   margin-top: 16px;
 }
 
+/* Ludothèque (jeux/index.html) : une carte cliquable par jeu. */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 24px;
+}
+.game-card {
+  display: flex;
+  flex-direction: column;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 85% -10%, #8be04e14, transparent 60%),
+    var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    transform 0.2s;
+}
+.game-card:hover,
+.game-card:focus-visible {
+  border-color: var(--gold);
+  transform: translateY(-3px);
+}
+.game-card:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+.game-icon {
+  color: var(--gold);
+  font-size: 46px;
+  line-height: 1;
+  margin-bottom: 28px;
+}
+.game-card .eyebrow {
+  font-size: 10px;
+  margin-bottom: 12px;
+}
+.game-card h2 {
+  font-size: 30px;
+}
+.game-card p {
+  color: var(--muted);
+  font-size: 15px;
+}
+.game-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+.game-tags li {
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.game-card .pill {
+  align-self: flex-start;
+  margin-top: auto;
+}
+.games-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  margin-top: 56px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+.games-next h2 {
+  font-size: 25px;
+}
+.games-next p {
+  margin: 0;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .game-card {
+    transition: none;
+  }
+}
+
 /* Hero d'accueil : diaporama style Tesla ------------------------------- */
 
 .hero-slider {
