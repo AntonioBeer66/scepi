@@ -38,7 +38,8 @@ export const GENERALE = 500;
 export const ALLOWED_BIDS = [
   80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270, GENERALE,
 ];
-// Belote du preneur : +20 au score s'il fait au moins 81 points de plis.
+// Belote du preneur : +20 au décompte de la donne (pas au score de la
+// partie) s'il fait au moins 81 points de plis.
 export const BELOTE_BONUS = 20;
 const BELOTE_MIN = 81;
 
@@ -1772,16 +1773,15 @@ function computeScore() {
   let gainDefense = 0;
   if (reussi) gainPreneurs = contractValue(G.contract) * G.multiplicateur;
   else gainDefense = 160 * G.multiplicateur;
-  // Belote du preneur : +20 à son score (jamais multiplié), réussi ou non,
-  // s'il a fait au moins 81 points de plis. Déjà comprise dans les 270 du
-  // capot beloté.
+  // Belote du preneur : +20 au décompte de la donne (pour faire le contrat,
+  // voir contratReussi) s'il a fait au moins 81 points de plis ; rien au
+  // score de la partie. Déjà comprise dans le capot beloté.
   const beloteBonus =
     beloteValide &&
     G.contract.type !== "CAPOT_BELOTE" &&
     G.pointsPlis[preneurs] >= BELOTE_MIN
       ? BELOTE_BONUS
       : 0;
-  gainPreneurs += beloteBonus;
 
   G.scores[preneurs] += gainPreneurs;
   G.scores[defense] += gainDefense;

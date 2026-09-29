@@ -79,9 +79,8 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
           : pts[pre] >= (belote ? Math.max(81, base - 20) : base);
       const gain = [0, 0];
       gain[reussi ? pre : 1 - pre] = (reussi ? (c.type === 'GENERALE' ? 250 : c.montant) : 160) * G.multiplicateur;
-      // Belote du preneur : +20 (non multiplié) dès 81 points de plis, sauf
-      // capot beloté (déjà compris dans 270).
-      if (belote && c.montant !== 270 && pts[pre] >= 81) gain[pre] += 20;
+      // La belote n'ajoute rien au score : elle compte seulement pour
+      // réussir le contrat (seuil ci-dessus).
       assert.strictEqual(G.history[0].reussi, reussi, `${where()} : réussite du contrat`);
       assert.deepStrictEqual([G.scores[0] - prev[0], G.scores[1] - prev[1]], gain, `${where()} : score`);
       // Seule une Générale adverse passe au-dessus du 270 à huit atouts.

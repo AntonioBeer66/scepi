@@ -40,8 +40,8 @@ assert.strictEqual(G.phase, "JEU");
 assert.ok(G.contract.generale);
 assert.strictEqual(G.joueurActif, taker, "le preneur d'une Générale prend la main");
 
-// Belote du preneur : +20 au score dès 81 points de plis, même si le
-// contrat chute ; rien en dessous de 81 ; déjà comprise dans 270.
+// Belote du preneur : +20 au décompte de la donne dès 81 points de plis,
+// jamais au score de la partie ; rien en dessous de 81 ; déjà comprise dans 270.
 function scoreWith({ montant, pointsPreneurs, belote }) {
   const g = createGame(humans, rng(9));
   g.contract = {
@@ -64,15 +64,18 @@ function scoreWith({ montant, pointsPreneurs, belote }) {
   }
   return g.dernierResultat;
 }
-// 100 avec belote, 90 points avant le dernier pli : réussi, 100 + 20.
+// 100 avec belote, 90 points de plis : 90 + 20 au décompte, réussi ; le
+// score de la partie ne prend que les 100 du contrat.
 let res = scoreWith({ montant: 100, pointsPreneurs: 90, belote: true });
 assert.ok(res.reussi);
 assert.strictEqual(res.beloteBonus, 20);
-assert.strictEqual(res.gains[0], 120);
-// 140 avec belote, 90 points : chuté, mais la belote (≥ 81) reste au preneur.
+assert.deepStrictEqual(res.gains, [100, 0]);
+// Sans belote, les mêmes 90 points chutent.
+assert.ok(!scoreWith({ montant: 100, pointsPreneurs: 90, belote: false }).reussi);
+// 140 avec belote, 90 points : chuté, la belote ne rapporte rien.
 res = scoreWith({ montant: 140, pointsPreneurs: 90, belote: true });
 assert.ok(!res.reussi);
-assert.deepStrictEqual(res.gains, [20, 160]);
+assert.deepStrictEqual(res.gains, [0, 160]);
 // Moins de 81 points : belote non comptée.
 res = scoreWith({ montant: 80, pointsPreneurs: 60, belote: true });
 assert.strictEqual(res.beloteBonus, 0);

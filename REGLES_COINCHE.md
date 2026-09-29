@@ -152,7 +152,7 @@ Fournir reste obligatoire sur son partenaire. Sans couleur demandée, couper sur
 - Au verrouillage du contrat, repérer si un même preneur possède dans sa main initiale le roi ET la dame d'atout. Lui seul est admissible au bonus ; la belote défensive ne rapporte rien.
 - Déclaration automatique, sans action du joueur : dès que la première de ces deux cartes est jouée, Belote est annoncée ; dès que la seconde est jouée, Rebelote l'est. L'ordre roi/dame est libre. Ce comportement est identique pour un siège humain ou un bot — aucun bouton, aucune fenêtre à guetter.
 - Le bonus devient valide quand les deux cartes ont été jouées (donc les deux annonces faites).
-- Belote valide : +20 au score de la partie pour les preneurs (jamais multiplié), que le contrat réussisse ou chute, à condition qu'ils aient fait au moins 81 points de plis. Elle abaisse aussi leur seuil de réussite (section 9). Pas de +20 en plus sur un capot beloté, dont les 270 l'incluent déjà.
+- Belote valide : +20 au décompte des points de la donne pour les preneurs, à condition qu'ils aient fait au moins 81 points de plis ; elle les aide seulement à réussir leur contrat (seuil abaissé, section 9) et n'ajoute rien au score de la partie. Un capot beloté l'exige déjà pour ses 270.
 - Le score peut être calculé dès la résolution du dernier pli : la belote est toujours tranchée au plus tard au moment où la dernière carte concernée est posée.
 
 ## 9. Calcul du score
@@ -174,8 +174,7 @@ valeur = 250 si GENERALE, sinon montant
 
 Si reussi : gain[preneurs] = valeur * multiplicateur ; gain[defense] = 0
 Sinon : gain[preneurs] = 0 ; gain[defense] = 160 * multiplicateur
-Si belote valide des preneurs, contrat != CAPOT_BELOTE et pointsPlis[preneurs] >= 81 :
-  gain[preneurs] += 20
+(la belote n'ajoute rien aux gains : elle ne sert qu'au seuil ci-dessus)
 ```
 
 Appliquer les gains une seule fois par donne. Ne pas ajouter les points de plis, arrondir le résultat, ni attribuer une prime de générale ou de capot non annoncé.
