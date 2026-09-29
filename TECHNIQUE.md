@@ -190,7 +190,8 @@ Le serveur se lance avec `PORT` et `ORIGINS=https://adresse-du-site`, et le site
 
 #### Bêta gratuite
 
-- **Site : GitHub Pages** (dépôt public, fichiers jusqu'à 100 Mo : `stockfish.wasm` des échecs, 99 Mo, dépasse la limite de 25 Mo de Cloudflare). Le workflow `.github/workflows/deploy-pages.yml` recompile et publie `site/` à chaque push sur `main`. Une fois : *Settings > Pages > Source : GitHub Actions*, et la variable d'Actions `COINCHE_SERVER`.
+- **Bêta actuelle : Cloudflare Workers, protégée par mot de passe** (`worker/index.js`, `wrangler.jsonc`) : `npx wrangler deploy` ; mot de passe en secret (`npx wrangler secret put SITE_PASSWORD`), jamais dans le dépôt. Les échecs y sont bloqués : leur moteur (Stockfish, 99 Mo) a été retiré, trop lourd pour l'hébergement gratuit (le jeu complet reste dans l'historique Git, branche `Chess-embed`).
+- **Site : GitHub Pages** (alternative sans mot de passe côté serveur). Le workflow `.github/workflows/deploy-pages.yml` recompile et publie `site/` à chaque push sur `main`. Une fois : *Settings > Pages > Source : GitHub Actions*, et la variable d'Actions `COINCHE_SERVER`.
 - **Serveur de coinche : Render**, offre gratuite (`render.yaml` : *New > Blueprint*). Renseigner `ORIGINS=https://antoniobeer66.github.io`. Le service s'endort après 15 min sans trafic et se réveille en une minute environ ; les parties en ligne en cours sont alors perdues. Le solo, lui, ne dépend pas du serveur.
 - Pour un serveur toujours éveillé : offre payante (Render, Railway…) ou petit VPS.
 

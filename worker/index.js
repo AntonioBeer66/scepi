@@ -4,13 +4,9 @@
 // Le mot de passe est un secret Cloudflare (wrangler secret put
 // SITE_PASSWORD), jamais dans le dépôt ; le cookie contient son empreinte
 // (changer le mot de passe déconnecte tout le monde).
-// stockfish.wasm (échecs, 99 Mo) dépasse la limite de 25 Mo par fichier de
-// Cloudflare : il est relayé depuis le dépôt GitHub.
 
 const COOKIE = "scepi_acces";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 jours
-const STOCKFISH =
-  "https://raw.githubusercontent.com/AntonioBeer66/scepi/main/site/assets/echecs/stockfish.wasm";
 
 async function digest(text) {
   const buf = await crypto.subtle.digest(
@@ -119,14 +115,6 @@ export default {
       return wantsPage
         ? loginPage(url.pathname + url.search, false)
         : new Response("Accès réservé.", { status: 401 });
-    }
-
-    if (url.pathname === "/assets/echecs/stockfish.wasm") {
-      const res = await fetch(STOCKFISH, { cf: { cacheEverything: true, cacheTtl: 86400 } });
-      return new Response(res.body, {
-        status: res.status,
-        headers: { "content-type": "application/wasm", "cache-control": "private, max-age=86400" },
-      });
     }
 
     const res = await env.ASSETS.fetch(request);

@@ -2431,6 +2431,14 @@ a {
   outline: 3px solid var(--gold);
   outline-offset: 3px;
 }
+/* Jeu pas encore disponible : carte grisée, pas de lien. */
+.game-card.is-disabled {
+  opacity: 0.55;
+}
+.game-card.is-disabled:hover {
+  border-color: var(--line);
+  transform: none;
+}
 .game-icon {
   color: var(--gold);
   font-size: 46px;
