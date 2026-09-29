@@ -149,8 +149,8 @@
         profile.id,
         {
           ...profile,
-          file: `../../src/echecs/${profile.model}`,
-          profile: `../../src/echecs/${profile.style}`,
+          file: `../../../src/echecs/${profile.model}`,
+          profile: `../../../src/echecs/${profile.style}`,
           copy: profile.description,
         },
       ]),
@@ -269,7 +269,7 @@
   };
   class StockfishEngine {
     constructor() {
-      const script = new URL("../../src/echecs/stockfish.js", document.baseURI);
+      const script = new URL("../../../src/echecs/stockfish.js", document.baseURI);
       this.worker = new Worker(script);
       this.ready = new Promise((resolve) => {
         this.resolveReady = resolve;
@@ -1928,7 +1928,7 @@
   if (boardFooter && navigation)
     boardFooter.insertBefore(navigation, $("#chess-reset"));
   if (boardFooter && sidePanel) sidePanel.appendChild(boardFooter);
-  fetch("../../src/echecs/config.json")
+  fetch("../../../src/echecs/config.json")
     .then((response) => response.json())
     .then((config) => {
       config.profiles.forEach((profile) => {

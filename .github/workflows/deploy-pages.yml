@@ -38,8 +38,14 @@ jobs:
       - run: npm run build
         env:
           VITE_COINCHE_SERVER: ${{ vars.COINCHE_SERVER }}
+      - name: Préparer le site et ses sources d’échecs
+        run: |
+          rm -rf pages-artifact
+          mkdir -p pages-artifact
+          cp -R site/. pages-artifact/
+          cp -R src pages-artifact/src
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: pages-artifact
       - id: deployment
         uses: actions/deploy-pages@v4

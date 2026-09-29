@@ -73,8 +73,12 @@ echo "Démarrage du serveur de coinche (port 8001)..."
 npm run server &
 SERVER_PID=$!
 
+DEPLOY_DIR=$(mktemp -d "${TMPDIR:-/tmp}/scepi-site.XXXXXX")
+cp -R site/. "$DEPLOY_DIR/"
+cp -R src "$DEPLOY_DIR/src"
+
 echo "Démarrage du site (port 8000)..."
-npx --yes serve site -l 8000 &
+npx --yes serve "$DEPLOY_DIR" -l 8000 &
 SITE_PID=$!
 
 cleanup() {

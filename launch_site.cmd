@@ -20,8 +20,14 @@ call npm run build || goto :erreur
 echo Demarrage du serveur de coinche (port 8001)...
 start "SCEP - serveur de coinche" cmd /k npm run server
 
+set "DEPLOY_DIR=%TEMP%\scepi-site"
+if exist "%DEPLOY_DIR%" rmdir /s /q "%DEPLOY_DIR%"
+mkdir "%DEPLOY_DIR%"
+xcopy /e /i /q site "%DEPLOY_DIR%"
+xcopy /e /i /q src "%DEPLOY_DIR%\src"
+
 echo Demarrage du site (port 8000)...
-start "SCEP - site" cmd /k npx --yes serve site -l 8000
+start "SCEP - site" cmd /k npx --yes serve "%DEPLOY_DIR%" -l 8000
 
 timeout /t 3 /nobreak >nul
 start "" http://localhost:8000/
