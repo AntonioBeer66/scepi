@@ -1,10 +1,12 @@
-// Une partie à l'écran : le client boardgame.io (en ligne par WebSocket, ou
-// en solo avec le serveur local dans l'onglet), la table Phaser, les
-// commandes HTML et, si ce navigateur est l'hôte, les bots et les délais.
+// Une partie à l'écran : le client de jeu (en ligne : WebSocket vers le
+// serveur du site, voir online-client.js ; en solo : boardgame.io avec son
+// serveur local dans l'onglet), la table Phaser, les commandes HTML et, si
+// ce navigateur est l'hôte, les bots et les délais.
 import { Client } from "boardgame.io/client";
-import { Local, SocketIO } from "boardgame.io/multiplayer";
+import { Local } from "boardgame.io/multiplayer";
 import { Coinche } from "../game.js";
 import { createHud } from "./hud.js";
+import { OnlineClient } from "./online-client.js";
 import { createTable } from "./table-scene.js";
 
 const SOLO_SEATS = [
@@ -19,7 +21,7 @@ const SOLO_STORAGE = "scepi-coinche-solo";
 export function startSession({
   online,
   launch,
-  server,
+  api,
   session,
   soloID,
   watch, // matchID d'une partie à regarder en spectateur
@@ -29,24 +31,23 @@ export function startSession({
   // Spectateur : ni place ni identifiants ; le serveur n'envoie aucune main.
   const playerID = watch ? undefined : online ? session.playerID : "0";
   const me = watch ? -1 : Number(playerID);
-  const client = Client({
-    game: Coinche,
-    numPlayers: 4,
-    playerID,
-    debug: false,
-    ...(online
-      ? {
-          multiplayer: SocketIO({ server }),
-          matchID: watch || session.matchID,
-          credentials: watch ? undefined : session.credentials,
-        }
-      : // Solo : état gardé dans ce navigateur (reprise après rechargement),
-        // effacé en quittant ; soloID est propre à chaque partie.
-        {
-          multiplayer: Local({ persist: true, storageKey: SOLO_STORAGE }),
-          matchID: soloID,
-        }),
-  });
+  const client = online
+    ? OnlineClient({
+        api,
+        matchID: watch || session.matchID,
+        playerID,
+        credentials: watch ? undefined : session.credentials,
+      })
+    : // Solo : état gardé dans ce navigateur (reprise après rechargement),
+      // effacé en quittant ; soloID est propre à chaque partie.
+      Client({
+        game: Coinche,
+        numPlayers: 4,
+        playerID,
+        debug: false,
+        multiplayer: Local({ persist: true, storageKey: SOLO_STORAGE }),
+        matchID: soloID,
+      });
 
   const view = document.querySelector("#game-view");
   view.hidden = false;

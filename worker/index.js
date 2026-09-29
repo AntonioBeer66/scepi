@@ -87,7 +87,11 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const password = env.SITE_PASSWORD;
-    if (!password) return new Response("Mot de passe non configuré.", { status: 503 });
+    // Sans mot de passe : ouvert seulement en local (wrangler dev, clone
+    // frais) ; en ligne, tout est refusé plutôt qu'exposé.
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (!password && !local) return new Response("Mot de passe non configuré.", { status: 503 });
+    if (!password) return serve(request, env, url);
     const expected = await digest(password);
 
     // La page de connexion a besoin du logo et de l'icône.
@@ -117,11 +121,25 @@ export default {
         : new Response("Accès réservé.", { status: 401 });
     }
 
-    const res = await env.ASSETS.fetch(request);
-    // Rien de la bêta ne doit être indexé ni partagé par un cache public.
-    const out = new Response(res.body, res);
-    out.headers.set("x-robots-tag", "noindex");
-    out.headers.set("cache-control", "private, no-cache");
-    return out;
+    return serve(request, env, url);
   },
 };
+
+// Après le contrôle d'accès : API de la coinche en ligne, ou fichiers du site.
+async function serve(request, env, url) {
+  if (url.pathname.startsWith("/api/")) {
+    // Seules les pages du site appellent l'API (pas un autre site qui
+    // profiterait du cookie d'un joueur).
+    const origin = request.headers.get("origin");
+    if (origin && origin !== url.origin) return new Response("Origine refusée.", { status: 403 });
+    return env.TABLES.get(env.TABLES.idFromName("salon")).fetch(request);
+  }
+  const res = await env.ASSETS.fetch(request);
+  // Rien de la bêta ne doit être indexé ni partagé par un cache public.
+  const out = new Response(res.body, res);
+  out.headers.set("x-robots-tag", "noindex");
+  out.headers.set("cache-control", "private, no-cache");
+  return out;
+}
+
+export { Tables } from "./tables.js";

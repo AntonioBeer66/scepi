@@ -161,39 +161,41 @@ Le manuel de l'Amicale est adapté en spécification serveur dans [REGLES_COINCH
 
 ### Architecture retenue
 
-Le jeu est écrit dans `src/coinche/` et compilé par Vite dans `site/assets/js/coinche/` (fichiers enregistrés dans Git : le site reste un dossier statique).
+Le jeu est écrit dans `src/coinche/` et compilé par Vite dans `site/assets/js/coinche/` (fichiers enregistrés dans Git). Le site et le serveur de jeu forment un seul Cloudflare Worker (`wrangler.jsonc`).
 
 | Fichier | Rôle |
 | --- | --- |
 | `src/coinche/engine.js` | Règles, score et IA des bots (enchères par système + Monte-Carlo). État en JSON pur, sans minuteur ni affichage ; un délai écoulé est une action `TIMEOUT`. |
-| `src/coinche/game.js` | Partie [boardgame.io](https://boardgame.io) : coups validés par le moteur, chaque joueur ne reçoit que sa main (`playerView`). |
+| `src/coinche/game.js` | Coups de la partie (format [boardgame.io](https://boardgame.io)), validés par le moteur ; chaque joueur ne reçoit que sa main (`playerView`). |
 | `src/coinche/host.js` | Hôte de table : fait jouer les bots et envoie les `TIMEOUT`. Tourne dans le navigateur du premier humain assis (il voit donc les mains des bots), dans un Web Worker (`client/host-worker.js`) : la réflexion des bots ne fige pas l'animation et un onglet en arrière-plan ne ralentit pas la table. Si l'hôte se déconnecte, un autre humain reprend le rôle. |
-| `src/coinche/client/` | Salons (HTML), commandes (HTML accessible) et table [Phaser](https://phaser.io) (WebGL, animations, particules, filtre Glow). Phaser n'est chargé qu'au lancement d'une partie. Cartes jouées au clic, au clavier ou par glisser-déposer. |
-| `server/index.js` | Serveur Node.js boardgame.io : salons, WebSocket, 4 tables permanentes, nettoyage des tables abandonnées, plafond de 40 tables. |
+| `src/coinche/online/tables.js` | Salons et parties en ligne, sans réseau : 4 tables permanentes, salons temporaires, places et identifiants, coups de `game.js` appliqués sur une copie, vue filtrée par joueur, nettoyage des parties abandonnées, plafond de 40 tables. |
+| `worker/tables.js` | Serveur de jeu : un Durable Object (API `/api/tables` du salon, WebSocket des parties, parties enregistrées dans son stockage). |
+| `worker/index.js` | Point d'entrée : mot de passe du site, puis API de jeu ou fichiers de `site/`. |
+| `src/coinche/client/` | Salons (HTML), commandes (HTML accessible) et table [Phaser](https://phaser.io) (WebGL, animations, particules). Phaser n'est chargé qu'au lancement d'une partie. Cartes jouées au clic, au clavier ou par glisser-déposer. En ligne : `online-client.js` (WebSocket) ; en solo : boardgame.io et son serveur local dans l'onglet. |
 
 - Solo contre trois bots : la partie tourne entièrement dans l'onglet, sans serveur ; elle est gardée dans le navigateur (reprise après rechargement) et effacée en quittant.
 - Spectateurs : une partie en cours peut être regardée depuis le salon, sans aucune main visible.
-- Les parties vivent en mémoire du serveur : un redémarrage les efface.
-- Déconnexion : la place est gardée, les délais continuent (l'hôte joue d'office à 30 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
+- Les parties en ligne sont enregistrées par le Durable Object : elles survivent à sa mise en veille ; une partie inactive 30 min est effacée.
+- Déconnexion : la place est gardée, le client se reconnecte seul, les délais continuent (l'hôte joue d'office à 30 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
 
 Commandes (Node.js 22 ou plus) :
 
 ```sh
 npm install
+npm start         # compile le jeu et lance le site + la coinche en ligne sur http://localhost:8000
 npm run build     # recompiler le jeu après une modification de src/
-npm run server    # serveur de jeu sur le port 8001
-npm test          # moteur, stratégies des bots, parties de bots, partie boardgame.io
+npm test          # moteur, stratégies des bots, parties de bots, partie boardgame.io, salons en ligne
 npm run test:e2e  # partie solo dans un vrai navigateur (Playwright ; Edge/Chrome du poste à défaut)
+node tests/coinche-online-e2e.js   # multijoueur de bout en bout (npm start dans un autre terminal)
+npm run deploy    # compile et publie sur Cloudflare
 ```
 
-Le serveur se lance avec `PORT` et `ORIGINS=https://adresse-du-site`, et le site se compile avec `VITE_COINCHE_SERVER=https://adresse-du-serveur npm run build`. Sans variable, le client vise le port 8001 de la même machine que la page.
+En local, sans `.dev.vars`, le site n'a pas de mot de passe ; avec un fichier `.dev.vars` contenant `SITE_PASSWORD=…`, il en a un comme en ligne.
 
-#### Bêta gratuite
+#### Bêta
 
-- **Bêta actuelle : Cloudflare Workers, protégée par mot de passe** (`worker/index.js`, `wrangler.jsonc`) : `npx wrangler deploy` ; mot de passe en secret (`npx wrangler secret put SITE_PASSWORD`), jamais dans le dépôt. Les échecs y sont bloqués : leur moteur (Stockfish, 99 Mo) a été retiré, trop lourd pour l'hébergement gratuit (le jeu complet reste dans l'historique Git, branche `Chess-embed`).
-- **Site : GitHub Pages** (alternative sans mot de passe côté serveur). Le workflow `.github/workflows/deploy-pages.yml` recompile et publie `site/` à chaque push sur `main`. Une fois : *Settings > Pages > Source : GitHub Actions*, et la variable d'Actions `COINCHE_SERVER`.
-- **Serveur de coinche : Render**, offre gratuite (`render.yaml` : *New > Blueprint*). Renseigner `ORIGINS=https://antoniobeer66.github.io`. Le service s'endort après 15 min sans trafic et se réveille en une minute environ ; les parties en ligne en cours sont alors perdues. Le solo, lui, ne dépend pas du serveur.
-- Pour un serveur toujours éveillé : offre payante (Render, Railway…) ou petit VPS.
+- **Cloudflare Workers, offre gratuite, protégée par mot de passe** : `npm run deploy` ; mot de passe en secret (`npx wrangler secret put SITE_PASSWORD`), jamais dans le dépôt. Le Durable Object tient dans l'offre gratuite (stockage SQLite, WebSocket hibernables : il ne consomme rien entre deux coups).
+- Les échecs y sont bloqués : leur moteur (Stockfish, 99 Mo) a été retiré, trop lourd pour l'hébergement gratuit (le jeu complet reste sur la branche `pre-deploiement`).
 
 ### Première version jouable proposée
 

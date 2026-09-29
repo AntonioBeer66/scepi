@@ -9,7 +9,7 @@ where node >nul 2>nul || (
   exit /b 1
 )
 
-if not exist node_modules (
+if not exist node_modules\.bin\wrangler.cmd (
   echo Installation des dependances...
   call npm install || goto :erreur
 )
@@ -17,18 +17,16 @@ if not exist node_modules (
 echo Compilation du jeu de coinche...
 call npm run build || goto :erreur
 
-echo Demarrage du serveur de coinche (port 8001)...
-start "SCEP - serveur de coinche" cmd /k npm run server
+rem Site + coinche en ligne, comme sur la beta (Cloudflare Workers en local).
+echo Demarrage du site et de la coinche en ligne (port 8000)...
+start "SCEP - site" cmd /k npx wrangler dev --port 8000
 
-echo Demarrage du site (port 8000)...
-start "SCEP - site" cmd /k npx --yes serve site -l 8000
-
-timeout /t 3 /nobreak >nul
+timeout /t 8 /nobreak >nul
 start "" http://localhost:8000/
 
 echo.
 echo Tout est lance : site sur http://localhost:8000
-echo Fermez les deux fenetres "SCEP - ..." pour tout arreter.
+echo Fermez la fenetre "SCEP - site" pour tout arreter.
 timeout /t 5 >nul
 exit /b 0
 

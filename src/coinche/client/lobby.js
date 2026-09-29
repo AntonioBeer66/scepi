@@ -1,22 +1,36 @@
 // Salons de la coinche : tables permanentes 1 à 4 et salons temporaires,
-// tenus par le serveur (server/index.js). On s'assoit avec un pseudo, puis
-// n'importe quel joueur assis lance la partie : les places vides sont
-// jouées par l'ordinateur. Sans serveur, reste le jeu solo contre trois bots.
-// La place occupée (identifiants boardgame.io) est gardée dans ce navigateur :
-// recharger la page ramène à la table.
-import { LobbyClient } from "boardgame.io/client";
+// tenus par le serveur du site (/api, worker/tables.js). On s'assoit avec un
+// pseudo, puis n'importe quel joueur assis lance la partie : les places
+// vides sont jouées par l'ordinateur. Sans serveur, reste le jeu solo
+// contre trois bots.
+// La place occupée (identifiants) est gardée dans ce navigateur : recharger
+// la page ramène à la table.
 import { MAX_NAME } from "../game.js";
 
-const SERVER =
-  import.meta.env.VITE_COINCHE_SERVER ||
-  `${location.protocol}//${location.hostname}:8001`;
+const API = "/api";
 const SESSION_KEY = "scepi-coinche-session";
 const SOLO_KEY = "scepi-coinche-solo-match";
 const SEAT_LABELS = ["Nord", "Est", "Sud", "Ouest"];
 const SEAT_TEAM = ["Équipe A", "Équipe B", "Équipe A", "Équipe B"];
 const POLL_MS = 3000;
 
-const lobbyClient = new LobbyClient({ server: SERVER });
+// Appels à l'API des salons ; une erreur porte le code HTTP (429 : trop de tables).
+async function api(path, body) {
+  const res = await fetch(`${API}${path}`, {
+    method: body ? "POST" : "GET",
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) throw new Error(String(res.status));
+  return res.json();
+}
+const lobbyClient = {
+  joinMatch: (matchID, playerID, playerName) =>
+    api(`/tables/${encodeURIComponent(matchID)}/join`, { playerID, playerName }),
+  leaveMatch: (matchID, playerID, credentials) =>
+    api(`/tables/${encodeURIComponent(matchID)}/leave`, { playerID, credentials }),
+  createMatch: () => api("/tables", {}),
+};
 
 function esc(str) {
   return String(str).replace(
@@ -89,9 +103,8 @@ function render() {
     status.textContent =
       "Serveur de jeu injoignable : le jeu en ligne est indisponible pour l’instant. Vous pouvez jouer seul contre l’ordinateur.";
   } else if (tables === null) {
-    // Hébergé gratuitement, le serveur s’endort : le premier appel le réveille.
     status.textContent =
-      "Connexion au serveur de jeu… (jusqu’à une minute s’il était en veille)";
+      "Connexion au serveur de jeu…";
   } else {
     status.textContent = "";
   }
@@ -138,7 +151,7 @@ function render() {
 
 async function refresh() {
   try {
-    const res = await fetch(`${SERVER}/tables`);
+    const res = await fetch(`${API}/tables`);
     if (!res.ok) throw new Error(res.status);
     tables = await res.json();
   } catch {
@@ -169,7 +182,7 @@ async function act(fn) {
   try {
     await fn();
   } catch (e) {
-    const msg = e?.details?.message || e?.message || "";
+    const msg = e?.message || "";
     window.alert(
       msg.includes("429")
         ? "Trop de tables sont ouvertes : rejoignez-en une existante."
@@ -204,7 +217,7 @@ async function enterGame({ online, launch = false, fresh = false, watch = null }
   playing = startSession({
     online,
     launch,
-    server: SERVER,
+    api: API,
     session,
     soloID: online ? null : soloID(fresh),
     watch,
@@ -228,7 +241,7 @@ async function enterGame({ online, launch = false, fresh = false, watch = null }
         session = null;
         saveSession(null);
         await lobbyClient
-          .leaveMatch("coinche", matchID, { playerID, credentials })
+          .leaveMatch(matchID, playerID, credentials)
           .catch(() => {});
       }
       poll();
@@ -248,10 +261,11 @@ function init() {
     if (!name || session) return;
     const { match: matchID, seat } = form.dataset;
     act(async () => {
-      const { playerCredentials } = await lobbyClient.joinMatch("coinche", matchID, {
-        playerID: seat,
-        playerName: name,
-      });
+      const { playerCredentials } = await lobbyClient.joinMatch(
+        matchID,
+        Number(seat),
+        name,
+      );
       session = { matchID, playerID: seat, credentials: playerCredentials, name };
       saveSession(session);
     });
@@ -268,7 +282,7 @@ function init() {
     if (button.dataset.action === "leave") {
       const { matchID, playerID, credentials } = session;
       act(async () => {
-        await lobbyClient.leaveMatch("coinche", matchID, { playerID, credentials });
+        await lobbyClient.leaveMatch(matchID, playerID, credentials);
         session = null;
         saveSession(null);
       });
@@ -279,7 +293,7 @@ function init() {
 
   $("#new-lobby-btn")?.addEventListener("click", () => {
     if (session) return;
-    act(() => lobbyClient.createMatch("coinche", { numPlayers: 4 }));
+    act(() => lobbyClient.createMatch());
   });
 
   const soloBtn = $("#solo-btn");

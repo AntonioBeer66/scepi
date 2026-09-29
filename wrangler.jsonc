@@ -1,7 +1,9 @@
-// Bêta sur Cloudflare Workers, protégée par mot de passe (worker/index.js).
+// Bêta sur Cloudflare Workers, protégée par mot de passe (worker/index.js),
+// avec la coinche en ligne dans un Durable Object (worker/tables.js).
+//   npm start                                (local : http://localhost:8000)
 //   npx wrangler login                       (une fois, dans le navigateur)
 //   npx wrangler secret put SITE_PASSWORD    (une fois)
-//   npx wrangler deploy
+//   npm run deploy
 {
   "name": "scepi-beta",
   "main": "worker/index.js",
@@ -12,4 +14,9 @@
     // Le Worker vérifie l'accès avant de servir le moindre fichier.
     "run_worker_first": true,
   },
+  "durable_objects": {
+    "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
+  },
+  // Stockage SQLite : celui de l'offre gratuite des Durable Objects.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tables"] }],
 }

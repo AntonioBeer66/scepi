@@ -69,22 +69,19 @@ npm run build || {
   exit 1
 }
 
-echo "Démarrage du serveur de coinche (port 8001)..."
-npm run server &
-SERVER_PID=$!
-
-echo "Démarrage du site (port 8000)..."
-npx --yes serve site -l 8000 &
+# Site + coinche en ligne, comme sur la bêta (Cloudflare Workers en local).
+echo "Démarrage du site et de la coinche en ligne (port 8000)..."
+npx wrangler dev --port 8000 &
 SITE_PID=$!
 
 cleanup() {
-  kill "$SERVER_PID" "$SITE_PID" 2>/dev/null
+  kill "$SITE_PID" 2>/dev/null
   exit 0
 }
 
 trap cleanup INT TERM
 
-sleep 3
+sleep 8
 open "http://localhost:8000/"
 
 echo

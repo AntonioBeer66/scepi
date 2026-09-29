@@ -24,6 +24,8 @@ const TYPES = {
 };
 
 const server = http.createServer((req, res) => {
+  // Pas de serveur de jeu ici : le salon le trouve indisponible (503).
+  if (req.url.startsWith("/api/")) return res.writeHead(503).end();
   let file = path.join(ROOT, decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (!file.startsWith(ROOT)) return res.writeHead(403).end();
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
@@ -54,7 +56,7 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => {
   // Le salon interroge le serveur de jeu, absent ici : erreurs attendues.
-  if (m.type() === "error" && !/ERR_CONNECTION_REFUSED|Failed to fetch/.test(m.text()))
+  if (m.type() === "error" && !/status of 503|ERR_CONNECTION_REFUSED|Failed to fetch/.test(m.text()))
     errors.push(m.text());
 });
 
