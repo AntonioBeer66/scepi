@@ -3,8 +3,14 @@
   if (!board || typeof Chess !== "function") return;
   const files = "abcdefgh",
     glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" },
-    pieceSvg = (type, color = "w") => `<img class="chess-piece-svg" src="../../assets/images/echecs/cburnett/${color}${type.toUpperCase()}.svg" alt="" draggable="false">`;
-  const soundFiles = { move: "move.wav", capture: "capture.wav", checkmate: "checkmate.wav", castle: "castle.wav" };
+    pieceSvg = (type, color = "w") =>
+      `<img class="chess-piece-svg" src="../../assets/images/echecs/cburnett/${color}${type.toUpperCase()}.svg" alt="" draggable="false">`;
+  const soundFiles = {
+    move: "move.wav",
+    capture: "capture.wav",
+    checkmate: "checkmate.wav",
+    castle: "castle.wav",
+  };
   const playSound = (name) => {
     const file = soundFiles[name];
     if (!file) return;
@@ -166,7 +172,9 @@
       select.addEventListener("change", () => {
         const current = profiles[select.value];
         if (!current) return;
-        $("#chess-bot-message").textContent = randomDialogue(current.selection_dialogue || current.dialogue);
+        $("#chess-bot-message").textContent = randomDialogue(
+          current.selection_dialogue || current.dialogue,
+        );
         $("#chess-selection-description").textContent =
           current.description || "";
         $("#chess-top-player").textContent = current.name;
@@ -240,9 +248,13 @@
     const topCaptures = $("#chess-top-captures"),
       bottomCaptures = $("#chess-bottom-captures");
     if (topCaptures)
-    topCaptures.innerHTML = top.map((type) => pieceSvg(type, playerColor)).join("");
+      topCaptures.innerHTML = top
+        .map((type) => pieceSvg(type, playerColor))
+        .join("");
     if (bottomCaptures)
-    bottomCaptures.innerHTML = bottom.map((type) => pieceSvg(type, botSide)).join("");
+      bottomCaptures.innerHTML = bottom
+        .map((type) => pieceSvg(type, botSide))
+        .join("");
     const topMaterial = $("#chess-top-material"),
       bottomMaterial = $("#chess-bottom-material"),
       difference = score(botSide) - score(playerColor);
@@ -269,7 +281,10 @@
   };
   class StockfishEngine {
     constructor() {
-      const script = new URL("../../../src/echecs/stockfish.js", document.baseURI);
+      const script = new URL(
+        "../../../src/echecs/stockfish.js",
+        document.baseURI,
+      );
       this.worker = new Worker(script);
       this.ready = new Promise((resolve) => {
         this.resolveReady = resolve;
@@ -329,7 +344,8 @@
             const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
             const pv = line.split(" pv ")[1].split(" ")[0];
             if (multipv && scoreMatch && pv) {
-              const mate = scoreMatch[1] === "mate" ? Number(scoreMatch[2]) : null;
+              const mate =
+                scoreMatch[1] === "mate" ? Number(scoreMatch[2]) : null;
               candidates.set(multipv, {
                 move: pv,
                 mate,
@@ -949,8 +965,7 @@
           current.element.style.top = `${origin.rank * 12.5}%`;
           selected = current.origin;
           showSelection(current.origin);
-        }
-        else if (!target) render();
+        } else if (!target) render();
       } else if (current.wasSelected) clearSelection();
       else {
         selected = current.origin;
@@ -1857,9 +1872,40 @@
     }
   };
   const soundMove = move;
-  move = function (from, to, animate = true) { const before = game.history().length; const result = soundMove(from, to, animate); if (result && game.history().length > before) { const played = game.history({ verbose: true }).at(-1); if (game.game_over() && isCheckmate()) playSound("checkmate"); else playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); } return result; };
+  move = function (from, to, animate = true) {
+    const before = game.history().length;
+    const result = soundMove(from, to, animate);
+    if (result && game.history().length > before) {
+      const played = game.history({ verbose: true }).at(-1);
+      if (game.game_over() && isCheckmate()) playSound("checkmate");
+      else
+        playSound(
+          played?.flags?.includes("k") || played?.flags?.includes("q")
+            ? "castle"
+            : played?.flags?.includes("c") || played?.flags?.includes("e")
+              ? "capture"
+              : "move",
+        );
+    }
+    return result;
+  };
   const soundBotMove = botMove;
-  botMove = async function () { const before = game.history().length; await soundBotMove(); if (game.history().length > before) { const played = game.history({ verbose: true }).at(-1); if (game.game_over() && isCheckmate()) playSound("checkmate"); else playSound(played?.flags?.includes("k") || played?.flags?.includes("q") ? "castle" : played?.flags?.includes("c") || played?.flags?.includes("e") ? "capture" : "move"); } };
+  botMove = async function () {
+    const before = game.history().length;
+    await soundBotMove();
+    if (game.history().length > before) {
+      const played = game.history({ verbose: true }).at(-1);
+      if (game.game_over() && isCheckmate()) playSound("checkmate");
+      else
+        playSound(
+          played?.flags?.includes("k") || played?.flags?.includes("q")
+            ? "castle"
+            : played?.flags?.includes("c") || played?.flags?.includes("e")
+              ? "capture"
+              : "move",
+        );
+    }
+  };
   document.addEventListener(
     "click",
     (event) => {
