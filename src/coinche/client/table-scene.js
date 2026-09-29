@@ -458,17 +458,12 @@ export function createTable(parent, { me, onPlay }) {
     const box = cardBox(id, L.cardW, L.cardH);
     const halo = scene.add.graphics();
     box.addAt(halo, 1);
-    // Halo lumineux (filtre Glow de Phaser 4) sur la carte survolée.
-    const glow = reduced
-      ? null
-      : halo.enableFilters().filters.external.addGlow(COLORS.gold, 5, 0, 1, false, 8, 12);
-    if (glow) glow.active = false;
     // Zone de survol fixe, à la place de la carte au repos (étendue vers le
     // haut pour couvrir la carte soulevée) : la carte bouge, pas sa zone.
     // Sinon, soulevée, elle glisserait sous le curseur au profit de sa
     // voisine, qui se soulèverait à son tour, et ainsi de suite.
     const zone = scene.add.zone(0, 0, 1, 1);
-    const o = { box, halo, glow, zone, img: box.img, shadow: box.shadow, index: -1 };
+    const o = { box, halo, zone, img: box.img, shadow: box.shadow, index: -1 };
     zone.setInteractive({ useHandCursor: true, draggable: true });
     zone.on("pointerover", () => {
       hoverId = id;
@@ -542,17 +537,23 @@ export function createTable(parent, { me, onPlay }) {
       o.img.setTint(legal && !isLegal ? 0x8a8499 : 0xffffff);
       o.shadow.setAlpha(lifted ? 0.75 : 0.55);
       o.halo.clear();
-      if (o.glow) o.glow.active = lifted;
-      if (isLegal)
+      // Liseré doré des cartes jouables ; la carte survolée rayonne en plus
+      // (contours de plus en plus larges et transparents). Dessiné à la main :
+      // le filtre Glow de Phaser, sur un objet dans un conteneur, se plaçait
+      // ailleurs sur la table.
+      const ring = (pad, width, alpha) =>
         o.halo
-          .lineStyle(lifted ? 4 : 3, COLORS.gold, lifted ? 1 : 0.8)
+          .lineStyle(width, COLORS.gold, alpha)
           .strokeRoundedRect(
-            -L.cardW / 2 - 2,
-            -L.cardH / 2 - 2,
-            L.cardW + 4,
-            L.cardH + 4,
-            L.cardW * 0.07 + 2,
+            -L.cardW / 2 - pad,
+            -L.cardH / 2 - pad,
+            L.cardW + 2 * pad,
+            L.cardH + 2 * pad,
+            L.cardW * 0.07 + pad,
           );
+      if (isLegal && lifted && !reduced)
+        [[12, 6, 0.08], [9, 5, 0.14], [6, 4, 0.24]].forEach((r) => ring(...r));
+      if (isLegal) ring(2, lifted ? 4 : 3, lifted ? 1 : 0.8);
       const s = fanSlot(i, n);
       const lift = (isLegal ? L.cardH * 0.14 : 0) + (lifted ? L.cardH * 0.1 : 0);
       const x = s.x + Math.sin(s.a) * lift;
