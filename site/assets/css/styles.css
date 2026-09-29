@@ -3602,7 +3602,7 @@ body.is-playing .rules-btn {
   z-index: 27;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end; /* le bouton reste au bord, palette ouverte ou non */
   gap: 8px;
 }
 .cg-emote-list {
@@ -3684,9 +3684,13 @@ body.is-playing .rules-btn {
   .cg-emotes {
     bottom: var(--cg-hand, 200px);
   }
-  /* Pendant les enchères, la barre prend toute la largeur : bouton masqué. */
+  /* Pendant les enchères, la barre prend toute la largeur : le bouton
+     monte en haut à droite de la table (sous la barre de jeu, ~92 px) et
+     la palette s'ouvre vers le bas. */
   #game-hud:has(.cg-bidbar) .cg-emotes {
-    display: none;
+    top: calc(100px + env(safe-area-inset-top));
+    bottom: auto;
+    flex-direction: column-reverse;
   }
 }
 /* Peu haut (téléphone en paysage) : palette sur trois colonnes, moins haute. */

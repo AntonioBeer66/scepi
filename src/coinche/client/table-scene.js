@@ -297,25 +297,24 @@ export function createTable(parent, { me, onPlay }) {
 
   // ---- Sièges : avatar, nom, bulle, dos des cartes ---------------------------
 
+  // Bulle à côté d'un siège : ses annonces pendant les enchères ; ensuite,
+  // le contrat reste affiché près du preneur (belote comprise) et
+  // « Coinche » / « Surcoinche » près de qui l'a dit, toute la donne.
   function bubbleText(seat) {
-    if (G.phase === "ENCHERES" || G.phase === "SURCOINCHE") {
-      const e = G.bidLog.filter((x) => x.seat === seat).pop();
-      if (!e) return null;
-      const lead = G.contract && G.contract.preneur === seat;
-      let t = e.montant ? bidLabel(e.montant, e.atout) : "Passe";
-      if (lead && G.contract.coinche) t += G.contract.surcoinche ? " ×4" : " ×2";
-      return { t, lead };
+    const c = G.contract;
+    if (c?.surcoincheur === seat && c.surcoincheur !== c.preneur)
+      return { t: "Surcoinche", alert: true };
+    if (c?.coincheur === seat) return { t: "Coinche", alert: true };
+    const bidding = G.phase === "ENCHERES" || G.phase === "SURCOINCHE";
+    if (c?.preneur === seat && (bidding || G.phase === "JEU" || G.phase === "SCORE")) {
+      let t = bidLabel(c.montant, c.atout) + (G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "");
+      if (!bidding && G.belote.beloteDeclared)
+        t += G.belote.rebeloteDeclared ? " · Rebelote" : " · Belote";
+      return { t, lead: true };
     }
-    if (
-      (G.phase === "JEU" || G.phase === "SCORE") &&
-      G.contract?.preneur === seat &&
-      G.belote.beloteDeclared
-    )
-      return {
-        t: G.belote.rebeloteDeclared ? "Rebelote !" : "Belote !",
-        lead: true,
-      };
-    return null;
+    if (!bidding) return null;
+    const e = G.bidLog.filter((x) => x.seat === seat).pop();
+    return e ? { t: e.montant ? bidLabel(e.montant, e.atout) : "Passe" } : null;
   }
 
   // Redessinés seulement si ce qu'ils montrent a changé : pas de textes
@@ -419,7 +418,7 @@ export function createTable(parent, { me, onPlay }) {
         const label = txt(0, 0, b.t, {
           fontSize: "13px",
           fontStyle: "bold",
-          color: COLORS.ink,
+          color: b.alert ? "#ffffff" : COLORS.ink,
         }).setOrigin(0.5);
         const bw = label.width + 18;
         const bh = label.height + 10;
@@ -430,7 +429,7 @@ export function createTable(parent, { me, onPlay }) {
         const bg = scene.add.graphics();
         bg.fillStyle(0x000000, 0.3)
           .fillRoundedRect(bx - bw / 2, by - bh / 2 + 3, bw, bh, bh / 2)
-          .fillStyle(b.lead ? COLORS.gold : COLORS.bubble, 1)
+          .fillStyle(b.alert ? COLORS.danger : b.lead ? COLORS.gold : COLORS.bubble, 1)
           .fillRoundedRect(bx - bw / 2, by - bh / 2, bw, bh, bh / 2);
         label.setPosition(bx, by);
         box.add([bg, label]);
