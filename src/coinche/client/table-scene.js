@@ -14,6 +14,7 @@
 // fixe entre deux cartes, ouverture bornée par la largeur disponible).
 import * as Phaser from "phaser";
 import {
+  GENERALE,
   RANKS,
   SUITS,
   SUIT_SYMBOL,
@@ -85,7 +86,14 @@ function initials(name) {
 }
 
 function bidLabel(montant, atout) {
-  const m = montant === 250 ? "Capot" : montant === 270 ? "Capot beloté" : montant;
+  const m =
+    montant === 250
+      ? "Capot"
+      : montant === 270
+        ? "Capot beloté"
+        : montant === GENERALE
+          ? "Générale"
+          : montant;
   return `${m} ${SUIT_SYMBOL[atout]}`;
 }
 
@@ -904,6 +912,22 @@ export function createTable(parent, { me, onPlay }) {
     focusCard(id) {
       focusId = id;
       if (scene && G) placeHand(false);
+    },
+    // Émoticône rapide d'un siège : au-dessus de son avatar, monte et s'efface.
+    showEmote(seat, emote) {
+      if (!scene || !L) return;
+      const { x, y } = L.seat[posOf(seat)];
+      const t = txt(x, y - L.r - 6, emote, { fontSize: `${Math.round(L.r * 1.3)}px` })
+        .setOrigin(0.5, 1)
+        .setDepth(85);
+      scene.tweens.add({
+        targets: t,
+        y: t.y - L.r,
+        alpha: { from: 1, to: 0 },
+        delay: dur(1300),
+        duration: dur(700),
+        onComplete: () => t.destroy(),
+      });
     },
     destroy() {
       resizer.disconnect();

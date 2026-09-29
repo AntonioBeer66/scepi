@@ -90,6 +90,8 @@ export function startSession({
     onRelaunch: (seats) => client.moves.lancer(seats),
     onQuit: stop,
     onFocusCard: (id) => table.focusCard(id),
+    // En ligne, le serveur renvoie l'émoticône à toute la table (vous compris).
+    onEmote: online ? (e) => client.sendEmote(e) : (e) => table.showEmote(me, e),
   });
 
   let launched = false;
@@ -144,6 +146,7 @@ export function startSession({
     table.update(G, prev);
     prev = G;
   });
+  if (online) client.onEmote((seat, e) => table.showEmote(seat, e));
   client.start();
 
   // Tout est coupé avant la déconnexion, qui prévient encore les abonnés :

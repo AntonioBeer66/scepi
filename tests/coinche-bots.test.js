@@ -66,7 +66,7 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       assert.deepStrictEqual([...G.plisGagnes], plis, `${where()} : nombre de plis`);
       assert.strictEqual(G.belote.holder, belote ? c.preneur : null, `${where()} : détenteur de la belote`);
       assert.strictEqual(G.belote.beloteDeclared && G.belote.rebeloteDeclared, belote, `${where()} : belote/rebelote`);
-      assert.strictEqual(!!c.generale, huitAtouts && c.montant === 270, `${where()} : marqueur Générale (270 seulement)`);
+      assert.strictEqual(!!c.huitAtouts, huitAtouts && c.montant === 270, `${where()} : marqueur huit atouts (270 seulement)`);
 
       const base = c.montant === 80 ? 82 : c.montant;
       const reussi = c.montant === 250 ? plis[pre] === 8
@@ -74,6 +74,9 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
           : pts[pre] >= (belote ? Math.max(81, base - 20) : base);
       const gain = [0, 0];
       gain[reussi ? pre : 1 - pre] = (reussi ? c.montant : 160) * G.multiplicateur;
+      // Belote du preneur : +20 (non multiplié) dès 81 points de plis, sauf
+      // capot beloté (déjà compris dans 270).
+      if (belote && c.montant !== 270 && pts[pre] >= 81) gain[pre] += 20;
       assert.strictEqual(G.history[0].reussi, reussi, `${where()} : réussite du contrat`);
       assert.deepStrictEqual([G.scores[0] - prev[0], G.scores[1] - prev[1]], gain, `${where()} : score`);
       if (huitAtouts) {
@@ -96,4 +99,4 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
   assert(Math.max(...G.scores) >= 1010, `partie ${game} : aucun camp à 1010`);
 }
 assert.strictEqual(stats.generales, stats.imposees, 'chaque Générale imposée doit être annoncée et gagnée');
-console.log(`${GAMES} + ${MC_GAMES} (Monte-Carlo) parties de bots sans erreur en ${Date.now() - t0} ms : ${stats.donnes} donnes arbitrées (${stats.belotes} belotes, ${stats.generales} Générales, ${stats.capots} capots, ${stats.coinches} coinches).`);
+console.log(`${GAMES} + ${MC_GAMES} (Monte-Carlo) parties de bots sans erreur en ${Date.now() - t0} ms : ${stats.donnes} donnes arbitrées (${stats.belotes} belotes, ${stats.generales} mains à huit atouts, ${stats.capots} capots, ${stats.coinches} coinches).`);

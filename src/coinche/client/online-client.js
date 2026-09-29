@@ -1,6 +1,7 @@
 // Client d'une partie en ligne (WebSocket vers worker/tables.js), avec la
 // même interface que le client boardgame.io qu'utilise session.js :
 // moves.<coup>(...args), subscribe(fn), getState(), matchData, start(), stop().
+// En plus : sendEmote(e) et onEmote(fn(seat, e)) pour les émoticônes rapides.
 // Reconnexion automatique (délai croissant) si la connexion tombe.
 export function OnlineClient({ api, matchID, playerID, credentials }) {
   let ws = null;
@@ -9,6 +10,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
   let retry = 0;
   let timer = null;
   const subs = new Set();
+  let emoteFn = null;
   const notify = () => subs.forEach((fn) => fn(state));
 
   const client = {
@@ -30,6 +32,12 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
       return () => subs.delete(fn);
     },
     getState: () => state,
+    sendEmote(emote) {
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "emote", emote }));
+    },
+    onEmote(fn) {
+      emoteFn = fn;
+    },
     start: connect,
     stop() {
       stopped = true;
@@ -55,6 +63,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
       } catch {
         return;
       }
+      if (msg.type === "emote") return emoteFn?.(msg.seat, msg.emote);
       if (msg.type !== "state") return;
       client.matchData = msg.players;
       state = { G: msg.G, _stateID: msg.stateID, isConnected: true };

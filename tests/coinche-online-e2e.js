@@ -36,6 +36,13 @@ async function visitor(label) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${label} : ${e}`));
+  // Émoticônes reçues par WebSocket (voir le test d'émoticône plus bas).
+  page.emotes = [];
+  page.on("websocket", (ws) =>
+    ws.on("framereceived", ({ payload }) => {
+      if (String(payload).includes('"type":"emote"')) page.emotes.push(JSON.parse(payload));
+    }),
+  );
   await page.goto(`${BASE}/jeux/coinche/`);
   if (await page.locator('input[name="mdp"]').count()) {
     assert.ok(PASSWORD, "mot de passe du site inconnu (PASSWORD)");
@@ -92,6 +99,12 @@ try {
   await bob.waitForSelector(".cg-phase", { timeout: 20000 });
   assert.match(await phase(alice), /Donne 1/);
   assert.match(await phase(bob), /Donne 1/);
+
+  // Émoticône d'Alice (siège 0) relayée par le serveur jusqu'à Bob.
+  await alice.click(".cg-emote-toggle");
+  await alice.click('.cg-emote[data-emote="👍"]');
+  for (let i = 0; i < 25 && !bob.emotes.length; i++) await bob.waitForTimeout(200);
+  assert.deepStrictEqual(bob.emotes[0], { type: "emote", seat: 0, emote: "👍" }, "émoticône reçue par Bob");
 
   // Deux plis joués à deux humains + deux bots (hôte : Alice).
   await until(async () => /Pli [3-8]\/8|Donne [2-9]/.test(await phase(bob)), [alice, bob]);

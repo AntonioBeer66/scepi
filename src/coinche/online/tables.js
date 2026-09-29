@@ -7,6 +7,10 @@
 // players[s] = { name, credentials } (name null : place libre).
 import { Coinche, MAX_NAME } from "../game.js";
 
+// Émoticônes rapides (bouton en bas à droite de la table) : seules celles-ci
+// circulent entre joueurs.
+export const EMOTES = ["👍", "😂", "😮", "😡", "🔥", "👏"];
+
 export const PERMANENT_TABLES = 4;
 export const MAX_MATCHES = 40;
 export const IDLE_MS = 30 * 60 * 1000; // partie ou salon abandonné

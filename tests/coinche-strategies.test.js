@@ -18,7 +18,7 @@ const api = {
   heuristicCard: (s) => bots.heuristicCard(cur, s),
   botWantsToCoinche: (s) => bots.wantsToCoinche(cur, s),
   botWantsToSurcoinche: (s) => bots.wantsToSurcoinche(cur, s),
-  contractIsGenerale: (c) => bots.contractIsGenerale(cur, c),
+  contractHuitAtouts: (c) => bots.contractHuitAtouts(cur, c),
   noteTrumpObligations: (s, c) => bots.noteTrumpObligations(cur, s, c),
   mcWorlds: (s, n) => bots.mcWorlds(cur, s, n),
   exactEnd: bots.exactEnd,
@@ -102,8 +102,8 @@ setup({ hands: hands('AH AD AC 10H 10D 10C KH KD', huitPiques), mainsInitiales: 
 check('Générale : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
 setup({ hands: hands(huitPiques), mainsInitiales: hands(huitPiques), contract: contract(0, 270, 'S', { coinche: true }) });
 check('Générale coinchée : surcoincher d’office', api.botWantsToSurcoinche(0), true);
-check('8 atouts annoncés à 270 : Générale', api.contractIsGenerale(contract(0, 270, 'S')), true);
-check('8 atouts annoncés à 80 : un simple 80, pas une Générale', api.contractIsGenerale(contract(0, 80, 'S')), false);
+check('8 atouts annoncés à 270 : Générale', api.contractHuitAtouts(contract(0, 270, 'S')), true);
+check('8 atouts annoncés à 80 : un simple 80, pas une Générale', api.contractHuitAtouts(contract(0, 80, 'S')), false);
 
 // ---- Jeu de la carte : atout Cœur, 100 par le siège 0
 const JEU = { contract: contract(0, 100, 'H'), donneAnnonces: [{ seat: 0, montant: 100, atout: 'H' }] };

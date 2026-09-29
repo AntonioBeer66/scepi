@@ -7,6 +7,8 @@
 // focus s'éclaire sur la table.
 import {
   ALLOWED_BIDS,
+  BELOTE_BONUS,
+  GENERALE,
   SUITS,
   SUIT_NAME,
   SUIT_SYMBOL,
@@ -14,6 +16,7 @@ import {
   computeLegal,
   teamOf,
 } from "../engine.js";
+import { EMOTES } from "../online/tables.js";
 
 const RED_SUITS = new Set(["H", "D"]);
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
@@ -46,6 +49,7 @@ function esc(s) {
 function bidReadout(value) {
   if (value === 250) return "Capot";
   if (value === 270) return "Capot beloté";
+  if (value === GENERALE) return "Générale";
   return String(value);
 }
 
@@ -53,7 +57,7 @@ function suitSpan(s) {
   return `<span class="cg-suit${RED_SUITS.has(s) ? " is-red" : ""}">${SUIT_SYMBOL[s]}</span>`;
 }
 
-export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard }) {
+export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard, onEmote }) {
   const root = view.querySelector("#game-hud");
   // Barre de jeu, panneau, résultat, enchères, boutons des cartes (voir paint).
   const painted = [];
@@ -167,6 +171,17 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
     });
   }
 
+  // Bandeau bref en haut de la table (belote, rebelote) ; le lecteur d'écran
+  // a déjà l'annonce (announce).
+  function toast(text) {
+    const el = document.createElement("div");
+    el.className = "cg-toast";
+    el.setAttribute("aria-hidden", "true");
+    el.textContent = text;
+    root.append(el);
+    setTimeout(() => el.remove(), 1600);
+  }
+
   // ---- Barre de jeu ------------------------------------------------------------
 
   function renderContract() {
@@ -190,8 +205,10 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
       TERMINEE: "Partie terminée",
     }[G.phase];
     const live = G.phase === "JEU" && G.contract;
+    const belote =
+      live && G.belote.rebeloteDeclared ? G.contract.equipePreneur : -1;
     const score = (t, label) =>
-      `<span class="cg-score${t === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[t]}</b>${live ? `<em>+${G.pointsPlis[t]}</em>` : ""}</span>`;
+      `<span class="cg-score${t === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[t]}</b>${live ? `<em>+${G.pointsPlis[t]}${t === belote ? ` <i title="Belote">+${BELOTE_BONUS}</i>` : ""}</em>` : ""}</span>`;
     const iconBtn = (action, icon, label, pressed) =>
       `<button type="button" class="cg-icon" data-action="${action}" data-focus-key="${action}" aria-label="${label}"${pressed === undefined ? "" : ` aria-expanded="${pressed}"`}>${ICONS[icon]}<span>${label}</span></button>`;
     return `<div class="cg-topbar">
@@ -314,7 +331,16 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
       const them = 1 - us;
       const row = (label, a, b) =>
         `<tr><th scope="row">${label}</th><td>${a}</td><td>${b}</td></tr>`;
-      const beloteBy = r.belote ? teamOf(r.preneur) : -1;
+      // Belote du preneur : +20 dès 81 points de plis ; déjà comprise
+      // dans un capot beloté.
+      const beloteCell = (res, t) =>
+        teamOf(res.preneur) !== t
+          ? ""
+          : res.beloteBonus
+            ? `+${res.beloteBonus}`
+            : res.montant === 270
+              ? "comprise"
+              : "non comptée (moins de 81)";
       return `<div class="cg-banner cg-recap ${won ? "is-win" : "is-loss"}">
         <b>${r.reussi ? "Contrat réussi" : "Contrat chuté"}</b>
         <span>${r.generale ? "Générale" : bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${esc(seatName(r.preneur))} ${r.preneur === me ? "preniez" : "prenait"}</span>
@@ -325,7 +351,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
           <tbody>
             ${row("Points des plis", r.points[us], r.points[them])}
             ${row("Plis", r.plis[us], r.plis[them])}
-            ${r.belote ? row("Belote", beloteBy === us ? "✓" : "", beloteBy === them ? "✓" : "") : ""}
+            ${r.belote ? row("Belote", beloteCell(r, us), beloteCell(r, them)) : ""}
             ${row("Marqué", `+${r.gains[us]}`, `+${r.gains[them]}`)}
           </tbody>
           <tfoot>${row("Total", G.scores[us], G.scores[them])}</tfoot>
@@ -440,6 +466,34 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
 
   preloadFlash();
 
+  // Émoticônes rapides, en bas à droite (pas pour les spectateurs) : le
+  // bouton ouvre la palette ; une par seconde au plus.
+  if (!spectator) {
+    const box = document.createElement("div");
+    box.className = "cg-emotes";
+    box.innerHTML = `<div class="cg-emote-list" hidden>${EMOTES.map(
+      (e) =>
+        `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e}">${e}</button>`,
+    ).join("")}</div>
+      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="Émoticônes">😀</button>`;
+    root.append(box);
+    const list = box.querySelector(".cg-emote-list");
+    const toggle = box.querySelector(".cg-emote-toggle");
+    const open = (yes) => {
+      list.hidden = !yes;
+      toggle.setAttribute("aria-expanded", String(yes));
+    };
+    let nextEmote = 0;
+    box.addEventListener("click", (event) => {
+      const btn = event.target.closest("button");
+      if (btn === toggle) return open(list.hidden);
+      if (!btn?.dataset.emote || Date.now() < nextEmote) return;
+      nextEmote = Date.now() + 1000;
+      onEmote(btn.dataset.emote);
+      open(false);
+    });
+  }
+
   return {
     waiting() {
       paint([
@@ -458,6 +512,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
       if (prev && G.contract?.coinche && !prev.contract?.coinche) flash("coinche");
       if (prev && G.contract?.surcoinche && !prev.contract?.surcoinche)
         flash("surcoinche");
+      if (prev && prev.donneNumero === G.donneNumero) {
+        if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast("Belote !");
+        if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)
+          toast(`Rebelote ! +${BELOTE_BONUS}`);
+      }
       announce(prev);
       render();
     },

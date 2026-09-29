@@ -16,6 +16,7 @@ Les conventions ci-dessous rendent les points incomplets du manuel exécutables.
 | Atout demandé | Monter si possible, même sur son partenaire ; sinon fournir un atout inférieur. Le manuel ne tranche pas explicitement ce cas. |
 | Partenaire maître et couleur demandée absente | Toute carte autorisée, y compris un atout inférieur à celui du partenaire. |
 | Capot beloté | Contrat distinct à 270 ; huit plis ET belote valide, sinon chute sans repli à 250. |
+| Générale | Enchère la plus haute (au-dessus de 270) : le preneur doit remporter les huit plis à lui seul (aucun pli pour son partenaire). Il entame le premier pli. Vaut 250 (comme un capot), multiplié par la coinche. |
 | Belote | Déclaration automatique : dès que le Roi puis la Dame d'atout du preneur sont joués, Belote puis Rebelote sont annoncées sans action du joueur (humain ou bot). |
 | Délais techniques | 30 s par enchère, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
 
@@ -151,6 +152,7 @@ Fournir reste obligatoire sur son partenaire. Sans couleur demandée, couper sur
 - Au verrouillage du contrat, repérer si un même preneur possède dans sa main initiale le roi ET la dame d'atout. Lui seul est admissible au bonus ; la belote défensive ne rapporte rien.
 - Déclaration automatique, sans action du joueur : dès que la première de ces deux cartes est jouée, Belote est annoncée ; dès que la seconde est jouée, Rebelote l'est. L'ordre roi/dame est libre. Ce comportement est identique pour un siège humain ou un bot — aucun bouton, aucune fenêtre à guetter.
 - Le bonus devient valide quand les deux cartes ont été jouées (donc les deux annonces faites).
+- Belote valide : +20 au score de la partie pour les preneurs (jamais multiplié), que le contrat réussisse ou chute, à condition qu'ils aient fait au moins 81 points de plis. Elle abaisse aussi leur seuil de réussite (section 9). Pas de +20 en plus sur un capot beloté, dont les 270 l'incluent déjà.
 - Le score peut être calculé dès la résolution du dernier pli : la belote est toujours tranchée au plus tard au moment où la dernière carte concernée est posée.
 
 ## 9. Calcul du score
@@ -166,12 +168,17 @@ Si contrat.type == CAPOT :
   reussi = plisGagnes[preneurs] == 8
 Si contrat.type == CAPOT_BELOTE :
   reussi = plisGagnes[preneurs] == 8 ET belote valide des preneurs
+Si contrat.type == GENERALE :
+  reussi = plisGagnés par le preneur lui-même == 8
+valeur = 250 si GENERALE, sinon montant
 
-Si reussi : gain[preneurs] = montant * multiplicateur ; gain[defense] = 0
+Si reussi : gain[preneurs] = valeur * multiplicateur ; gain[defense] = 0
 Sinon : gain[preneurs] = 0 ; gain[defense] = 160 * multiplicateur
+Si belote valide des preneurs, contrat != CAPOT_BELOTE et pointsPlis[preneurs] >= 81 :
+  gain[preneurs] += 20
 ```
 
-Appliquer les gains une seule fois par donne. Ne pas ajouter les points de plis, arrondir le résultat, ajouter 20 au contrat pour la belote, ni attribuer une prime de générale ou de capot non annoncé.
+Appliquer les gains une seule fois par donne. Ne pas ajouter les points de plis, arrondir le résultat, ni attribuer une prime de générale ou de capot non annoncé.
 
 À 1 010 points ou plus, déclarer la victoire après résolution de la donne. Sinon, afficher le résultat 5 secondes et redistribuer avec le donneur suivant. Jouer les huit plis même si un contrat est déjà irréalisable : aucune revendication anticipée en V1.
 

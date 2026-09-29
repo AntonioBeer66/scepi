@@ -14,9 +14,10 @@
 // WebSocket : le client envoie d'abord { type: "hello", playerID?,
 // credentials? } (sans playerID : spectateur), puis { type: "move", name,
 // args } ; il reçoit { type: "state", G, stateID, players } à chaque
-// changement, G filtré pour ce qu'il a le droit de voir.
+// changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
+// { type: "emote", emote } → { type: "emote", seat, emote } à toute la table.
 import { DurableObject } from "cloudflare:workers";
-import { createTables } from "../src/coinche/online/tables.js";
+import { createTables, EMOTES } from "../src/coinche/online/tables.js";
 
 const MAX_MESSAGE = 8 * 1024; // un coup tient en quelques centaines d'octets
 const KEY = (id) => `m:${id}`;
@@ -164,6 +165,22 @@ export class Tables extends DurableObject {
       ws.serializeAttachment({ id, seat: ok ? seat : null, ready: true });
       if (ok) this.broadcast(id); // les autres le voient connecté
       else this.send(ws, id);
+      return;
+    }
+    // Émoticône d'un joueur assis : relayée à toute la table, une par
+    // seconde au plus (rien n'est enregistré).
+    if (msg?.type === "emote" && att.ready && att.seat != null && EMOTES.includes(msg.emote)) {
+      const now = Date.now();
+      if (now - (att.lastEmote || 0) < 1000) return;
+      ws.serializeAttachment({ ...att, lastEmote: now });
+      const out = JSON.stringify({ type: "emote", seat: att.seat, emote: msg.emote });
+      for (const other of this.ctx.getWebSockets(id)) {
+        try {
+          other.send(out);
+        } catch {
+          // fermée entre-temps
+        }
+      }
       return;
     }
     if (msg?.type === "move" && att.ready && att.seat != null) {
