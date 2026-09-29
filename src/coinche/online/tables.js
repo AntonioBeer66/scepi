@@ -28,6 +28,7 @@ export const PERMANENT_TABLES = 4;
 export const MAX_MATCHES = 40;
 export const IDLE_MS = 30 * 60 * 1000; // partie ou salon abandonné
 export const EMPTY_MS = 10 * 60 * 1000; // salon temporaire jamais rejoint
+export const ABANDON_MS = 2 * 60 * 1000; // partie lancée sans humain connecté
 const INVALID_MOVE = "INVALID_MOVE"; // valeur rendue par les coups refusés
 const MOVES = new Set(Object.keys(Coinche.moves));
 const MAX_ARGS = 3;
@@ -80,6 +81,7 @@ const newCredentials = () => crypto.randomUUID();
 
 export function createTables({ now = Date.now, random = Math.random } = {}) {
   const matches = new Map();
+  const seen = new Map(); // id → dernière fois qu'un humain assis était connecté
 
   function create(table = null) {
     if (matches.size >= MAX_MATCHES) return null;
@@ -111,7 +113,11 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
     // Entretien : chaque numéro permanent garde une table en attente ; les
     // parties et salons abandonnés disparaissent. Rend les parties
     // effacées et créées (à répercuter sur le stockage).
-    maintain() {
+    // Partie lancée : effacée dès que tous les humains l'ont quittée, ou
+    // après ABANDON_MS sans aucun d'eux connecté (onglets fermés) ; personne
+    // pour l'héberger, elle ne ferait qu'occuper une table.
+    // connected(id, siège) : voir list ; absent, tout le monde l'est.
+    maintain(connected = () => true) {
       const t = now();
       const removed = [];
       const created = [];
@@ -119,12 +125,17 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
       for (const m of matches.values()) {
         const idle = t - m.updatedAt;
         const empty = m.players.every((p) => !p.name);
+        const started = m.G.phase !== "ATTENTE";
+        if (m.players.some((p, s) => p.name && connected(m.id, s))) seen.set(m.id, t);
         if (
+          (started && empty) ||
+          (started && t - (seen.get(m.id) ?? t) > ABANDON_MS) ||
           idle > IDLE_MS ||
           (m.G.phase === "ATTENTE" && empty && !m.table && idle > EMPTY_MS) ||
           (m.G.phase === "ATTENTE" && m.table && waiting.has(m.table))
         ) {
           matches.delete(m.id);
+          seen.delete(m.id);
           removed.push(m.id);
         } else if (m.G.phase === "ATTENTE" && m.table) waiting.add(m.table);
       }
@@ -163,6 +174,11 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
       if (!seatOk(seat) || !pseudo) return { error: "INVALIDE" };
       if (m.players[seat].name) return { error: "OCCUPEE" };
       m.players[seat] = { name: pseudo, credentials: newCredentials() };
+      // Partie en cours : il prend la main du bot qui tenait la place.
+      if (m.G.seats?.[seat]?.type === "bot") {
+        m.G = { ...m.G, seats: m.G.seats.map((s, i) => (i === seat ? { type: "human", name: pseudo } : s)) };
+        m.stateID++;
+      }
       m.updatedAt = now();
       return { credentials: m.players[seat].credentials };
     },

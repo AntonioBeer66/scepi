@@ -769,12 +769,13 @@ a {
 
 .seat-join-form {
   display: flex;
+  flex-wrap: wrap; /* écran étroit : le bouton passe sous le pseudo */
   gap: 6px;
   flex: 1;
   min-width: 160px;
 }
 .seat-join-form input {
-  flex: 1;
+  flex: 1 1 7.5em;
   min-width: 0;
   background: #181722;
   border: 1px solid var(--line);
@@ -2347,6 +2348,7 @@ a {
 }
 .game-card .pill {
   align-self: flex-start;
+  gap: 0.4em; /* « Jouer → » : inline-flex avale l'espace */
   margin-top: auto;
 }
 .games-next {
@@ -2757,12 +2759,10 @@ a {
   }
 
 
+  /* Table décorative : sur téléphone, elle repoussait les vraies tables
+     d'un écran entier plus bas. */
   .table-preview {
-    height: 260px;
-    width: calc(100% - 30px);
-    border-width: 6px;
-    border-radius: 90px;
-    margin-top: 22px;
+    display: none;
   }
   .seat {
     font-size: 9px;
@@ -3687,5 +3687,11 @@ body.is-playing .rules-btn {
   /* Pendant les enchères, la barre prend toute la largeur : bouton masqué. */
   #game-hud:has(.cg-bidbar) .cg-emotes {
     display: none;
+  }
+}
+/* Peu haut (téléphone en paysage) : palette sur trois colonnes, moins haute. */
+@media (max-height: 500px) {
+  .cg-emote-list {
+    grid-template-columns: repeat(3, auto);
   }
 }

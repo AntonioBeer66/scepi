@@ -88,7 +88,7 @@ export class Tables extends DurableObject {
   }
 
   async maintain() {
-    const { removed, created } = this.tables.maintain();
+    const { removed, created } = this.tables.maintain((id, s) => this.connected(id, s));
     for (const id of removed) {
       await this.save(id);
       for (const ws of this.ctx.getWebSockets(id)) ws.close(4404, "Table fermée");
@@ -170,6 +170,7 @@ export class Tables extends DurableObject {
         if (att?.seat === seat) ws.serializeAttachment({ ...att, seat: null });
       }
       this.broadcast(id);
+      await this.maintain(); // dernier humain parti : la partie s'arrête
       return json({ ok: true });
     }
     return json({ error: "INTROUVABLE" }, 404);

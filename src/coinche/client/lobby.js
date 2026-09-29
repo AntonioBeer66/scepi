@@ -70,7 +70,7 @@ function tableLabel(t, ephemeralIndex) {
   return t.table ? `Table ${t.table}` : `Salon ${ephemeralIndex}`;
 }
 
-function seatMarkup(t, p, i) {
+function seatMarkup(t, p, i, joinLabel = "Rejoindre") {
   const label = SEAT_LABELS[i];
   const head = `<span class="seat-tag"><b>${label}</b><small>${SEAT_TEAM[i]}</small></span>`;
   const isMe = session?.matchID === t.matchID && session.playerID === String(i);
@@ -90,7 +90,7 @@ function seatMarkup(t, p, i) {
     <form class="seat-join-form" data-action="join" data-match="${esc(t.matchID)}" data-seat="${i}">
       <label class="visually-hidden" for="${esc(id)}">Pseudo pour la place ${label}</label>
       <input id="${esc(id)}" type="text" name="pseudo" maxlength="${MAX_NAME}" placeholder="Votre pseudo" autocomplete="nickname" required>
-      <button type="submit" class="button primary seat-btn">Rejoindre</button>
+      <button type="submit" class="button primary seat-btn">${joinLabel}</button>
     </form>
   </li>`;
 }
@@ -127,11 +127,14 @@ function render() {
       const mine = session?.matchID === t.matchID;
       // Partie en cours chez d'autres : on peut la regarder.
       const live = t.phase !== "ATTENTE" && !mine;
+      // Places tenues par un bot : on peut les reprendre en cours de partie.
       const seats = live
         ? t.players
-            .map(
-              (p, i) => `<li class="seat-row is-taken"><span class="seat-tag"><b>${SEAT_LABELS[i]}</b><small>${SEAT_TEAM[i]}</small></span>
-            <span class="seat-occupant">${p.name ? esc(p.name) : "Ordinateur"}</span></li>`,
+            .map((p, i) =>
+              p.name || session || t.phase === "TERMINEE"
+                ? `<li class="seat-row is-taken"><span class="seat-tag"><b>${SEAT_LABELS[i]}</b><small>${SEAT_TEAM[i]}</small></span>
+            <span class="seat-occupant">${p.name ? esc(p.name) : "Ordinateur"}</span></li>`
+                : seatMarkup(t, p, i, "Remplacer le bot"),
             )
             .join("")
         : t.players.map((p, i) => seatMarkup(t, p, i)).join("");
@@ -302,8 +305,13 @@ function init() {
         session = null;
         saveSession(null);
       });
-    } else if (button.dataset.action === "start") {
-      enterGame({ online: true, launch: true });
+    } else if (button.dataset.action === "start" && !busy) {
+      // Places relues juste avant : le salon affiché peut dater de quelques
+      // secondes, et un joueur tout juste assis serait lancé comme bot.
+      busy = true;
+      refresh()
+        .then(() => !playing && enterGame({ online: true, launch: true }))
+        .finally(() => (busy = false));
     }
   });
 

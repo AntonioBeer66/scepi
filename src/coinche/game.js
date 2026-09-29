@@ -119,7 +119,8 @@ export const Coinche = {
         if (!G.seats || seatOf(playerID) !== G.hote || seat === G.hote)
           return INVALID_MOVE;
         if (!isSeat(seat) || !isHuman(G, seat)) return INVALID_MOVE;
-        G.seats[seat] = { type: "bot", name: "Ordinateur" };
+        // Le pseudo reste affiché, marqué « (bot) » : on sait qui a quitté.
+        G.seats[seat] = { type: "bot", name: `${G.seats[seat].name} (bot)` };
       },
     },
 

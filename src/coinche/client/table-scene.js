@@ -193,19 +193,32 @@ export function createTable(parent, { me, onPlay }) {
     const cx = W / 2;
     const cy = (top + bottom) / 2;
     const tableH = bottom - top;
+    const handY = H - cardH * 0.56 - 10;
+    // Haut de la main, cartes jouables soulevées comprises.
+    const handTop = handY - cardH * 0.74;
+    // Pli en croix (d : demi-écart vertical) : il doit tenir entre Nord
+    // (avatar, nom et dos de cartes : ~3,6 r sous le haut) et la main, ce
+    // qui borne sa taille sur un écran peu haut (téléphone en paysage).
+    const northBottom = top + 10 + r * 3.6;
     const trickH = Math.round(
-      Math.max(64, Math.min(tableH * 0.3, (right - left) * 0.14 * CARD_RATIO, 150)),
+      Math.max(
+        56,
+        Math.min(
+          tableH * 0.3,
+          (right - left) * 0.14 * CARD_RATIO,
+          150,
+          (cy - northBottom) / 1.05,
+          (handTop - cy) / 1.05,
+        ),
+      ),
     );
     const trickW = trickH / CARD_RATIO;
-    const d = trickH * 0.5;
+    const d = trickH * 0.55;
     // Éventail : rayon proportionnel à la carte, ouverture bornée.
     const R = cardH * 4;
     const avail = Math.max(0, W - cardW * 1.7 - 24);
     const maxSpread = 2 * Math.asin(Math.min(1, avail / (2 * R)));
     const sideY = cy - (portrait ? tableH * 0.12 : 0);
-    const handY = H - cardH * 0.56 - 10;
-    // Haut de la main, cartes jouables soulevées comprises.
-    const handTop = handY - cardH * 0.74;
     // Vous : au-dessus de l'éventail, à gauche ; sur un écran peu haut
     // (téléphone en paysage) cette place chevaucherait Ouest : coin bas
     // gauche, à côté de la main.
@@ -238,9 +251,9 @@ export function createTable(parent, { me, onPlay }) {
       ],
       slot: [
         { x: cx, y: cy + d },
-        { x: cx + d * 1.3, y: cy },
+        { x: cx + trickW * 1.12, y: cy },
         { x: cx, y: cy - d },
-        { x: cx - d * 1.3, y: cy },
+        { x: cx - trickW * 1.12, y: cy },
       ],
     };
   }
@@ -326,8 +339,14 @@ export function createTable(parent, { me, onPlay }) {
       const active =
         (G.phase === "ENCHERES" || G.phase === "JEU") && G.joueurActif === seat;
       const bot = G.seats[seat].type === "bot";
+      // Bot d'origine : « Bot Nord » ; bot qui remplace un joueur parti :
+      // son pseudo marqué « (bot) » (voir devenirBot dans game.js).
       const name =
-        seat === me ? "Vous" : bot ? `Bot ${COMPASS[pos]}` : G.seats[seat].name;
+        seat === me
+          ? "Vous"
+          : bot && G.seats[seat].name === "Ordinateur"
+            ? `Bot ${COMPASS[pos]}`
+            : G.seats[seat].name;
       const box = scene.add.container(x, y).setDepth(8);
 
       // Dos des cartes restantes, en petit éventail tourné vers le centre.

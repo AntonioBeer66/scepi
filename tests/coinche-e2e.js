@@ -88,7 +88,7 @@ async function playUntil(test, ms = 90000) {
     const pass = page.locator(".cg-bidbar button", { hasText: "Passer" });
     if (await pass.count()) await pass.click().catch(() => {});
     const card = page.locator(".hand-buttons button").first();
-    if (await card.count()) await card.click({ force: true }).catch(() => {});
+    if (await card.count()) await card.evaluate((b) => b.click()).catch(() => {}); // bouton masqué (clavier) : clic direct
     await page.waitForTimeout(300);
   }
   throw new Error(`délai dépassé (phase : ${await phase()})`);

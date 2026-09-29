@@ -1,7 +1,8 @@
 // Coinche en ligne de bout en bout, dans de vrais navigateurs (Playwright)
 // sur le serveur du site (Worker + Durable Object) : deux joueurs
 // s'assoient à une table libre, la lancent et jouent deux plis ; un spectateur
-// regarde ; un joueur quitte, la partie continue avec l'ordinateur.
+// regarde ; un joueur quitte, un bot le remplace sous son pseudo ; un
+// visiteur prend la place d'un bot ; tous partis, la partie s'arrête.
 //   npm start  (dans un autre terminal), puis :
 //   node tests/coinche-online-e2e.js
 // BASE : adresse du site (défaut http://localhost:8000) ; PASSWORD : mot
@@ -65,17 +66,17 @@ async function playStep(page) {
   const pass = page.locator(".cg-bidbar button", { hasText: "Passer" });
   if (await pass.count()) await pass.click().catch(() => {});
   const card = page.locator(".hand-buttons button").first();
-  if (await card.count()) await card.click({ force: true }).catch(() => {});
+  if (await card.count()) await card.evaluate((b) => b.click()).catch(() => {}); // bouton masqué (clavier) : clic direct
 }
 
-async function until(test, pages, ms = 120000) {
+async function until(test, pages, ms = 120000, what = "") {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (await test()) return;
     for (const p of pages) await playStep(p);
     await pages[0].waitForTimeout(300);
   }
-  throw new Error("délai dépassé");
+  throw new Error(`délai dépassé : ${what}`);
 }
 
 try {
@@ -108,7 +109,7 @@ try {
   assert.match(await phase(bob), /Donne 1/);
 
   // Deux plis joués à deux humains + deux bots (hôte : Alice).
-  await until(async () => /Pli [3-8]\/8|Donne [2-9]/.test(await phase(bob)), [alice, bob]);
+  await until(async () => /Pli [3-8]\/8|Donne [2-9]/.test(await phase(bob)), [alice, bob], 120000, "deux plis");
 
   // Émoticône d'Alice (siège 0) relayée par le serveur jusqu'à Bob (en jeu :
   // sur téléphone, le bouton est masqué pendant les enchères).
@@ -124,18 +125,34 @@ try {
   assert.match(await phase(watcher), /Donne/);
   assert.strictEqual(await watcher.locator(".hand-buttons button, .cg-bidbar").count(), 0);
 
-  // Bob quitte : sa place passe à l'ordinateur, la partie continue.
+  // Bob quitte : un bot prend sa place, sous son pseudo marqué « (bot) »,
+  // et la partie continue.
   await bob.locator(".cg-icon", { hasText: "Quitter" }).click();
-  // (le siège de Bob est « Nord » vu d'Alice : ses coups sont alors annoncés
-  // au nom de « Bot Nord »)
   await until(
-    async () => /Bot Nord/.test(await alice.locator("#game-announce").textContent()),
+    async () => /Bob \(bot\)/.test(await alice.locator("#game-announce").textContent()),
     [alice],
-    90000,
+    90000, "Bob (bot)",
   );
 
+  // Dave arrive en cours de partie et prend la place d'un bot (Est).
+  const dave = await visitor("Dave");
+  const daveForm = dave.locator(`form[data-match="${matchID}"][data-seat="1"]`);
+  await daveForm.locator("input").fill("Dave");
+  await daveForm.locator("button", { hasText: "Remplacer le bot" }).click();
+  await dave.waitForSelector(".cg-phase", { timeout: 20000 });
+  // Il joue désormais pour cette place : enchère ou carte à son tour.
+  await until(async () => (await dave.locator(".hand-buttons button, .cg-bidbar").count()) > 0, [alice], 60000, "tour de Dave");
+  await dave.locator(".cg-icon", { hasText: "Quitter" }).click();
+
+  // Alice quitte à son tour : plus personne, la partie s'arrête (table
+  // effacée, le spectateur revient au salon).
+  await alice.locator(".cg-icon", { hasText: "Quitter" }).click();
+  await watcher.waitForSelector("#game-view", { state: "hidden", timeout: 20000 });
+  const tables = await (await alice.request.get(`${BASE}/api/tables`)).json();
+  assert.ok(!tables.some((t) => t.matchID === matchID), "partie arrêtée quand tout le monde a quitté");
+
   assert.deepStrictEqual(errors, [], "aucune erreur dans les pages");
-  console.log(`En ligne : partie lancée à deux, jouée, regardée, reprise par l'ordinateur (${BASE}).`);
+  console.log(`En ligne : partie lancée à deux, jouée, regardée, joueur remplacé par un bot puis bot remplacé par un joueur, arrêtée quand tous sont partis (${BASE}).`);
 } finally {
   await browser.close();
 }

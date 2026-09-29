@@ -146,7 +146,10 @@ export function startSession({
     table.update(G, prev);
     prev = G;
   });
-  if (online) client.onEmote((seat, e) => table.showEmote(seat, e));
+  if (online) {
+    client.onEmote((seat, e) => table.showEmote(seat, e));
+    client.onGone(stop); // partie arrêtée : retour au salon
+  }
   client.start();
 
   // Tout est coupé avant la déconnexion, qui prévient encore les abonnés :

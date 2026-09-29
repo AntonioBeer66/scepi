@@ -86,9 +86,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   const seatName = (s) =>
     s === me
       ? "Vous"
-      : G.seats[s].type === "bot"
+      : G.seats[s].type === "bot" && G.seats[s].name === "Ordinateur"
         ? `Bot ${compass(s)}`
-        : G.seats[s].name;
+        : G.seats[s].name; // joueur, ou bot qui l'a remplacé : « Bob (bot) »
   const who = (s) =>
     s === me || G.seats[s].type === "bot"
       ? seatName(s)
@@ -519,6 +519,12 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)
           toast(`Rebelote ! +${BELOTE_BONUS}`);
       }
+      // Joueur parti en cours de partie : un bot prend sa place.
+      for (const s of [0, 1, 2, 3])
+        if (prev?.seats?.[s].type === "human" && G.seats[s].type === "bot")
+          toast(`${prev.seats[s].name} a quitté : un bot le remplace`);
+        else if (prev?.seats?.[s].type === "bot" && G.seats[s].type === "human")
+          toast(`${G.seats[s].name} prend la place du bot`);
       announce(prev);
       render();
     },

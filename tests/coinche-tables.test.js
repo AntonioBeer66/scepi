@@ -9,6 +9,7 @@ import assert from "assert";
 import { bots, tuning } from "../src/coinche/engine.js";
 import { createHost } from "../src/coinche/host.js";
 import {
+  ABANDON_MS,
   createTables,
   EMPTY_MS,
   historyCSV,
@@ -132,6 +133,36 @@ now += IDLE_MS + 1;
 tables.maintain();
 assert.ok(!tables.get(t1), "partie abandonnée effacée");
 assert.strictEqual(list().length, PERMANENT_TABLES);
+
+// En cours de partie : un humain prend la place d'un bot (il en reçoit la
+// main) ; quand tous les humains sont partis, la partie s'arrête aussitôt.
+const botSeats = [{ type: "human", name: "Alice" }, { type: "bot" }, { type: "bot" }, { type: "bot" }];
+const t2 = tables.create().id;
+const a2 = tables.join(t2, 0, "Alice").credentials;
+assert.ok(tables.move(t2, 0, "lancer", [botSeats]));
+const d2 = tables.join(t2, 1, "Dave").credentials;
+assert.deepStrictEqual(tables.get(t2).G.seats[1], { type: "human", name: "Dave" });
+assert.ok(tables.view(t2, 1).G.hands[1].every(Boolean), "Dave reçoit la main du bot");
+assert.ok(!tables.move(t2, 0, "pourSiege", [1, { type: "PASSER" }]), "l'hôte ne joue plus pour lui");
+tables.leave(t2, 1, d2);
+tables.maintain();
+assert.ok(tables.get(t2), "Alice reste : la partie continue");
+tables.leave(t2, 0, a2);
+tables.maintain();
+assert.ok(!tables.get(t2), "plus personne : partie arrêtée");
+
+// Humains assis mais tous déconnectés (onglets fermés) : arrêtée après
+// ABANDON_MS, pas avant.
+const t3 = tables.create().id;
+tables.join(t3, 0, "Alice");
+assert.ok(tables.move(t3, 0, "lancer", [botSeats]));
+tables.maintain(() => true);
+now += ABANDON_MS - 1;
+tables.maintain(() => false);
+assert.ok(tables.get(t3), "reconnexion encore possible");
+now += 2;
+tables.maintain(() => false);
+assert.ok(!tables.get(t3), "abandonnée : arrêtée");
 
 // Plafond de tables.
 while (tables.create());
