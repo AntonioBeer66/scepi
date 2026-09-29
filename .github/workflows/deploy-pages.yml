@@ -1,5 +1,5 @@
 # Bêta du site sur GitHub Pages (gratuit, dépôt public) : à chaque push sur
-# la branche test, le jeu est recompilé en visant le serveur de coinche en
+# la branche main, le jeu est recompilé en visant le serveur de coinche en
 # ligne, puis le dossier site/ est publié tel quel.
 # Réglages du dépôt (une fois) :
 #   Settings > Pages > Source : « GitHub Actions »
@@ -10,7 +10,7 @@ name: Déployer la bêta (GitHub Pages)
 
 on:
   push:
-    branches: [test]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

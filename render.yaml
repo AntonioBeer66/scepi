@@ -8,7 +8,7 @@ services:
     name: scepi-coinche
     runtime: node
     plan: free
-    branch: test
+    branch: main
     buildCommand: npm ci --omit=dev
     startCommand: npm run server
     healthCheckPath: /tables
