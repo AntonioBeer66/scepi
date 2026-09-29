@@ -21,8 +21,19 @@ rem Site + coinche en ligne, comme sur la beta (Cloudflare Workers en local).
 echo Demarrage du site et de la coinche en ligne (port 8000)...
 start "SCEP - site" cmd /k npx wrangler dev --port 8000
 
-timeout /t 8 /nobreak >nul
+rem Ouvre le navigateur des que le site repond (2 minutes au plus).
+echo Attente du serveur...
+set /a essais=0
+:attente
+ping -n 3 127.0.0.1 >nul
+curl -s -o nul http://localhost:8000/ && goto :pret
+set /a essais+=1
+if %essais% lss 60 goto :attente
+echo Le serveur ne repond pas : ouvrez http://localhost:8000 a la main.
+goto :fin
+:pret
 start "" http://localhost:8000/
+:fin
 
 echo.
 echo Tout est lance : site sur http://localhost:8000

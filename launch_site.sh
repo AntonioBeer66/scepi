@@ -81,7 +81,8 @@ cleanup() {
 
 trap cleanup INT TERM
 
-sleep 8
+# Ouvre le navigateur dès que le site répond (2 minutes au plus).
+for _ in $(seq 60); do curl -s -o /dev/null http://localhost:8000/ && break; sleep 2; done
 open "http://localhost:8000/"
 
 echo

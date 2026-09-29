@@ -59,55 +59,144 @@
       </div>
     </header>
     <main id="contenu" class="container">
-      <section class="page-intro">
+      <section class="page-intro lx-intro">
         <span class="eyebrow">03 / JEUX</span>
         <h1>La ludothèque<br /><span>de SCEP Invaders.</span></h1>
         <p>
-          Les jeux auxquels on joue entre membres, en ligne ou contre
-          l’ordinateur. On commence par la coinche, avec nos règles.
+          Deux jeux jouables tout de suite dans le navigateur, sans compte ni
+          installation. D’autres arriveront : soufflez-nous les prochains.
         </p>
+        <ul class="lx-facts" aria-label="En bref">
+          <li><b>2</b> jeux</li>
+          <li><b>0</b> inscription</li>
+          <li><b>PC</b> &amp; téléphone</li>
+        </ul>
       </section>
-      <section class="games-grid reveal-stagger" aria-label="Jeux">
-        <a class="game-card" href="../jeux/coinche/index.html">
-          <span class="game-icon" aria-hidden="true">♠</span>
-          <span class="eyebrow">JEU DE CARTES</span>
+
+      <!-- Coinche : le jeu phare -->
+      <article class="lx-game lx-coinche reveal">
+        <div class="lx-art" aria-hidden="true">
+          <div class="lx-fan">
+            <img src="../assets/images/coinche/cards/JH.png" alt="" /><img
+              src="../assets/images/coinche/cards/9H.png"
+              alt=""
+            /><img src="../assets/images/coinche/cards/AH.png" alt="" /><img
+              src="../assets/images/coinche/cards/10H.png"
+              alt=""
+            /><img src="../assets/images/coinche/cards/KH.png" alt="" />
+          </div>
+          <span class="lx-chip">Générale ?</span>
+        </div>
+        <div class="lx-copy">
+          <span class="eyebrow green">JEU DE CARTES · 1 À 4 JOUEURS</span>
           <h2>Coinche</h2>
           <p>
-            Le jeu de cartes de l’asso, avec les règles SCEPI : enchères,
-            coinche, surcoinche, belote et Générale.
+            Le jeu de cartes de l’asso, avec nos règles : enchères, coinche,
+            surcoinche, belote et Générale.
           </p>
-          <ul class="game-tags">
-            <li>En ligne</li>
-            <li>Solo contre l’ordinateur</li>
-            <li>4 joueurs, 2 équipes</li>
+          <ul class="lx-features">
+            <li>
+              Tables en ligne entre amis, les places libres jouées par
+              l’ordinateur
+            </li>
+            <li>Solo contre trois bots, repris où vous l’aviez laissé</li>
+            <li>Spectateurs, émotes et historique des parties</li>
           </ul>
-          <span class="pill">Jouer <span aria-hidden="true">→</span></span>
-        </a>
-        <a class="game-card" href="../jeux/echecs/index.html">
-          <span class="game-icon" aria-hidden="true">♞</span>
-          <span class="eyebrow">JEU DE PLATEAU</span>
+          <div class="lx-actions">
+            <a class="button primary" href="./coinche/index.html"
+              >Jouer à la coinche</a
+            ><a class="lx-link" href="#en-ligne">Comment jouer en ligne ↓</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Échecs -->
+      <article class="lx-game lx-echecs reveal">
+        <div class="lx-copy">
+          <span class="eyebrow">JEU DE PLATEAU · 1 JOUEUR</span>
           <h2>Échecs</h2>
           <p>
-            Affrontez des bots au style inspiré de parties publiques, qui
-            choisissent leurs coups comme leurs modèles.
+            Choisissez votre adversaire parmi trois profils, du plus calme au
+            plus coriace. Ils commentent la partie pendant que vous jouez.
           </p>
-          <ul class="game-tags">
-            <li>Contre l’ordinateur</li>
-            <li>Profils de bots</li>
-            <li>1 joueur</li>
+          <ul class="lx-levels">
+            <li>
+              <img src="../assets/images/echecs/lea.png" alt="" /><b>Léa</b
+              ><span class="lx-bar" style="--lvl: 0.6"></span><small>900</small>
+            </li>
+            <li>
+              <img src="../assets/images/echecs/mathieu.png" alt="" /><b
+                >Mathieu</b
+              ><span class="lx-bar" style="--lvl: 0.67"></span
+              ><small>1000</small>
+            </li>
+            <li>
+              <img src="../assets/images/echecs/arno.png" alt="" /><b>Arno</b
+              ><span class="lx-bar" style="--lvl: 1"></span><small>1500</small>
+            </li>
           </ul>
-          <span class="pill">Jouer <span aria-hidden="true">→</span></span>
-        </a>
+          <div class="lx-actions">
+            <a class="button primary" href="./echecs/index.html"
+              >Jouer aux échecs</a
+            >
+          </div>
+        </div>
+        <div class="lx-art" aria-hidden="true">
+          <div class="lx-board">
+            <img class="p1" src="../assets/images/echecs/cburnett/bK.svg" alt="" /><img
+              class="p2"
+              src="../assets/images/echecs/cburnett/wQ.svg"
+              alt=""
+            /><img class="p3" src="../assets/images/echecs/cburnett/wN.svg" alt="" /><img
+              class="p4"
+              src="../assets/images/echecs/cburnett/bP.svg"
+              alt=""
+            />
+          </div>
+        </div>
+      </article>
+
+      <!-- Jouer en ligne en trois étapes -->
+      <section class="section" id="en-ligne">
+        <div class="home-heading">
+          <span class="eyebrow">EN LIGNE</span>
+          <h2>Une table en trois étapes.</h2>
+        </div>
+        <ol class="lx-steps reveal-stagger">
+          <li>
+            <span>01</span>
+            <h3>Choisissez une table</h3>
+            <p>
+              Dans le salon de la coinche, prenez une place libre avec vos amis.
+            </p>
+          </li>
+          <li>
+            <span>02</span>
+            <h3>Entrez un pseudo</h3>
+            <p>Pas de compte, pas d’inscription : un pseudo suffit.</p>
+          </li>
+          <li>
+            <span>03</span>
+            <h3>Lancez la partie</h3>
+            <p>
+              L’ordinateur complète les places vides ; un ami qui arrive peut
+              reprendre la place d’un bot en cours de partie.
+            </p>
+          </li>
+        </ol>
       </section>
-      <section class="games-next">
+
+      <!-- La suite -->
+      <section class="lx-next reveal">
         <div>
+          <span class="eyebrow">LA SUITE</span>
           <h2>Quel jeu ensuite ?</h2>
           <p>
             Belote, tarot, poker, jeu de plateau… Dites-nous ce que vous
             aimeriez retrouver dans la ludothèque.
           </p>
         </div>
-        <a class="button outline" href="../contact/index.html"
+        <a class="button primary" href="../contact/index.html"
           >Proposer un jeu</a
         >
       </section>

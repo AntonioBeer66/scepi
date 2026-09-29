@@ -49,7 +49,7 @@ if (revealTargets.length && "IntersectionObserver" in window) {
 // Souris seulement ; sur écran tactile, rien ne change.
 if (matchMedia("(hover: hover)").matches) {
   const cards = document.querySelectorAll(
-    ".home-pillar, .home-game, .home-event, .pillar, .game-card, .contact-card, .crew-card, .crew-strip",
+    ".home-pillar, .home-game, .home-event, .pillar, .crew-card, .crew-strip, .lx-game, .lx-steps li, .ct-door, .ct-grid article, .ct-net",
   );
   for (const card of cards) {
     card.classList.add("spot");
@@ -59,4 +59,21 @@ if (matchMedia("(hover: hover)").matches) {
       card.style.setProperty("--my", `${e.clientY - r.top}px`);
     });
   }
+}
+
+// Bouton « Copier » (adresse e-mail de la page Contact).
+for (const btn of document.querySelectorAll("[data-copy]")) {
+  btn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy);
+      btn.textContent = "Copié !";
+      btn.classList.add("is-done");
+    } catch {
+      btn.textContent = "Sélectionnez l’adresse";
+    }
+    setTimeout(() => {
+      btn.textContent = "Copier";
+      btn.classList.remove("is-done");
+    }, 2000);
+  });
 }
