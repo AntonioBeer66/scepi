@@ -2432,6 +2432,11 @@ a {
   font-weight: 750;
   line-height: 1.12;
   margin-bottom: 0.9rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 .slider-content p {
   font-size: clamp(1rem, 1.6vw, 1.15rem);
@@ -2475,6 +2480,7 @@ a {
   color: var(--text);
   font-size: 26px;
   line-height: 1;
+  padding-bottom: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2508,16 +2514,18 @@ a {
   border-color: var(--gold);
 }
 /* Theme-based slide backgrounds (fallback while the SVG loads) */
-.slide-gaming {
+.slide-general {
   background-color: #1a0f2e;
 }
 .slide-coinche {
   background-color: #0f1e0f;
+  justify-content: center;
+  padding-top: 0;
 }
 .slide-events {
   background-color: #281747;
 }
-.slide-community {
+.slide-contact {
   background-color: #1a271a;
 }
 
