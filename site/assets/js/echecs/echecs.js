@@ -943,7 +943,13 @@
           selected = current.origin;
           showSelection(current.origin);
           showPromotionChooser(current.origin, target, false);
-        } else if (target && !move(current.origin, target, false)) render();
+        } else if (target && !move(current.origin, target, false)) {
+          const origin = pos(current.origin);
+          current.element.style.left = `${origin.file * 12.5}%`;
+          current.element.style.top = `${origin.rank * 12.5}%`;
+          selected = current.origin;
+          showSelection(current.origin);
+        }
         else if (!target) render();
       } else if (current.wasSelected) clearSelection();
       else {
