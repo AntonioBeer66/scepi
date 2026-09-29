@@ -495,6 +495,42 @@ function botDecideBid(seat) {
   }
 }
 
+// Générale : faire les huit plis à soi seul. Elle vaut un capot (250) ;
+// le preneur entame. On la tente quand la simulation la réussit presque
+// toujours, sauf si la belote permet le capot beloté (270, plus payant) ;
+// ou pour passer au-dessus d'un capot adverse, dès 60 % de réussite.
+// Seulement avec Valet et 9 d'atout et au moins cinq atouts : le reste
+// ne vaut pas la simulation.
+const GENERALE_SURE = 0.85;
+const GENERALE_OVER = 0.6;
+function generaleBid(seat, hand, cur, team) {
+  if (cur?.type === "GENERALE") return null;
+  const oppCapot = !!cur && teamOf(cur.preneur) !== team && cur.montant >= 250;
+  let best = null;
+  for (const atout of SUITS) {
+    if (
+      suitCards(hand, atout).length < 5 ||
+      !holds(hand, atout, "J") ||
+      !holds(hand, atout, "9")
+    )
+      continue;
+    if (hasBelote(hand, atout) && !oppCapot && (!cur || cur.montant < 270)) continue;
+    const pm = makeProbability(seat, {
+      id: -1,
+      type: "GENERALE",
+      montant: GENERALE,
+      atout,
+      preneur: seat,
+      equipePreneur: team,
+      coinche: false,
+      surcoinche: false,
+    });
+    if (pm !== null && (!best || pm > best.pm)) best = { pm, atout };
+  }
+  if (!best || best.pm < (oppCapot ? GENERALE_OVER : GENERALE_SURE)) return null;
+  return { type: "ENCHERIR", montant: GENERALE, atout: best.atout };
+}
+
 function decideBid(seat) {
   const PASS = { type: "PASSER" };
   const hand = G.hands[seat];
@@ -504,6 +540,8 @@ function decideBid(seat) {
   const partner = partnerOf(seat);
   const memo = G.bidMemo[seat];
   const min = cur ? cur.montant + 10 : 80;
+  const gen = generaleBid(seat, hand, cur, team);
+  if (gen) return gen;
   if (cur && cur.montant >= 270) return PASS;
   const ours = !!cur && teamOf(cur.preneur) === team;
   const capotOnTable = !!cur && cur.montant >= 250;
@@ -719,6 +757,9 @@ function botWantsToCoinche(seat) {
   // Contre un capot, seul un pli d'atout est sûr : l'annonceur n'a pas de
   // perdante à côté, ses As et ceux de son partenaire couvrent tout, et nos
   // As seraient coupés. (Contre une Générale, la défense n'a aucun atout.)
+  // Générale comprise : la lecture des enchères (bidFits) ne sait pas
+  // encore ce qu'elle promet, les mondes simulés lui prêteraient des mains
+  // trop faibles ; on s'en tient au pli d'atout sûr.
   if (contract.type !== "NUMERIQUE") return tenue;
   // La coinche double tout : rentable dès que le contrat réussit moins
   // souvent que 160/(160+M) (67 % à 80, 57 % à 120). On joue la donne sur
@@ -750,7 +791,7 @@ function botWantsToSurcoinche(seat) {
   // Le preneur qui tient les 8 atouts (sa propre main, rien d'autre) gagne à coup sûr.
   if (seat === contract.preneur && suitCards(hand, atout).length === 8)
     return true;
-  if (contract.type !== "NUMERIQUE") return false;
+  if (contract.type !== "NUMERIQUE" && contract.type !== "GENERALE") return false;
   // Réussite simulée quasi certaine (+0,8 pt/donne en duel).
   const pm = makeProbability(seat, contract);
   if (pm !== null && pm >= 0.9) return true;
@@ -890,6 +931,11 @@ function playContext(seat) {
     attack: team === G.contract.equipePreneur,
     amPreneur: seat === G.contract.preneur,
     capot: G.contract.type !== "NUMERIQUE",
+    // Partenaire d'une Générale : le moindre pli pris la fait chuter.
+    genPartner:
+      G.contract.type === "GENERALE" &&
+      team === G.contract.equipePreneur &&
+      seat !== G.contract.preneur,
     oppTrumps: opponents.some((o) => mayTrump(o, 0, hand)),
     tricksLeft: 8 - G.plisJoues,
   };
@@ -1097,6 +1143,11 @@ function followCard(ctx) {
   const winners = legal.filter(beats);
   const others = legal.filter((c) => !beats(c));
   const grab = ctx.capot;
+
+  // Générale du partenaire : ne jamais passer devant, ni lui ni la défense
+  // (c'est à lui de prendre) ; ne gagner que contraint.
+  if (ctx.genPartner)
+    return others.length ? discard(ctx, lead, others) : weakest(winners, atout);
 
   if (partnerWins) {
     if (holdsUp(winCard)) return charge(ctx, lead, winCard);
@@ -1484,7 +1535,11 @@ function playOut(seat, world, card) {
   const bel = worldBelote(seat, world);
   G = sim;
   try {
-    let next = card ? simPlay(sim, seat, card) : suivant(real.donneur);
+    let next = card
+      ? simPlay(sim, seat, card)
+      : sim.contract.type === "GENERALE"
+        ? sim.contract.preneur
+        : suivant(real.donneur);
     while (sim.plisJoues < 8) {
       if (exactTeam !== null && 8 - sim.plisJoues <= EXACT_TRICKS) {
         sim.exactValue = exactEnd(sim, next, bel, exactTeam);
@@ -1500,8 +1555,8 @@ function playOut(seat, world, card) {
 
 // Score de la donne vu d'une équipe, plus un soupçon de points de plis
 // pour départager.
-function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team) {
-  const reussi = contratReussi(c, pointsPlis, plisGagnes, bel);
+function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team, plisSiege) {
+  const reussi = contratReussi(c, pointsPlis, plisGagnes, bel, plisSiege);
   const gain = (reussi ? contractValue(c) : 160) * multiplicateur;
   return (
     ((reussi ? c.equipePreneur : 1 - c.equipePreneur) === team
@@ -1523,6 +1578,7 @@ function exactEnd(sim, first, bel, team) {
   const h = sim.hands.map((x) => x.slice());
   const pts = sim.pointsPlis.slice();
   const tricks = sim.plisGagnes.slice();
+  const seatTricks = (sim.plisSiege || [0, 0, 0, 0]).slice();
   const pli = sim.pliCourant.slice();
   let done = sim.plisJoues;
   function rec(seat, alpha, beta) {
@@ -1534,6 +1590,7 @@ function exactEnd(sim, first, bel, team) {
         bel,
         sim.multiplicateur,
         team,
+        seatTricks,
       );
     const hand = h[seat];
     const max = teamOf(seat) === team;
@@ -1550,9 +1607,11 @@ function exactEnd(sim, first, bel, team) {
         const p = trickPoints(full, atout) + (done === 7 ? 10 : 0);
         pts[teamOf(win)] += p;
         tricks[teamOf(win)]++;
+        seatTricks[win]++;
         done++;
         r = rec(win, alpha, beta);
         done--;
+        seatTricks[win]--;
         tricks[teamOf(win)]--;
         pts[teamOf(win)] -= p;
         pli.push(...full);
@@ -1591,6 +1650,7 @@ function mcValue(seat, card, world) {
     bel,
     sim.multiplicateur,
     teamOf(seat),
+    sim.plisSiege,
   );
 }
 

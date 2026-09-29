@@ -78,3 +78,36 @@ res = scoreWith({ montant: 80, pointsPreneurs: 60, belote: true });
 assert.strictEqual(res.beloteBonus, 0);
 
 console.log("Règles : Générale (rang, valeur, main, huit plis seul) et belote (+20 dès 81) vérifiées.");
+
+// Bots : une main qui fait les huit plis seule (Valet, 9, As, 10, 8, 7
+// d'atout, As de pique et de trèfle, sans la belote) s'annonce en Générale,
+// puis se joue et se gagne (la partenaire ne prend aucun pli).
+{
+  const { play } = await import("./coinche-sim.js");
+  const engine = await import("../src/coinche/engine.js");
+  const pick = (ids, deck) => ids.map((id) => deck.find((c) => c.id === id));
+  const monster = ["JH", "9H", "AH", "10H", "8H", "7H", "AS", "AC"];
+  let bid = null;
+  let result = null;
+  const deal = (g, deck) => {
+    if (g.history.length) return null;
+    const rest = deck.filter((c) => !monster.includes(c.id));
+    const seat = (g.donneur + 1) % 4; // premier à parler
+    return [0, 1, 2, 3].map((s) => (s === seat ? pick(monster, deck) : rest.splice(0, 8)));
+  };
+  play(engine, {
+    dealSeed: 3,
+    botSeed: 4,
+    deal,
+    on: {
+      score(g) {
+        if (result) return;
+        bid = g.contract;
+        result = g.dernierResultat;
+      },
+    },
+  });
+  assert.strictEqual(bid.type, "GENERALE", "le bot annonce la Générale");
+  assert.ok(result.reussi, "et la gagne, sans pli pour son partenaire");
+  console.log(`Bots : Générale annoncée (${bid.atout}) et gagnée (${result.gains.join(" – ")}).`);
+}

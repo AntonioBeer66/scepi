@@ -22,20 +22,23 @@ const team = (seat) => seat % 2;
 
 // La coinche simulée joue aussi des mondes : 4 suffisent pour vérifier les règles.
 engine.tuning.bidSamples = 4;
-const stats = { donnes: 0, belotes: 0, generales: 0, imposees: 0, capots: 0, coinches: 0 };
+const stats = { donnes: 0, belotes: 0, generales: 0, imposees: 0, capots: 0, coinches: 0, annoncees: 0, gagnees: 0, surencheries: 0 };
 const t0 = Date.now();
 
 for (let game = 0; game < GAMES + MC_GAMES; game++) {
   engine.tuning.mcSamples = game < GAMES ? 0 : 2;
   let pts = [0, 0];
   let plis = [0, 0];
+  let plisSiege = [0, 0, 0, 0]; // Générale : les plis du preneur lui-même
   let prev = [0, 0];
+  let imposee = false; // donne à huit atouts imposée en cours
   const where = () => `partie ${game}, donne ${stats.donnes}`;
 
   // Le premier à parler reçoit les 8 cartes d'une couleur.
   const generale = (G, deck) => {
     if (game % 4 || G.history.length) return null;
     stats.imposees++;
+    imposee = true;
     const seat = (G.donneur + 1) % 4;
     const suit = deck[game % deck.length].suit;
     const rest = shuffle(deck.filter((c) => c.suit !== suit), rng(game));
@@ -53,6 +56,7 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       const best = pli.reduce((a, b) => (force(b.carte) > force(a.carte) ? b : a));
       assert.strictEqual(winner, best.siege, `${where()} : mauvais gagnant de pli`);
       plis[team(winner)]++;
+      plisSiege[winner]++;
       pts[team(winner)] += pli.reduce((s, e) => s + ((e.carte.suit === atout ? POINTS.atout : POINTS.plain)[e.carte.rank] || 0), 0)
         + (plis[0] + plis[1] === 8 ? 10 : 0);
     },
@@ -69,16 +73,23 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       assert.strictEqual(!!c.huitAtouts, huitAtouts && c.montant === 270, `${where()} : marqueur huit atouts (270 seulement)`);
 
       const base = c.montant === 80 ? 82 : c.montant;
-      const reussi = c.montant === 250 ? plis[pre] === 8
+      const reussi = c.type === 'GENERALE' ? plisSiege[c.preneur] === 8
+        : c.montant === 250 ? plis[pre] === 8
         : c.montant === 270 ? plis[pre] === 8 && belote
           : pts[pre] >= (belote ? Math.max(81, base - 20) : base);
       const gain = [0, 0];
-      gain[reussi ? pre : 1 - pre] = (reussi ? c.montant : 160) * G.multiplicateur;
+      gain[reussi ? pre : 1 - pre] = (reussi ? (c.type === 'GENERALE' ? 250 : c.montant) : 160) * G.multiplicateur;
       // Belote du preneur : +20 (non multiplié) dès 81 points de plis, sauf
       // capot beloté (déjà compris dans 270).
       if (belote && c.montant !== 270 && pts[pre] >= 81) gain[pre] += 20;
       assert.strictEqual(G.history[0].reussi, reussi, `${where()} : réussite du contrat`);
       assert.deepStrictEqual([G.scores[0] - prev[0], G.scores[1] - prev[1]], gain, `${where()} : score`);
+      // Seule une Générale adverse passe au-dessus du 270 à huit atouts.
+      if (imposee && !huitAtouts) {
+        assert.strictEqual(c.type, 'GENERALE', `${where()} : huit atouts surenchéris autrement qu'en Générale`);
+        stats.surencheries++;
+      }
+      imposee = false;
       if (huitAtouts) {
         assert(c.montant === 270 && reussi && G.multiplicateur === 1, `${where()} : Générale annoncée 270, gagnée, jamais coinchée`);
         stats.generales++;
@@ -86,11 +97,13 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
 
       stats.donnes++;
       if (belote) stats.belotes++;
+      if (c.type === 'GENERALE') { stats.annoncees++; if (reussi) stats.gagnees++; }
       if (c.montant >= 250) stats.capots++;
       if (G.multiplicateur > 1) stats.coinches++;
       prev = [...G.scores];
       pts = [0, 0];
       plis = [0, 0];
+      plisSiege = [0, 0, 0, 0];
     },
   };
 
@@ -98,5 +111,5 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
   assert.strictEqual(G.phase, 'TERMINEE', `partie ${game} non terminée`);
   assert(Math.max(...G.scores) >= 1010, `partie ${game} : aucun camp à 1010`);
 }
-assert.strictEqual(stats.generales, stats.imposees, 'chaque Générale imposée doit être annoncée et gagnée');
-console.log(`${GAMES} + ${MC_GAMES} (Monte-Carlo) parties de bots sans erreur en ${Date.now() - t0} ms : ${stats.donnes} donnes arbitrées (${stats.belotes} belotes, ${stats.generales} mains à huit atouts, ${stats.capots} capots, ${stats.coinches} coinches).`);
+assert.strictEqual(stats.generales + stats.surencheries, stats.imposees, 'chaque main à huit atouts imposée : 270 gagné, ou surenchéri en Générale');
+console.log(`${GAMES} + ${MC_GAMES} (Monte-Carlo) parties de bots sans erreur en ${Date.now() - t0} ms : ${stats.donnes} donnes arbitrées (${stats.belotes} belotes, ${stats.generales} mains à huit atouts, ${stats.annoncees} Générales annoncées dont ${stats.gagnees} gagnées, ${stats.capots} capots, ${stats.coinches} coinches).`);
