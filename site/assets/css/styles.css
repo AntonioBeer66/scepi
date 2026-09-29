@@ -2820,8 +2820,11 @@ a {
   .slider-content {
     padding: 0 16px;
   }
+  /* Téléphone : trois lignes, sinon les titres longs sont coupés. */
   .slider-content h1 {
     font-size: clamp(1.9rem, 7vw, 2.6rem);
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
   .slider-content p {
     font-size: 0.95rem;
