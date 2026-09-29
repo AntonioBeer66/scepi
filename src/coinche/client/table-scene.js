@@ -463,22 +463,26 @@ export function createTable(parent, { me, onPlay }) {
       ? null
       : halo.enableFilters().filters.external.addGlow(COLORS.gold, 5, 0, 1, false, 8, 12);
     if (glow) glow.active = false;
-    const o = { box, halo, glow, img: box.img, shadow: box.shadow, index: -1 };
-    const img = box.img;
-    img.setInteractive({ useHandCursor: true, draggable: true });
-    img.on("pointerover", () => {
+    // Zone de survol fixe, à la place de la carte au repos (étendue vers le
+    // haut pour couvrir la carte soulevée) : la carte bouge, pas sa zone.
+    // Sinon, soulevée, elle glisserait sous le curseur au profit de sa
+    // voisine, qui se soulèverait à son tour, et ainsi de suite.
+    const zone = scene.add.zone(0, 0, 1, 1);
+    const o = { box, halo, glow, zone, img: box.img, shadow: box.shadow, index: -1 };
+    zone.setInteractive({ useHandCursor: true, draggable: true });
+    zone.on("pointerover", () => {
       hoverId = id;
       placeHand(false);
     });
-    img.on("pointerout", () => {
+    zone.on("pointerout", () => {
       if (hoverId === id) hoverId = null;
       if (!o.drag) placeHand(false);
     });
-    img.on("pointerup", (pointer) => {
+    zone.on("pointerup", (pointer) => {
       if (pointer.getDistance() > DRAG_MIN) return; // fin de glisser : voir dragend
       if (isPlayable(id)) onPlay(id);
     });
-    img.on("dragstart", (pointer) => {
+    zone.on("dragstart", (pointer) => {
       if (!isPlayable(id)) return;
       scene.tweens.killTweensOf(box);
       o.drag = { dx: box.x - pointer.worldX, dy: box.y - pointer.worldY };
@@ -490,11 +494,11 @@ export function createTable(parent, { me, onPlay }) {
         duration: dur(120),
       });
     });
-    img.on("drag", (pointer) => {
+    zone.on("drag", (pointer) => {
       if (!o.drag) return;
       box.setPosition(pointer.worldX + o.drag.dx, pointer.worldY + o.drag.dy);
     });
-    img.on("dragend", () => {
+    zone.on("dragend", () => {
       if (!o.drag) return;
       o.drag = null;
       if (box.y < L.handY - L.cardH * 0.75 && isPlayable(id)) {
@@ -512,6 +516,7 @@ export function createTable(parent, { me, onPlay }) {
     for (const [id, o] of hand)
       if (!ids.has(id)) {
         o.box.destroy();
+        o.zone.destroy();
         hand.delete(id);
       }
     const legal = myTurnToPlay()
@@ -554,6 +559,14 @@ export function createTable(parent, { me, onPlay }) {
       const y =
         s.y - Math.cos(s.a) * lift + (legal && !isLegal ? L.cardH * 0.05 : 0);
       o.box.setDepth(30 + i + (lifted ? 20 : 0));
+      // Zone de survol : place au repos + hauteur du soulèvement maximal ;
+      // son ordre ne change jamais (la plus à droite est dessus).
+      const up = L.cardH * 0.12;
+      o.zone
+        .setSize(L.cardW, L.cardH + 2 * up)
+        .setPosition(s.x + Math.sin(s.a) * up, s.y - Math.cos(s.a) * up)
+        .setRotation(s.a)
+        .setDepth(30 + i);
       if (o.dealing) return; // la distribution la posera
       if (fresh && animateDeal && !reduced) {
         // Distribuée face cachée depuis le donneur, puis retournée.
@@ -720,7 +733,10 @@ export function createTable(parent, { me, onPlay }) {
     const newDonne = !prev || prev.donneNumero !== G.donneNumero;
     if (newDonne) {
       clearTrick();
-      hand.forEach((o) => o.box.destroy());
+      hand.forEach((o) => {
+        o.box.destroy();
+        o.zone.destroy();
+      });
       hand.clear();
       // Reprise en cours de pli (rechargement, reconnexion).
       if (!prev) G.pliCourant.forEach(flyIn);
