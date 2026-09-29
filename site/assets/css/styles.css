@@ -3679,15 +3679,11 @@ body.is-playing .rules-btn {
     transform: none !important;
   }
 }
-/* Portrait étroit : l'éventail occupe tout le bas, le bouton se pose au-dessus. */
+/* Portrait étroit : l'éventail et la barre d'enchères occupent le bas ; le
+   bouton reste toute la partie en haut à droite de la table, sous la barre
+   de jeu (~92 px), et la palette s'ouvre vers le bas. */
 @media (max-width: 640px) {
   .cg-emotes {
-    bottom: var(--cg-hand, 200px);
-  }
-  /* Pendant les enchères, la barre prend toute la largeur : le bouton
-     monte en haut à droite de la table (sous la barre de jeu, ~92 px) et
-     la palette s'ouvre vers le bas. */
-  #game-hud:has(.cg-bidbar) .cg-emotes {
     top: calc(100px + env(safe-area-inset-top));
     bottom: auto;
     flex-direction: column-reverse;
