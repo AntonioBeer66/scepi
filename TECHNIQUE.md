@@ -186,7 +186,13 @@ npm test          # moteur, stratégies des bots, parties de bots, partie boardg
 npm run test:e2e  # partie solo dans un vrai navigateur (Playwright ; Edge/Chrome du poste à défaut)
 ```
 
-Hébergement du serveur à choisir : il faut un processus Node.js permanent, WebSocket et HTTPS (Render, Fly.io, VPS…). Le lancer avec `PORT` et `ORIGINS=https://scepinvaders.com`, puis compiler le site avec `VITE_COINCHE_SERVER=https://adresse-du-serveur npm run build`. Sans variable, le client vise le port 8001 de la même machine que la page.
+Le serveur se lance avec `PORT` et `ORIGINS=https://adresse-du-site`, et le site se compile avec `VITE_COINCHE_SERVER=https://adresse-du-serveur npm run build`. Sans variable, le client vise le port 8001 de la même machine que la page.
+
+#### Bêta gratuite
+
+- **Site : GitHub Pages** (dépôt public, fichiers jusqu'à 100 Mo : `stockfish.wasm` des échecs, 99 Mo, dépasse la limite de 25 Mo de Cloudflare). Le workflow `.github/workflows/deploy-pages.yml` recompile et publie `site/` à chaque push sur `test`. Une fois : *Settings > Pages > Source : GitHub Actions*, et la variable d'Actions `COINCHE_SERVER`.
+- **Serveur de coinche : Render**, offre gratuite (`render.yaml` : *New > Blueprint*). Renseigner `ORIGINS=https://antoniobeer66.github.io`. Le service s'endort après 15 min sans trafic et se réveille en une minute environ ; les parties en ligne en cours sont alors perdues. Le solo, lui, ne dépend pas du serveur.
+- Pour un serveur toujours éveillé : offre payante (Render, Railway…) ou petit VPS.
 
 ### Première version jouable proposée
 

@@ -1,0 +1,45 @@
+# Bêta du site sur GitHub Pages (gratuit, dépôt public) : à chaque push sur
+# la branche test, le jeu est recompilé en visant le serveur de coinche en
+# ligne, puis le dossier site/ est publié tel quel.
+# Réglages du dépôt (une fois) :
+#   Settings > Pages > Source : « GitHub Actions »
+#   Settings > Secrets and variables > Actions > Variables :
+#     COINCHE_SERVER = https://<service>.onrender.com (voir render.yaml)
+# Sans COINCHE_SERVER, seul le solo fonctionne.
+name: Déployer la bêta (GitHub Pages)
+
+on:
+  push:
+    branches: [test]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_COINCHE_SERVER: ${{ vars.COINCHE_SERVER }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -89,7 +89,9 @@ function render() {
     status.textContent =
       "Serveur de jeu injoignable : le jeu en ligne est indisponible pour l’instant. Vous pouvez jouer seul contre l’ordinateur.";
   } else if (tables === null) {
-    status.textContent = "Connexion au serveur de jeu…";
+    // Hébergé gratuitement, le serveur s’endort : le premier appel le réveille.
+    status.textContent =
+      "Connexion au serveur de jeu… (jusqu’à une minute s’il était en veille)";
   } else {
     status.textContent = "";
   }
