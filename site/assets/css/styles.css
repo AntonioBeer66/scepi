@@ -2946,8 +2946,7 @@ body.is-playing .rules-btn {
   flex-direction: column;
   color: var(--text);
   background:
-    radial-gradient(ellipse at 50% 45%, #1c1233 0%, var(--bg) 70%),
-    var(--bg);
+    radial-gradient(ellipse at 50% 45%, #1c1233 0%, var(--bg) 70%), var(--bg);
 }
 .game-view[hidden] {
   display: none !important;
@@ -2974,8 +2973,13 @@ body.is-playing .rules-btn {
   position: absolute;
   box-sizing: border-box;
   border: 8px solid #2b2145;
-  background:
-    radial-gradient(ellipse at 50% 42%, #3a2a6e 0%, #2a1d50 38%, #1c1436 72%, #150f29 100%);
+  background: radial-gradient(
+    ellipse at 50% 42%,
+    #3a2a6e 0%,
+    #2a1d50 38%,
+    #1c1436 72%,
+    #150f29 100%
+  );
   box-shadow:
     0 24px 60px #0009,
     0 0 0 1px #ffffff14,
@@ -2994,7 +2998,8 @@ body.is-playing .rules-btn {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("../images/logo-green.png") center / var(--logo, 160px) no-repeat;
+  background: url("../images/logo-green.png") center / var(--logo, 160px)
+    no-repeat;
   opacity: 0.08;
 }
 
