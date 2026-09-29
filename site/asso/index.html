@@ -598,13 +598,58 @@
         }
       }
       @media (max-width: 760px) {
+        /* Téléphone : l'emblème ouvre la page, les chiffres sur une ligne */
         .asso-hero {
-          padding-top: 40px;
-          gap: 24px;
+          padding-top: 24px;
+          gap: 8px;
+        }
+        .asso-emblem {
+          order: -1;
+          width: min(230px, 64%);
+        }
+        .asso-hero h1 {
+          font-size: clamp(2.3rem, 10.5vw, 3rem);
+        }
+        .asso-hero-copy p {
+          font-size: 16px;
+          margin-bottom: 24px;
         }
         .asso-stats {
-          grid-template-columns: repeat(2, auto);
-          gap: 20px 34px;
+          grid-template-columns: repeat(4, auto);
+          justify-content: space-between;
+          gap: 8px;
+          margin-top: 30px;
+        }
+        .asso-stats dd {
+          font-size: 1.35rem;
+        }
+        .asso-stats dt {
+          font-size: 10px;
+        }
+        .pillar-grid {
+          gap: 12px;
+        }
+        .pillar {
+          display: grid;
+          grid-template-columns: 34px 1fr;
+          column-gap: 16px;
+          padding: 20px;
+        }
+        .pillar .invader {
+          grid-row: span 2;
+          margin: 4px 0 0;
+        }
+        .pillar h3 {
+          font-size: 1.15rem;
+          margin-bottom: 6px;
+        }
+        .board-grid li {
+          padding: 14px 18px;
+        }
+        .board-avatar {
+          flex-basis: 40px;
+          height: 40px;
+          font-size: 13px;
         }
         .pillars,
         .crew,

@@ -301,23 +301,6 @@ a {
   color: var(--gold);
 }
 
-.ticker {
-  border-block: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-  padding: 23px 2px;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  color: var(--muted);
-}
-.ticker i {
-  color: var(--gold);
-  font-size: 17px;
-  font-style: normal;
-}
-
 /* Sections communes -------------------------------------------------- */
 
 .section {
@@ -2126,18 +2109,6 @@ a {
     padding: 14px 17px;
     gap: 18px;
   }
-
-  .ticker {
-    justify-content: center;
-    gap: 13px;
-    flex-wrap: wrap;
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    padding: 17px 0;
-  }
-  .ticker i {
-    font-size: 11px;
-  }
   .section {
     padding-top: 48px;
   }
@@ -3122,30 +3093,6 @@ body.is-playing .rules-btn {
 .home-actions .outline {
   margin-top: 0;
 }
-.home-stats {
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-  gap: 22px;
-  margin: 44px 0 0;
-  padding-top: 26px;
-  border-top: 1px solid var(--line);
-}
-.home-stats div {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 4px;
-}
-.home-stats dd {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 750;
-  letter-spacing: -0.03em;
-  color: var(--text);
-}
-.home-stats dt {
-  font-size: 11px;
-  color: var(--muted);
-}
 
 /* Illustration du haut : mascotte en orbite, cartes, manette, cavalier */
 .home-art {
@@ -3337,105 +3284,6 @@ body.is-playing .rules-btn {
 }
 
 /* Jouer maintenant : les deux jeux du site */
-.home-games {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-}
-.home-game {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  background: #120d1d;
-}
-.home-game:hover {
-  transform: translateY(-4px);
-  border-color: #ffffff33;
-}
-.home-game-art {
-  position: relative;
-  height: 230px;
-  overflow: hidden;
-}
-.is-coinche .home-game-art {
-  background: radial-gradient(ellipse at 50% 60%, #1f4a1c, #0f1e0f 70%);
-}
-.is-echecs .home-game-art {
-  background:
-    repeating-conic-gradient(#ffffff08 0 25%, transparent 0 50%) 0 0 / 56px
-      56px,
-    radial-gradient(ellipse at 50% 60%, #3a2a66, #1a0f2e 70%);
-}
-.home-game .playing-card {
-  top: 44px;
-  left: calc(50% - 50px);
-  width: 100px;
-}
-.home-game .playing-card:nth-child(3) {
-  transform: translate(62px, 14px) rotate(15deg);
-  z-index: 3;
-}
-.home-game .playing-card.back {
-  transform: translate(-70px, 8px) rotate(-18deg);
-}
-.home-game:hover .playing-card:nth-child(3) {
-  transform: translate(72px, 6px) rotate(20deg);
-}
-.home-knight {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -55%);
-  font-size: 150px;
-  line-height: 1;
-  color: #f7f4fc;
-  text-shadow: 0 16px 34px #000a;
-}
-.home-avatar {
-  position: absolute;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 3px solid var(--gold);
-  background: var(--gold);
-  object-fit: cover;
-}
-.home-avatar.a1 {
-  left: 12%;
-  top: 22%;
-}
-.home-avatar.a2 {
-  right: 12%;
-  top: 16%;
-}
-.home-avatar.a3 {
-  right: 22%;
-  bottom: 14%;
-}
-.home-game-copy {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 26px 28px 28px;
-}
-.home-game-copy .eyebrow {
-  font-size: 11px;
-  margin-bottom: 12px;
-}
-.home-game-copy h3 {
-  margin-bottom: 10px;
-}
-.home-game-copy p {
-  font-size: 14px;
-}
-.home-game-cta {
-  margin-top: auto;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--gold);
-}
 
 /* Une année avec SCEPI : cartes illustrées */
 .home-events {
@@ -3536,12 +3384,6 @@ body.is-playing .rules-btn {
 @media (max-width: 760px) {
   .home-hero {
     padding: 36px 0 44px;
-  }
-  .home-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .home-games {
-    grid-template-columns: 1fr;
   }
   .home-events {
     grid-template-columns: 1fr;
@@ -4102,5 +3944,99 @@ html {
   .lx-next,
   .ct-door {
     padding: 28px 22px;
+  }
+}
+
+/* Accueil : bloc « Jouer » vers la ludothèque */
+.home-play {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  align-items: center;
+  gap: 32px;
+  padding: 44px 48px;
+  border: 1px solid #39ff1433;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 85% 50%, #2b6a2655, transparent 60%),
+    #120d1d;
+}
+.home-play h2 {
+  margin-bottom: 12px;
+}
+.home-play p {
+  max-width: 520px;
+  margin-bottom: 26px;
+}
+.home-play:hover .button {
+  background: #ffdc40;
+}
+.home-play-art {
+  position: relative;
+  height: 200px;
+}
+.home-play-art img {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  width: 104px;
+  border-radius: 9px;
+  box-shadow: 0 14px 30px #000a;
+  transition: transform 0.35s;
+}
+.home-play-art img:first-child {
+  transform: translateX(-100%) rotate(-12deg);
+}
+.home-play-art img:nth-child(2) {
+  transform: translateX(-30%) rotate(6deg);
+}
+.home-play-art span {
+  position: absolute;
+  right: 6%;
+  bottom: 0;
+  font-size: 110px;
+  line-height: 1;
+  color: #f7f4fc;
+  text-shadow: 0 14px 30px #000b;
+}
+.home-play:hover .home-play-art img:first-child {
+  transform: translateX(-110%) rotate(-18deg);
+}
+.home-play:hover .home-play-art img:nth-child(2) {
+  transform: translateX(-20%) rotate(12deg);
+}
+
+/* Accueil sur téléphone : plus compact */
+@media (max-width: 760px) {
+  .home-art {
+    width: min(340px, 100%);
+  }
+  .home-pillars {
+    gap: 12px;
+  }
+  .home-pillar {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    column-gap: 16px;
+    padding: 20px;
+  }
+  .home-pillar svg {
+    grid-row: span 2;
+    width: 34px;
+    height: 34px;
+    margin: 2px 0 0;
+  }
+  .home-pillar h3 {
+    font-size: 1.15rem;
+    margin-bottom: 6px;
+  }
+  .home-play {
+    grid-template-columns: 1fr;
+    padding: 28px 22px;
+  }
+  .home-play-art {
+    display: none;
+  }
+  .home-heading.is-row .button {
+    margin: 0;
   }
 }
