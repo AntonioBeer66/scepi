@@ -42,7 +42,6 @@ site/
   jeux/index.html          (ludothèque : onglet « Jeux »)
   jeux/coinche/index.html
   jeux/echecs/index.html
-  coinche/, echecs/        (redirections des anciennes adresses)
   evenements/index.html
   contact/index.html
   assets/
