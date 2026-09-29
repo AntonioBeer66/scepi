@@ -29,7 +29,9 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
           matchID: session.matchID,
           credentials: session.credentials,
         }
-      : { multiplayer: Local() }),
+      : // boardgame.io garde ses serveurs locaux pour toute la page : une
+        // partie solo quittée ne doit pas ressortir à la suivante.
+        { multiplayer: Local(), matchID: `solo-${Date.now()}` }),
   });
 
   const view = document.querySelector("#game-view");
@@ -76,8 +78,9 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
           client.moves.devenirBot(s);
   }
 
-  client.subscribe((state) => {
-    if (!state) return;
+  let stopped = false;
+  const unsubscribe = client.subscribe((state) => {
+    if (!state || stopped) return;
     const G = state.G;
     if (G.phase === "ATTENTE") {
       if (!launched && (launch || !online)) {
@@ -102,7 +105,12 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
   });
   client.start();
 
+  // Tout est coupé avant la déconnexion, qui prévient encore les abonnés :
+  // sinon l'hôte repartirait et les bots joueraient sans personne.
   function stop() {
+    if (stopped) return;
+    stopped = true;
+    unsubscribe();
     host.stop();
     client.stop();
     table.destroy();

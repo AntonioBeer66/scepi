@@ -7,13 +7,19 @@
 // pixels de l'écran (CSS × devicePixelRatio), la caméra zoome d'autant et
 // les textes sont rastérisés à cette résolution ; toute la mise en page
 // reste en pixels CSS.
+// Cartes : les images sont recopiées une fois dans des textures carrées
+// (puissance de deux) aux coins arrondis, avec mipmaps : elles restent nettes
+// quelle que soit leur réduction. Le tapis est en CSS (.cg-felt).
 // Éventail : chaque carte pivote autour d'un point sous la main (angle
 // fixe entre deux cartes, ouverture bornée par la largeur disponible).
 import * as Phaser from "phaser";
 import { RANKS, SUITS, SUIT_SYMBOL, computeLegal, DURATION_MS } from "../engine.js";
 import { TRICK_SHOW_MS } from "../host.js";
 
-const CARD_RATIO = 491 / 320; // hauteur / largeur des images de cartes
+const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
+const CARD_RATIO = CARD_PX.h / CARD_PX.w;
+const POT = 512; // texture carrée puissance de deux : mipmaps possibles
+const SHADOW_K = 1.35; // l'ombre floue déborde de la carte
 const TRICK_PAUSE_MS = 1100; // pli complet affiché, gagnant en évidence
 const COLLECT_MS = 550; // puis ramassé (total : TRICK_SHOW_MS de host.js)
 const CARD_IDS = SUITS.flatMap((s) => RANKS.map((r) => r + s));
@@ -25,10 +31,6 @@ const COLORS = {
   gold: 0xf4c600,
   goldCss: "#f4c600",
   danger: 0xff5b5b,
-  felt: 0x1f1638,
-  feltInner: 0x251a44,
-  rim: 0x2b2145,
-  line: 0x7f77dd,
   avatar: 0x3c3489,
   avatarMe: 0x26215c,
   bubble: 0xf7f4fc,
@@ -63,6 +65,41 @@ function bidLabel(montant, atout) {
   return `${m} ${SUIT_SYMBOL[atout]}`;
 }
 
+// Recopie chaque carte (et le dos) dans une texture 512×512, coins arrondis
+// et liseré compris ; les images n'utilisent que son cadre « f ». Plus une
+// ombre floue partagée, étirée à la taille de chaque carte.
+function bakeTextures(scene) {
+  const { w, h } = CARD_PX;
+  const rad = w * 0.07;
+  for (const key of [...CARD_IDS, "back"]) {
+    const c = document.createElement("canvas");
+    c.width = c.height = POT;
+    const ctx = c.getContext("2d");
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(1, 1, w, h, rad);
+    ctx.clip();
+    ctx.drawImage(scene.textures.get(key).getSourceImage(), 1, 1, w, h);
+    ctx.restore();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = key === "back" ? "#ffffff55" : "#00000026";
+    ctx.beginPath();
+    ctx.roundRect(2.5, 2.5, w - 3, h - 3, rad - 1.5);
+    ctx.stroke();
+    scene.textures.addCanvas(`c:${key}`, c).add("f", 0, 0, 0, w + 2, h + 2);
+  }
+  const s = document.createElement("canvas");
+  s.width = s.height = 128;
+  const k = 128 / SHADOW_K;
+  const ctx = s.getContext("2d");
+  ctx.filter = "blur(8px)";
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.roundRect(64 - k / 2, 64 - k / 2, k, k, 10);
+  ctx.fill();
+  scene.textures.addCanvas("shadow", s);
+}
+
 export function createTable(parent, { me, onPlay }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const dur = (ms) => (reduced ? 0 : ms);
@@ -78,11 +115,12 @@ export function createTable(parent, { me, onPlay }) {
   let timer = null; // { start, total } : fenêtre de temps en cours
   let L = null; // mise en page courante
 
-  const hand = new Map(); // id → { box, halo, img }
-  const trick = new Map(); // id → image posée au centre
+  const hand = new Map(); // id → { box, halo, img, shadow }
+  const trick = new Map(); // id → carte posée au centre (conteneur)
   let sweeping = [];
-  let staticObjs = []; // tapis, logo
   let seatObjs = [];
+  let seatSig = "";
+  const lastBubble = [];
   let ring = null; // anneau-chrono, redessiné à chaque image
 
   const txt = (x, y, str, style) =>
@@ -152,43 +190,41 @@ export function createTable(parent, { me, onPlay }) {
     };
   }
 
-  // ---- Tapis ------------------------------------------------------------------
+  // ---- Tapis (CSS, sous le canevas) ----------------------------------------
+
+  const felt = document.createElement("div");
+  felt.className = "cg-felt";
+  parent.prepend(felt);
 
   function drawTable() {
-    staticObjs.forEach((o) => o.destroy());
-    const g = scene.add.graphics().setDepth(0);
     const w = L.right - L.left;
     const h = L.bottom - L.top;
-    const rad = Math.min(h / 2, w / 2, 160);
-    g.fillStyle(COLORS.rim, 1).fillRoundedRect(L.left, L.top, w, h, rad);
-    g.fillStyle(COLORS.felt, 1).fillRoundedRect(
-      L.left + 7,
-      L.top + 7,
-      w - 14,
-      h - 14,
-      Math.max(0, rad - 7),
-    );
-    g.fillStyle(COLORS.feltInner, 1).fillRoundedRect(
-      L.left + w * 0.2,
-      L.top + h * 0.2,
-      w * 0.6,
-      h * 0.6,
-      Math.min(h * 0.3, rad),
-    );
-    g.lineStyle(1, COLORS.line, 0.28).strokeRoundedRect(
-      L.left + 14,
-      L.top + 14,
-      w - 28,
-      h - 28,
-      Math.max(0, rad - 14),
-    );
-    const size = Math.min(h * 0.42, 190);
-    const logo = scene.add
-      .image(L.cx, L.cy, "logo")
-      .setDisplaySize(size, size)
-      .setAlpha(0.09)
-      .setDepth(1);
-    staticObjs = [g, logo];
+    Object.assign(felt.style, {
+      left: `${L.left}px`,
+      top: `${L.top}px`,
+      width: `${w}px`,
+      height: `${h}px`,
+      borderRadius: `${Math.min(h / 2, w / 2, 160)}px`,
+    });
+    felt.style.setProperty("--logo", `${Math.round(Math.min(h * 0.42, 190))}px`);
+  }
+
+  // ---- Cartes : ombre douce + image (tailles en pixels CSS) -----------------
+
+  function sizeCard(box, w, h) {
+    box.img.setDisplaySize(w, h);
+    box.shadow.setDisplaySize(w * SHADOW_K, h * SHADOW_K).setPosition(0, h * 0.045);
+  }
+
+  function cardBox(id, w, h) {
+    const shadow = scene.add.image(0, 0, "shadow").setAlpha(0.55);
+    const img = scene.add.image(0, 0, `c:${id}`, "f");
+    const box = scene.add.container(0, 0, [shadow, img]);
+    box.id = id;
+    box.img = img;
+    box.shadow = shadow;
+    sizeCard(box, w, h);
+    return box;
   }
 
   // ---- Sièges : avatar, nom, bulle, dos des cartes ---------------------------
@@ -214,7 +250,19 @@ export function createTable(parent, { me, onPlay }) {
     return null;
   }
 
-  function drawSeats() {
+  // Redessinés seulement si ce qu'ils montrent a changé : pas de textes
+  // recréés (et renvoyés au GPU) pendant les animations.
+  function drawSeats(force) {
+    const sig = JSON.stringify([
+      G.phase,
+      G.joueurActif,
+      G.donneur,
+      G.seats,
+      G.hands.map((h) => h.length),
+      [0, 1, 2, 3].map(bubbleText),
+    ]);
+    if (!force && sig === seatSig) return;
+    seatSig = sig;
     seatObjs.forEach((o) => o.destroy());
     seatObjs = [];
     for (let seat = 0; seat < 4; seat++) {
@@ -240,22 +288,11 @@ export function createTable(parent, { me, onPlay }) {
         const bh = bw * CARD_RATIO;
         for (let i = 0; i < n; i++) {
           const a = (i - (n - 1) / 2) * 0.13;
-          const bx = Math.sin(a) * bw * 2.2;
-          const by = (1 - Math.cos(a)) * bw * 2.2;
           fan.add(
             scene.add
-              .image(bx, by, "back")
+              .image(Math.sin(a) * bw * 2.2, (1 - Math.cos(a)) * bw * 2.2, "c:back", "f")
               .setDisplaySize(bw, bh)
               .setRotation(a),
-          );
-          // Liseré clair : le dos violet se détache du tapis.
-          fan.add(
-            scene.add
-              .graphics()
-              .setPosition(bx, by)
-              .setRotation(a)
-              .lineStyle(1, 0xffffff, 0.45)
-              .strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 3),
           );
         }
         box.add(fan);
@@ -263,6 +300,8 @@ export function createTable(parent, { me, onPlay }) {
 
       const disc = scene.add.graphics();
       disc
+        .fillStyle(0x000000, 0.35)
+        .fillCircle(0, 3, L.r + 1)
         .fillStyle(seat === me ? COLORS.avatarMe : COLORS.avatar, 1)
         .fillCircle(0, 0, L.r)
         .lineStyle(2, active ? COLORS.gold : 0xffffff, active ? 1 : 0.18)
@@ -308,23 +347,27 @@ export function createTable(parent, { me, onPlay }) {
           fontStyle: "bold",
           color: COLORS.ink,
         }).setOrigin(0.5);
-        const bw = label.width + 16;
-        const bh = label.height + 8;
+        const bw = label.width + 18;
+        const bh = label.height + 10;
         // À côté de l'avatar, du côté du centre de la table.
         const side = pos === 1 ? -1 : 1;
-        const bx = side * (L.r + 8 + bw / 2);
+        const bx = side * (L.r + 10 + bw / 2);
         const by = pos === 2 ? 0 : -L.r * 0.2;
         const bg = scene.add.graphics();
-        bg.fillStyle(b.lead ? COLORS.gold : COLORS.bubble, 1).fillRoundedRect(
-          bx - bw / 2,
-          by - bh / 2,
-          bw,
-          bh,
-          bh / 2,
-        );
+        bg.fillStyle(0x000000, 0.3)
+          .fillRoundedRect(bx - bw / 2, by - bh / 2 + 3, bw, bh, bh / 2)
+          .fillStyle(b.lead ? COLORS.gold : COLORS.bubble, 1)
+          .fillRoundedRect(bx - bw / 2, by - bh / 2, bw, bh, bh / 2);
         label.setPosition(bx, by);
         box.add([bg, label]);
+        // Nouvelle bulle : petite apparition.
+        if (!reduced && lastBubble[seat] !== b.t) {
+          bg.setAlpha(0);
+          label.setAlpha(0);
+          scene.tweens.add({ targets: [bg, label], alpha: 1, duration: 180 });
+        }
       }
+      lastBubble[seat] = b?.t;
       seatObjs.push(box);
     }
   }
@@ -379,19 +422,19 @@ export function createTable(parent, { me, onPlay }) {
       let o = hand.get(c.id);
       const fresh = !o;
       if (fresh) {
+        const box = cardBox(c.id, L.cardW, L.cardH);
         const halo = scene.add.graphics();
-        const img = scene.add.image(0, 0, c.id);
-        const box = scene.add.container(0, 0, [halo, img]);
-        img.setInteractive({ useHandCursor: true });
-        img.on("pointerover", () => {
+        box.addAt(halo, 1);
+        box.img.setInteractive({ useHandCursor: true });
+        box.img.on("pointerover", () => {
           hoverId = c.id;
           placeHand(false);
         });
-        img.on("pointerout", () => {
+        box.img.on("pointerout", () => {
           if (hoverId === c.id) hoverId = null;
           placeHand(false);
         });
-        img.on("pointerup", () => {
+        box.img.on("pointerup", () => {
           if (!G || !myTurnToPlay() || performance.now() < blockedUntil) return;
           const ok = computeLegal(
             G.hands[me],
@@ -401,23 +444,24 @@ export function createTable(parent, { me, onPlay }) {
           ).some((x) => x.id === c.id);
           if (ok) onPlay(c.id);
         });
-        o = { box, halo, img };
+        o = { box, halo, img: box.img, shadow: box.shadow };
         hand.set(c.id, o);
       }
       const isLegal = legal ? legal.has(c.id) : false;
       const lifted = isLegal && (hoverId === c.id || focusId === c.id);
-      o.img.setDisplaySize(L.cardW, L.cardH);
+      sizeCard(o.box, L.cardW, L.cardH);
       o.img.setTint(legal && !isLegal ? 0x8a8499 : 0xffffff);
+      o.shadow.setAlpha(lifted ? 0.75 : 0.55);
       o.halo.clear();
       if (isLegal)
         o.halo
-          .lineStyle(lifted ? 4 : 3, COLORS.gold, lifted ? 1 : 0.85)
+          .lineStyle(lifted ? 4 : 3, COLORS.gold, lifted ? 1 : 0.8)
           .strokeRoundedRect(
-            -L.cardW / 2 - 3,
-            -L.cardH / 2 - 3,
-            L.cardW + 6,
-            L.cardH + 6,
-            10,
+            -L.cardW / 2 - 2,
+            -L.cardH / 2 - 2,
+            L.cardW + 4,
+            L.cardH + 4,
+            L.cardW * 0.07 + 2,
           );
       const s = fanSlot(i, n);
       const lift = (isLegal ? L.cardH * 0.14 : 0) + (lifted ? L.cardH * 0.1 : 0);
@@ -434,9 +478,9 @@ export function createTable(parent, { me, onPlay }) {
           rotation: s.a,
           scale: 1,
           alpha: 1,
-          delay: dur(i * 45),
-          duration: dur(280),
-          ease: "Cubic.easeOut",
+          delay: dur(i * 55),
+          duration: dur(420),
+          ease: "Back.easeOut",
         });
       } else if (fresh) {
         o.box.setPosition(x, y).setRotation(s.a);
@@ -447,10 +491,10 @@ export function createTable(parent, { me, onPlay }) {
           x,
           y,
           rotation: s.a,
-          scale: 1,
+          scale: lifted ? 1.04 : 1,
           alpha: 1,
-          duration: dur(150),
-          ease: "Quad.easeOut",
+          duration: dur(200),
+          ease: "Cubic.easeOut",
         });
       }
     });
@@ -458,81 +502,86 @@ export function createTable(parent, { me, onPlay }) {
 
   // ---- Pli ------------------------------------------------------------------------
 
-  // Carte jouée : lancée depuis votre main (ou le siège) avec un tour sur
-  // elle-même, posée de biais à sa place.
+  // Carte jouée : glisse depuis votre main (ou le siège) en pivotant un peu,
+  // et se pose de biais à sa place.
   function flyIn(entry) {
     const { siege, carte } = entry;
     const pos = posOf(siege);
-    const from = hand.get(carte.id)?.box ?? L.seat[pos];
+    const from = hand.get(carte.id)?.box;
+    const start = from ?? L.seat[pos];
     const to = L.slot[pos];
     const end = tilt(carte.id);
-    const spin = reduced ? 0 : (carte.id.charCodeAt(0) % 2 ? 1 : -1) * Math.PI * 2;
-    const img = scene.add
-      .image(from.x, from.y, carte.id)
+    const turn = reduced ? 0 : (carte.id.charCodeAt(0) % 2 ? 1 : -1) * 0.5;
+    const box = cardBox(carte.id, L.trickW, L.trickH)
+      .setPosition(start.x, start.y)
       .setDepth(10 + trick.size)
-      .setRotation(end - spin);
-    const sx = L.trickW / img.width;
-    const sy = L.trickH / img.height;
-    img.setScale(siege === me ? (L.cardW / img.width) : sx * 0.5, siege === me ? (L.cardH / img.height) : sy * 0.5);
+      .setRotation(from ? from.rotation : end - turn)
+      .setScale(from ? L.cardW / L.trickW : 0.45);
     scene.tweens.add({
-      targets: img,
+      targets: box,
       x: to.x,
       y: to.y,
       rotation: end,
-      scaleX: sx,
-      scaleY: sy,
-      duration: dur(380),
-      ease: "Cubic.easeOut",
+      scale: 1,
+      duration: dur(420),
+      ease: "Quart.easeOut",
     });
-    trick.set(carte.id, img);
+    trick.set(carte.id, box);
   }
 
   // Pli complet : gagnant en évidence, puis ramassé vers son avatar.
   function collect(lastTrick) {
     const ids = lastTrick.cards.map((e) => e.carte.id);
-    const imgs = ids.map((id) => trick.get(id)).filter(Boolean);
+    const boxes = ids.map((id) => trick.get(id)).filter(Boolean);
     ids.forEach((id) => trick.delete(id));
-    const halo = scene.add.graphics().setDepth(9);
-    sweeping.push(...imgs, halo);
+    const halo = scene.add.graphics().setDepth(14);
+    sweeping.push(...boxes, halo);
     blockedUntil = performance.now() + dur(TRICK_PAUSE_MS + COLLECT_MS);
     const winner = lastTrick.cards.find((e) => e.siege === lastTrick.winnerSeat);
-    const winnerImg = imgs.find((i) => i.texture.key === winner?.carte.id);
-    scene.time.delayedCall(dur(400), () => {
-      if (!winnerImg?.active) return;
+    const top = boxes.find((b) => b.id === winner?.carte.id);
+    scene.time.delayedCall(dur(450), () => {
+      if (!top?.active) return;
+      top.setDepth(15);
       halo
-        .setPosition(winnerImg.x, winnerImg.y)
-        .setRotation(winnerImg.rotation)
+        .setPosition(top.x, top.y)
+        .setRotation(top.rotation)
         .lineStyle(3, COLORS.gold, 1)
         .strokeRoundedRect(
-          -L.trickW / 2 - 4,
-          -L.trickH / 2 - 4,
-          L.trickW + 8,
-          L.trickH + 8,
-          8,
+          -L.trickW / 2 - 3,
+          -L.trickH / 2 - 3,
+          L.trickW + 6,
+          L.trickH + 6,
+          L.trickW * 0.07 + 3,
         );
+      scene.tweens.add({
+        targets: [top, halo],
+        scale: 1.08,
+        duration: dur(160),
+        yoyo: true,
+        ease: "Sine.easeInOut",
+      });
     });
     scene.time.delayedCall(dur(TRICK_PAUSE_MS), () => {
       halo.destroy();
       const to = L.seat[posOf(lastTrick.winnerSeat)];
       scene.tweens.add({
-        targets: imgs,
+        targets: boxes,
         x: to.x,
         y: to.y,
-        scaleX: 0.02,
-        scaleY: 0.02,
+        scale: 0.3,
         alpha: 0,
         duration: dur(COLLECT_MS),
-        ease: "Quad.easeIn",
+        ease: "Cubic.easeIn",
         onComplete: () => {
-          imgs.forEach((i) => i.destroy());
-          sweeping = sweeping.filter((o) => !imgs.includes(o) && o !== halo);
+          boxes.forEach((b) => b.destroy());
+          sweeping = sweeping.filter((o) => !boxes.includes(o) && o !== halo);
         },
       });
     });
   }
 
   function clearTrick() {
-    trick.forEach((i) => i.destroy());
+    trick.forEach((b) => b.destroy());
     trick.clear();
     sweeping.forEach((o) => o.destroy());
     sweeping = [];
@@ -570,7 +619,7 @@ export function createTable(parent, { me, onPlay }) {
       if (trickDone) collect(G.lastTrick);
     }
     placeHand(newDonne);
-    drawSeats();
+    drawSeats(false);
   }
 
   function relayout() {
@@ -588,13 +637,13 @@ export function createTable(parent, { me, onPlay }) {
     );
     drawTable();
     if (!G) return;
-    drawSeats();
+    drawSeats(true);
     placeHand(false);
-    for (const [id, img] of trick) {
+    for (const [id, box] of trick) {
       const e = G.pliCourant.find((x) => x.carte.id === id);
       if (!e) continue;
       const to = L.slot[posOf(e.siege)];
-      img.setPosition(to.x, to.y).setDisplaySize(L.trickW, L.trickH);
+      sizeCard(box.setPosition(to.x, to.y), L.trickW, L.trickH);
     }
   }
 
@@ -603,13 +652,13 @@ export function createTable(parent, { me, onPlay }) {
       for (const id of CARD_IDS)
         this.load.image(id, `../assets/images/cards/${id}.png`);
       this.load.svg("back", "../assets/images/cards/back.svg", {
-        width: 274,
-        height: 420,
+        width: CARD_PX.w,
+        height: CARD_PX.h,
       });
-      this.load.image("logo", "../assets/images/logo-green.png");
     }
     create() {
       scene = this;
+      bakeTextures(this);
       this.cameras.main.setOrigin(0, 0).setZoom(dpr);
       ring = this.add.graphics().setDepth(7);
       relayout();
@@ -630,6 +679,10 @@ export function createTable(parent, { me, onPlay }) {
     width: (parent.clientWidth || 800) * dpr,
     height: (parent.clientHeight || 500) * dpr,
     scale: { mode: Phaser.Scale.NONE, zoom: 1 / dpr },
+    render: {
+      mipmapFilter: "LINEAR_MIPMAP_LINEAR",
+      powerPreference: "high-performance",
+    },
     scene: TableScene,
   });
   const resizer = new ResizeObserver(() => relayout());
@@ -648,6 +701,7 @@ export function createTable(parent, { me, onPlay }) {
     destroy() {
       resizer.disconnect();
       game.destroy(true);
+      felt.remove();
       scene = null;
     },
   };

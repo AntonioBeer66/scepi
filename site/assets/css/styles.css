@@ -1849,6 +1849,35 @@ body.is-playing .rules-btn {
   inset: 0;
   display: block;
 }
+/* Tapis : dessiné par le navigateur (dégradés nets à toute résolution),
+   placé et dimensionné par la table ; logo en filigrane. */
+.cg-felt {
+  position: absolute;
+  box-sizing: border-box;
+  border: 8px solid #2b2145;
+  background:
+    radial-gradient(ellipse at 50% 42%, #3a2a6e 0%, #2a1d50 38%, #1c1436 72%, #150f29 100%);
+  box-shadow:
+    0 24px 60px #0009,
+    0 0 0 1px #ffffff14,
+    inset 0 0 0 1px #7f77dd40,
+    inset 0 0 80px #0a061599;
+  pointer-events: none;
+}
+.cg-felt::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid #7f77dd2e;
+  border-radius: inherit;
+}
+.cg-felt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("../images/logo-green.png") center / var(--logo, 160px) no-repeat;
+  opacity: 0.08;
+}
 
 /* Barre de jeu */
 .cg-topbar {
@@ -2182,6 +2211,48 @@ body.is-playing .rules-btn {
   color: #ff8a8a;
   font-size: 13px;
   text-align: center;
+}
+
+/* Finitions : verre dépoli sur la table, retours au survol. */
+.cg-bidbar,
+.cg-panel,
+.cg-banner {
+  background: #120d20d6;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+.cg-chip,
+.cg-btn,
+.cg-icon {
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.cg-chip:hover,
+.cg-btn:hover {
+  transform: translateY(-1px);
+}
+.cg-btn:hover {
+  border-color: #ffffff66;
+}
+.cg-btn.is-primary:hover {
+  box-shadow: 0 0 18px #f4c60059;
+}
+.cg-chip[aria-pressed="true"] {
+  box-shadow: 0 0 12px #f4c60033;
+}
+.cg-yourturn {
+  box-shadow: 0 0 14px #8be04e80;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-chip,
+  .cg-btn,
+  .cg-icon {
+    transition: none;
+  }
 }
 
 @media (max-width: 900px) {
