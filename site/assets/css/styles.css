@@ -3000,8 +3000,8 @@ body.is-playing .rules-btn {
 
 /* Barre de jeu */
 .cg-topbar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   min-height: 56px;
@@ -3017,10 +3017,16 @@ body.is-playing .rules-btn {
   gap: 8px;
   min-width: 0;
 }
+/* Le contrat se réduit (points de suspension) ; le reste garde sa place. */
+.cg-top-left {
+  flex: 1 1 0;
+}
 .cg-top-mid {
+  flex: 0 1 auto;
   justify-content: center;
 }
 .cg-top-right {
+  flex: 0 0 auto;
   justify-content: flex-end;
 }
 .cg-contract {
@@ -3417,23 +3423,21 @@ body.is-playing .rules-btn {
 }
 
 @media (max-width: 900px) {
-  .cg-icon span {
+  .cg-icon span,
+  .cg-sub {
     display: none;
   }
 }
 @media (max-width: 640px) {
   .cg-topbar {
-    grid-template-columns: 1fr auto;
     row-gap: 2px;
     padding: 4px 8px;
   }
+  /* Donne et tour sur une seconde ligne, sous le contrat et les scores. */
   .cg-top-mid {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    order: 3;
+    flex-basis: 100%;
     justify-content: flex-start;
-  }
-  .cg-sub {
-    display: none;
   }
   .cg-top-right {
     gap: 2px;
@@ -3453,4 +3457,102 @@ body.is-playing .rules-btn {
     min-width: 40px;
     padding: 0 8px;
   }
+}
+
+/* Téléphone : barre de jeu compacte en paysage, barre d'enchères resserrée
+   (montants sur une ligne qu'on fait défiler), rien sous les encoches. */
+.game-view {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overscroll-behavior: none;
+}
+.coinche-stage {
+  touch-action: none; /* gestes gérés par la table (Phaser) */
+}
+.cg-icon,
+.cg-chip,
+.cg-btn {
+  touch-action: manipulation; /* pas de zoom au double tapotement */
+}
+@media (max-height: 500px) {
+  .cg-topbar {
+    min-height: 44px;
+    padding: 2px 10px;
+    gap: 8px;
+  }
+  .cg-score {
+    min-width: 48px;
+    padding: 0 8px;
+  }
+  .cg-score b {
+    font-size: 15px;
+  }
+  .cg-score small,
+  .cg-score em {
+    font-size: 9px;
+  }
+  .cg-icon {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 6px;
+  }
+  .cg-panel {
+    top: 52px;
+    max-height: calc(100% - 64px);
+  }
+  .cg-banner {
+    gap: 4px;
+    padding: 10px 18px;
+    max-height: calc(100% - 60px);
+    overflow-y: auto;
+  }
+  .cg-recap-table th,
+  .cg-recap-table td {
+    padding: 2px 10px;
+    font-size: 13px;
+  }
+  .cg-recap-table tfoot th,
+  .cg-recap-table tfoot td {
+    font-size: 15px;
+  }
+}
+@media (max-width: 700px), (max-height: 500px) {
+  .cg-bidbar {
+    gap: 6px;
+    padding: 8px;
+    max-width: calc(100% - 12px);
+  }
+  .cg-bidbar.is-open {
+    width: min(560px, calc(100% - 12px));
+  }
+  .cg-prompt {
+    font-size: 13px;
+  }
+  .cg-chips[aria-label="Montant"] {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .cg-chip {
+    flex: none;
+    min-width: 42px;
+    min-height: 40px;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+  .cg-suitchip {
+    font-size: 20px;
+  }
+  .cg-btn {
+    min-height: 40px;
+    padding: 0 14px;
+  }
+}
+/* Page de la coinche en plein écran (viewport-fit=cover) : le salon reste
+   hors des encoches en paysage. */
+.coinche-page {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }

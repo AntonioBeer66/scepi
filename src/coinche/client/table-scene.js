@@ -150,6 +150,7 @@ export function createTable(parent, { me, onPlay }) {
   let queued = null; // dernier état reçu avant la fin du chargement
   let focusId = null;
   let hoverId = null;
+  let touchSel = null; // carte soulevée d'un premier toucher (voir handCard)
   let blockedUntil = 0;
   let timer = null; // { start, total } : fenêtre de temps en cours
   let L = null; // mise en page courante
@@ -196,6 +197,11 @@ export function createTable(parent, { me, onPlay }) {
     const handY = H - cardH * 0.56 - 10;
     // Haut de la main, cartes jouables soulevées comprises.
     const handTop = handY - cardH * 0.74;
+    // Vous : au-dessus de l'éventail, à gauche ; sur un écran peu haut
+    // (téléphone en paysage) cette place chevaucherait Ouest : coin bas
+    // gauche, à côté de la main.
+    let mine = { x: left + r + 18, y: Math.min(bottom - r - 14, handTop - r - 8) };
+    if (mine.y - sideY < 2 * r + 34) mine = { x: left + r + 12, y: H - r - 14 };
     return {
       W,
       H,
@@ -214,11 +220,9 @@ export function createTable(parent, { me, onPlay }) {
       maxSpread,
       handY,
       seat: [
-        // Vous : coin bas gauche, au-dessus de l'éventail (spectateur : le
-        // joueur Sud en bas au centre, comme Nord en haut).
-        me < 0
-          ? { x: cx, y: bottom - r - 10 }
-          : { x: left + r + 18, y: Math.min(bottom - r - 14, handTop - r - 8) },
+        // Vous (voir mine) ; spectateur : le
+        // joueur Sud en bas au centre, comme Nord en haut.
+        me < 0 ? { x: cx, y: bottom - r - 10 } : mine,
         { x: right - r - 14, y: sideY },
         { x: cx, y: top + r + 10 },
         { x: left + r + 14, y: sideY },
@@ -496,7 +500,15 @@ export function createTable(parent, { me, onPlay }) {
     });
     zone.on("pointerup", (pointer) => {
       if (pointer.getDistance() > DRAG_MIN) return; // fin de glisser : voir dragend
-      if (isPlayable(id)) onPlay(id);
+      if (!isPlayable(id)) return;
+      // Au doigt, pas de survol pour voir la carte avant : un premier
+      // toucher la soulève, un second la joue (ou la glisser vers le tapis).
+      if (pointer.wasTouch && touchSel !== id) {
+        touchSel = id;
+        placeHand(false);
+        return;
+      }
+      onPlay(id);
     });
     zone.on("dragstart", (pointer) => {
       if (!isPlayable(id)) return;
@@ -549,7 +561,8 @@ export function createTable(parent, { me, onPlay }) {
       const moved = !fresh && o.index !== i; // main retriée (atout connu)
       o.index = i;
       const isLegal = legal ? legal.has(c.id) : false;
-      const lifted = isLegal && (hoverId === c.id || focusId === c.id);
+      const lifted =
+        isLegal && (hoverId === c.id || focusId === c.id || touchSel === c.id);
       // Rien n'a changé pour cette carte : ni retracé ni ré-animé.
       const key = `${i}/${n}/${isLegal}/${lifted}/${!!legal}/${L.W}x${L.H}`;
       if (o.key === key) return;
@@ -752,6 +765,7 @@ export function createTable(parent, { me, onPlay }) {
   function apply(next) {
     const prev = G;
     G = next;
+    if (!myTurnToPlay()) touchSel = null;
     startTimer(prev);
     const newDonne = !prev || prev.donneNumero !== G.donneNumero;
     if (newDonne) {
@@ -846,6 +860,13 @@ export function createTable(parent, { me, onPlay }) {
       bakeTextures(this);
       this.cameras.main.setOrigin(0, 0).setZoom(dpr);
       this.input.dragDistanceThreshold = DRAG_MIN;
+      // Toucher le tapis (hors des cartes) repose la carte soulevée.
+      this.input.on("pointerup", (pointer, over) => {
+        if (touchSel && !over.length) {
+          touchSel = null;
+          placeHand(false);
+        }
+      });
       ring = this.add.graphics().setDepth(7);
       relayout();
       if (queued) apply(queued);
