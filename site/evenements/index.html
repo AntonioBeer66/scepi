@@ -248,6 +248,66 @@
           transition: none;
         }
       }
+      /* Chiffres de l'année, sous le titre */
+      .ev-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin: 34px 0 0;
+      }
+      .ev-stats div {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 6px;
+        padding: 20px 22px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #120d1d;
+      }
+      .ev-stats dd {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 750;
+        letter-spacing: -0.03em;
+        color: var(--gold);
+      }
+      .ev-stats dt {
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+      /* Appel final vers Instagram */
+      .ev-next {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px 40px;
+        margin-top: 76px;
+        padding: 40px 44px;
+        border: 1px solid #f4c60033;
+        border-radius: 18px;
+        background:
+          radial-gradient(ellipse at 100% 50%, #f4c6001c, transparent 60%),
+          #120d1d;
+      }
+      .ev-next h2 {
+        margin-bottom: 10px;
+      }
+      .ev-next p {
+        max-width: 520px;
+        margin: 0;
+      }
+      @media (max-width: 900px) {
+        .ev-stats {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 760px) {
+        .ev-next {
+          padding: 28px 22px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -289,6 +349,12 @@
           Au-delà des jeux . . .<br /><span>. . . des moments merveilleux</span>
         </h1>
         <p>Suivez avec nous tous les events organisés par SCEPI.</p>
+        <dl class="ev-stats">
+          <div><dt>Joueurs au Poker Championship</dt><dd>104</dd></div>
+          <div><dt>De lots à gagner</dt><dd>1 000 €</dd></div>
+          <div><dt>Participants à la conférence jeu responsable</dt><dd>45</dd></div>
+          <div><dt>Anciens et nouveaux au week-end intergé</dt><dd>35</dd></div>
+        </dl>
       </section>
       <article class="event-banner reveal">
         <div>
@@ -582,6 +648,23 @@
             </div>
           </li>
         </ol>
+      </section>
+      <section class="ev-next reveal">
+        <div>
+          <span class="eyebrow">PROCHAIN RENDEZ-VOUS</span>
+          <h2>Ne manquez pas le prochain.</h2>
+          <p>
+            Tournois, soirées jeux, sorties : chaque événement est annoncé en
+            premier sur Instagram.
+          </p>
+        </div>
+        <a
+          class="button primary"
+          href="https://www.instagram.com/scepinvaders/?hl=fr"
+          target="_blank"
+          rel="noopener"
+          >Suivre @scepinvaders <span aria-hidden="true">↗</span></a
+        >
       </section>
     </main>
     <footer class="footer">
