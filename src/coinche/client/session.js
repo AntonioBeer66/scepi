@@ -53,19 +53,32 @@ export function startSession({
   view.hidden = false;
   document.body.classList.add("is-playing");
 
-  // Bots et délais tournent dans un worker (voir host-worker.js).
-  const hostWorker = new Worker(new URL("./host-worker.js", import.meta.url), {
-    type: "module",
-  });
-  hostWorker.onmessage = ({ data }) => {
-    // Décision prise sur un état déjà dépassé (le jeu a avancé pendant
-    // l'aller-retour) : le serveur la refuserait, inutile de l'envoyer.
-    if (stopped || data.tour !== client.getState()?.G.tour) return;
-    client.moves.pourSiege(data.seat, data.action);
-  };
+  // Bots et délais tournent dans un worker (voir host-worker.js), créé
+  // seulement si ce navigateur devient hôte ; « stop » n'est envoyé qu'en
+  // perdant ce rôle, pas à chaque coup.
+  let hostWorker = null;
+  let hosting = false;
   const host = {
-    update: (G) => hostWorker.postMessage({ type: "update", G }),
-    stop: () => hostWorker.postMessage({ type: "stop" }),
+    update(G) {
+      if (!hostWorker) {
+        hostWorker = new Worker(new URL("./host-worker.js", import.meta.url), {
+          type: "module",
+        });
+        hostWorker.onmessage = ({ data }) => {
+          // Décision prise sur un état déjà dépassé (le jeu a avancé pendant
+          // l'aller-retour) : le serveur la refuserait, inutile de l'envoyer.
+          if (stopped || data.tour !== client.getState()?.G.tour) return;
+          client.moves.pourSiege(data.seat, data.action);
+        };
+      }
+      hosting = true;
+      hostWorker.postMessage({ type: "update", G });
+    },
+    stop() {
+      if (!hosting) return;
+      hosting = false;
+      hostWorker.postMessage({ type: "stop" });
+    },
   };
   const table = createTable(view.querySelector("#coinche-stage"), {
     me,
@@ -121,7 +134,7 @@ export function startSession({
       }
       return;
     }
-    if (!G.seats) return;
+    if (!G.seats || G === prev) return; // même état notifié deux fois
     if (G.hote === me) {
       if (prev && G.donneNumero < prev.donneNumero) host.stop(); // partie relancée
       host.update(G);
@@ -139,7 +152,7 @@ export function startSession({
     if (stopped) return;
     stopped = true;
     unsubscribe();
-    hostWorker.terminate();
+    hostWorker?.terminate();
     // Partie solo abandonnée : rien ne reste dans le navigateur.
     // (wipe() de boardgame.io oublie le journal et l'état initial.)
     const db = !online && client.transport.master?.storageAPI;

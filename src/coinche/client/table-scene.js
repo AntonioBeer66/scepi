@@ -30,8 +30,8 @@ const CARD_RATIO = CARD_PX.h / CARD_PX.w;
 const POT = 512; // texture carrée puissance de deux : mipmaps possibles
 const SHADOW_K = 1.35; // l'ombre floue déborde de la carte
 const DRAG_MIN = 8; // px : en deçà, un clic ; au-delà, un glisser
-const TRICK_PAUSE_MS = 1100; // pli complet affiché, gagnant en évidence
-const COLLECT_MS = 550; // puis ramassé (total : TRICK_SHOW_MS de host.js)
+const TRICK_PAUSE_MS = 600; // pli complet affiché, gagnant en évidence
+const COLLECT_MS = 300; // puis ramassé (total : TRICK_SHOW_MS de host.js)
 const CARD_IDS = SUITS.flatMap((s) => RANKS.map((r) => r + s));
 const FAN_STEP = Phaser.Math.DegToRad(6.5);
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
@@ -138,7 +138,9 @@ function bakeTextures(scene) {
 export function createTable(parent, { me, onPlay }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const dur = (ms) => (reduced ? 0 : ms);
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  // 2× au plus : au-delà, plus de deux fois plus de pixels à peindre pour
+  // un gain invisible à distance d'écran.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
   // Spectateur (me = -1) : la table vue depuis le siège 0.
   const anchor = me < 0 ? 0 : me;
   const posOf = (seat) => (seat - anchor + 4) % 4;
@@ -412,15 +414,23 @@ export function createTable(parent, { me, onPlay }) {
     }
   }
 
-  // Anneau-chrono autour de l'avatar actif (redessiné à chaque image).
+  // Anneau-chrono autour de l'avatar actif : vérifié à chaque image, retracé
+  // seulement quand il a bougé d'un degré (une dizaine de fois par seconde).
+  let ringKey = "";
   function drawRing() {
+    let frac = 0;
+    let key = "";
+    if (G && L && timer?.total && (G.phase === "ENCHERES" || G.phase === "JEU")) {
+      frac = Math.max(
+        0,
+        Math.min(1, (timer.start + timer.total - performance.now()) / timer.total),
+      );
+      key = `${G.joueurActif}/${Math.round(frac * 360)}/${L.W}x${L.H}`;
+    }
+    if (key === ringKey) return;
+    ringKey = key;
     ring.clear();
-    if (!G || !L || !timer || !timer.total) return;
-    if (G.phase !== "ENCHERES" && G.phase !== "JEU") return;
-    const frac = Math.max(
-      0,
-      Math.min(1, (timer.start + timer.total - performance.now()) / timer.total),
-    );
+    if (!key) return;
     const { x, y } = L.seat[posOf(G.joueurActif)];
     ring.lineStyle(4, frac < 0.2 ? COLORS.danger : COLORS.gold, 1);
     ring.beginPath();
@@ -444,13 +454,24 @@ export function createTable(parent, { me, onPlay }) {
     };
   }
 
+  // Main triée et cartes jouables : calculées une fois par état reçu, pas à
+  // chaque survol (placeHand est rappelé à chaque entrée/sortie de carte).
+  let cacheFor = null;
+  let sorted = [];
+  let legal = null; // ids jouables, ou null hors de votre tour de jeu
+  function handState() {
+    if (cacheFor !== G) {
+      cacheFor = G;
+      sorted = sortHand((G.hands[me] || []).filter(Boolean), G.contract?.atout);
+      legal = myTurnToPlay()
+        ? new Set(computeLegal(sorted, G.pliCourant, G.contract.atout, me).map((c) => c.id))
+        : null;
+    }
+    return { cards: sorted, legal };
+  }
+
   const isPlayable = (id) =>
-    G &&
-    myTurnToPlay() &&
-    performance.now() >= blockedUntil &&
-    computeLegal(G.hands[me], G.pliCourant, G.contract.atout, me).some(
-      (x) => x.id === id,
-    );
+    G && performance.now() >= blockedUntil && !!handState().legal?.has(id);
 
   // Carte de la main : clic pour la jouer, ou glisser-déposer vers le tapis
   // (lâchée au-dessus de la main : jouée ; sinon elle reprend sa place).
@@ -463,7 +484,7 @@ export function createTable(parent, { me, onPlay }) {
     // Sinon, soulevée, elle glisserait sous le curseur au profit de sa
     // voisine, qui se soulèverait à son tour, et ainsi de suite.
     const zone = scene.add.zone(0, 0, 1, 1);
-    const o = { box, halo, zone, img: box.img, shadow: box.shadow, index: -1 };
+    const o = { box, halo, zone, index: -1, key: null };
     zone.setInteractive({ useHandCursor: true, draggable: true });
     zone.on("pointerover", () => {
       hoverId = id;
@@ -480,6 +501,7 @@ export function createTable(parent, { me, onPlay }) {
     zone.on("dragstart", (pointer) => {
       if (!isPlayable(id)) return;
       scene.tweens.killTweensOf(box);
+      o.key = null; // déplacée à la main : à replacer ensuite
       o.drag = { dx: box.x - pointer.worldX, dy: box.y - pointer.worldY };
       box.setDepth(90);
       scene.tweens.add({
@@ -506,7 +528,7 @@ export function createTable(parent, { me, onPlay }) {
   }
 
   function placeHand(animateDeal) {
-    const cards = sortHand((G.hands[me] || []).filter(Boolean), G.contract?.atout);
+    const { cards, legal } = handState();
     const ids = new Set(cards.map((c) => c.id));
     for (const [id, o] of hand)
       if (!ids.has(id)) {
@@ -514,11 +536,6 @@ export function createTable(parent, { me, onPlay }) {
         o.zone.destroy();
         hand.delete(id);
       }
-    const legal = myTurnToPlay()
-      ? new Set(
-          computeLegal(cards, G.pliCourant, G.contract.atout, me).map((c) => c.id),
-        )
-      : null;
     const n = cards.length;
     const dealer = L.seat[posOf(G.donneur)];
     cards.forEach((c, i) => {
@@ -533,9 +550,13 @@ export function createTable(parent, { me, onPlay }) {
       o.index = i;
       const isLegal = legal ? legal.has(c.id) : false;
       const lifted = isLegal && (hoverId === c.id || focusId === c.id);
+      // Rien n'a changé pour cette carte : ni retracé ni ré-animé.
+      const key = `${i}/${n}/${isLegal}/${lifted}/${!!legal}/${L.W}x${L.H}`;
+      if (o.key === key) return;
+      o.key = key;
       sizeCard(o.box, L.cardW, L.cardH);
-      o.img.setTint(legal && !isLegal ? 0x8a8499 : 0xffffff);
-      o.shadow.setAlpha(lifted ? 0.75 : 0.55);
+      o.box.img.setTint(legal && !isLegal ? 0x8a8499 : 0xffffff);
+      o.box.shadow.setAlpha(lifted ? 0.75 : 0.55);
       o.halo.clear();
       // Liseré doré des cartes jouables ; la carte survolée rayonne en plus
       // (contours de plus en plus larges et transparents). Dessiné à la main :
@@ -572,7 +593,7 @@ export function createTable(parent, { me, onPlay }) {
       if (fresh && animateDeal && !reduced) {
         // Distribuée face cachée depuis le donneur, puis retournée.
         o.dealing = true;
-        o.img.setTexture("c:back", "f");
+        o.box.img.setTexture("c:back", "f");
         sizeCard(o.box, L.cardW, L.cardH);
         o.box.setPosition(dealer.x, dealer.y).setScale(0.3).setAlpha(0).setRotation(0);
         scene.tweens.chain({
@@ -584,23 +605,24 @@ export function createTable(parent, { me, onPlay }) {
               rotation: s.a,
               scale: 1,
               alpha: 1,
-              delay: i * 70,
-              duration: 380,
+              delay: i * 40,
+              duration: 260,
               ease: "Cubic.easeOut",
             },
-            { scaleX: 0, duration: 110, ease: "Sine.easeIn" },
+            { scaleX: 0, duration: 80, ease: "Sine.easeIn" },
             {
               scaleX: 1,
-              duration: 130,
+              duration: 90,
               ease: "Sine.easeOut",
               onStart: () => {
-                o.img.setTexture(`c:${c.id}`, "f");
+                o.box.img.setTexture(`c:${c.id}`, "f");
                 sizeCard(o.box, L.cardW, L.cardH);
               },
             },
           ],
           onComplete: () => {
             o.dealing = false;
+            o.key = null; // posée par la distribution : à recaler
             if (G) placeHand(false);
           },
         });
@@ -615,7 +637,7 @@ export function createTable(parent, { me, onPlay }) {
           rotation: s.a,
           scale: lifted ? 1.04 : 1,
           alpha: 1,
-          duration: dur(moved ? 520 : 200),
+          duration: dur(moved ? 340 : 140),
           ease: moved ? "Cubic.easeInOut" : "Cubic.easeOut",
         });
       }
@@ -646,7 +668,7 @@ export function createTable(parent, { me, onPlay }) {
       y: to.y,
       rotation: end,
       scale: 1,
-      duration: dur(420),
+      duration: dur(280),
       ease: "Quart.easeOut",
     });
     trick.set(carte.id, box);
@@ -662,7 +684,7 @@ export function createTable(parent, { me, onPlay }) {
     blockedUntil = performance.now() + dur(TRICK_PAUSE_MS + COLLECT_MS);
     const winner = lastTrick.cards.find((e) => e.siege === lastTrick.winnerSeat);
     const top = boxes.find((b) => b.id === winner?.carte.id);
-    scene.time.delayedCall(dur(450), () => {
+    scene.time.delayedCall(dur(250), () => {
       if (!top?.active) return;
       top.setDepth(15);
       halo
@@ -679,7 +701,7 @@ export function createTable(parent, { me, onPlay }) {
       scene.tweens.add({
         targets: [top, halo],
         scale: 1.08,
-        duration: dur(160),
+        duration: dur(120),
         yoyo: true,
         ease: "Sine.easeInOut",
       });

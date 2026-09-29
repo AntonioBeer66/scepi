@@ -18,8 +18,8 @@ import {
 const RED_SUITS = new Set(["H", "D"]);
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
 const FLASH = {
-  coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1600 },
-  surcoinche: { src: "../../assets/images/coinche/surcoinched.mp4", ms: 2900 },
+  coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1100 },
+  surcoinche: { src: "../../assets/images/coinche/surcoinched.mp4", ms: 1700 },
 };
 const ICONS = {
   history:
@@ -55,6 +55,13 @@ function suitSpan(s) {
 
 export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard }) {
   const root = view.querySelector("#game-hud");
+  // Barre de jeu, panneau, résultat, enchères, boutons des cartes (voir paint).
+  const painted = [];
+  const slots = [0, 1, 2, 3, 4].map(() => {
+    const el = document.createElement("div");
+    el.className = "cg-slot";
+    return root.appendChild(el);
+  });
   const announcer = view.querySelector("#game-announce");
   const ui = {
     suit: null,
@@ -350,13 +357,30 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
       .join("")}</div>`;
   }
 
-  function render() {
+  // Une zone par partie du HUD, remplacée seulement si son contenu change :
+  // un coup de bot ne rejoue pas l'apparition de la barre d'enchères ni
+  // ne fait perdre le focus clavier.
+  function paint(parts) {
     const focusKey = root.contains(document.activeElement)
       ? document.activeElement.dataset.focusKey
       : null;
-    root.innerHTML = `${renderTopbar()}${renderPanel()}${renderBanner()}${renderBidbar()}${renderHandButtons()}`;
-    if (focusKey)
+    parts.forEach((html, i) => {
+      if (painted[i] === html) return;
+      slots[i].innerHTML = html;
+      painted[i] = html;
+    });
+    if (focusKey && !root.contains(document.activeElement))
       root.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`)?.focus();
+  }
+
+  function render() {
+    paint([
+      renderTopbar(),
+      renderPanel(),
+      renderBanner(),
+      renderBidbar(),
+      renderHandButtons(),
+    ]);
   }
 
   // ---- Événements ----------------------------------------------------------------
@@ -418,8 +442,14 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
 
   return {
     waiting() {
-      root.innerHTML = `<div class="cg-topbar"><div class="cg-top-left"><span class="cg-contract is-empty">Table en préparation</span></div>
-        <div class="cg-top-right"><button type="button" class="cg-icon" data-action="quit" aria-label="Quitter">${ICONS.quit}<span>Quitter</span></button></div></div>`;
+      paint([
+        `<div class="cg-topbar"><div class="cg-top-left"><span class="cg-contract is-empty">Table en préparation</span></div>
+        <div class="cg-top-right"><button type="button" class="cg-icon" data-action="quit" aria-label="Quitter">${ICONS.quit}<span>Quitter</span></button></div></div>`,
+        "",
+        "",
+        "",
+        "",
+      ]);
     },
     update(next, prev) {
       G = next;

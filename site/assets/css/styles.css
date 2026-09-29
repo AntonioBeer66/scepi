@@ -275,78 +275,25 @@ a {
   background: #ffdc40;
   transform: translateY(-2px);
 }
-.text-link {
-  font-size: 13px;
-  padding: 15px 0;
-}
-.text-link span {
-  margin-left: 16px;
-}
-.text-link:hover {
-  color: var(--gold);
-}
-.hero-note {
-  margin-top: 42px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  color: var(--muted);
-  font-size: 12px;
-}
-.hero-note > span {
-  color: var(--gold);
-  font-size: 20px;
-}
-.hero-emblem {
-  position: relative;
-  isolation: isolate;
-  min-height: 440px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(ellipse, #7a481621, transparent 65%);
-}
-.hero-emblem > img {
-  width: 360px;
-  max-width: 76%;
-  position: relative;
-  filter: drop-shadow(0 16px 35px #0006);
-}
+
+
+
+
+
+
+
 .orbit {
   position: absolute;
   border: 1px solid #a997c51e;
   border-radius: 50%;
   z-index: -1;
 }
-.orbit-one {
-  width: 95%;
-  aspect-ratio: 1;
-  max-width: 430px;
-}
-.orbit-two {
-  width: 75%;
-  aspect-ratio: 1;
-  max-width: 350px;
-}
+
+
 .hero-emblem:before,
-.hero-emblem:after {
-  content: "";
-  position: absolute;
-  background: var(--line);
-  z-index: -1;
-}
-.hero-emblem:before {
-  height: 1px;
-  left: 0;
-  right: 0;
-  top: 50%;
-}
-.hero-emblem:after {
-  width: 1px;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-}
+
+
+
 .coordinate {
   position: absolute;
   font-size: 9px;
@@ -365,16 +312,8 @@ a {
   position: absolute;
   color: var(--gold);
 }
-.star-a {
-  top: 36px;
-  left: 32px;
-  font-size: 25px;
-}
-.star-b {
-  bottom: 45px;
-  right: 20px;
-  font-size: 27px;
-}
+
+
 .ticker {
   border-block: 1px solid var(--line);
   display: flex;
@@ -826,21 +765,8 @@ a {
   color: var(--green);
   font-size: 11px;
 }
-.seat-occupant.cpu {
-  color: #9fb598;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.cpu-badge {
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 9px;
-  border: 1px solid #4c6a41;
-  color: #a7d49a;
-  border-radius: 4px;
-  padding: 2px 6px;
-  letter-spacing: 0.08em;
-}
+
+
 .seat-join-form {
   display: flex;
   gap: 6px;
@@ -2263,24 +2189,9 @@ a {
   font-size: 18px;
   max-width: none;
 }
-.about-panel {
-  display: grid;
-  grid-template-columns: 0.8fr 1fr;
-  gap: 60px;
-  align-items: center;
-  padding: 40px 60px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background:
-    radial-gradient(ellipse at 88% -14%, #f4c60016, transparent 55%),
-    var(--surface);
-}
-.about-emblem {
-  text-align: center;
-}
-.about-emblem img {
-  width: 280px;
-}
+
+
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -2298,36 +2209,9 @@ a {
   grid-template-columns: repeat(3, 1fr);
   gap: 24px;
 }
-.portrait-placeholder {
-  height: 210px;
-  background:
-    radial-gradient(1px 1px at 20% 30%, #f4c60040, transparent),
-    radial-gradient(1px 1px at 75% 65%, #ffffff30, transparent),
-    radial-gradient(1.5px 1.5px at 55% 20%, #f4c60030, transparent),
-    linear-gradient(135deg, #231735, #171020);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  margin-bottom: 22px;
-  overflow: hidden;
-}
-.portrait-placeholder b {
-  font-size: 80px;
-  color: #776086;
-}
-.portrait-placeholder span {
-  position: absolute;
-  top: 16px;
-  left: 18px;
-  right: 18px;
-  color: var(--muted);
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-}
+
+
+
 .crew-card h3 {
   margin-bottom: 8px;
 }
@@ -2340,18 +2224,8 @@ a {
 .highlight-grid {
   grid-template-columns: repeat(2, 1fr);
 }
-.join-panel {
-  margin-top: 60px;
-  padding: 42px 0;
-  border-top: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-}
-.join-panel h2 {
-  margin: 0;
-}
+
+
 .green-pill {
   border-color: #39ff1440;
   color: #b7d4af;
@@ -2660,9 +2534,7 @@ a {
   .hero {
     gap: 10px;
   }
-  .hero-emblem {
-    min-height: 350px;
-  }
+
   .header nav {
     gap: 24px;
   }
@@ -2740,24 +2612,11 @@ a {
   .hero-copy > p {
     font-size: 14px;
   }
-  .hero-note {
-    margin-top: 26px;
-  }
-  .hero-emblem {
-    min-height: 295px;
-    width: 100%;
-    max-width: 380px;
-    justify-self: center;
-  }
-  .hero-emblem > img {
-    width: 230px;
-  }
-  .orbit-one {
-    width: 275px;
-  }
-  .orbit-two {
-    width: 220px;
-  }
+
+
+
+
+
   .coordinate {
     font-size: 8px;
   }
@@ -2769,18 +2628,9 @@ a {
     left: 0;
     bottom: 0;
   }
-  .hero-emblem:after {
-    top: 10px;
-    bottom: 10px;
-  }
-  .star-a {
-    left: 18px;
-    top: 35px;
-  }
-  .star-b {
-    right: 15px;
-    bottom: 20px;
-  }
+
+
+
   .actions {
     gap: 22px;
     margin-top: 24px;
@@ -2790,9 +2640,7 @@ a {
     padding: 14px 17px;
     gap: 18px;
   }
-  .text-link {
-    font-size: 12px;
-  }
+
   .ticker {
     justify-content: center;
     gap: 13px;
@@ -2901,26 +2749,14 @@ a {
   .page-intro p {
     font-size: 16px;
   }
-  .about-panel {
-    grid-template-columns: 1fr;
-    gap: 30px;
-    padding: 30px;
-  }
-  .about-emblem img {
-    width: 210px;
-  }
+
+
   .crew-grid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  .portrait-placeholder {
-    height: 180px;
-  }
-  .join-panel {
-    align-items: start;
-    flex-direction: column;
-    margin-top: 30px;
-  }
+
+
   .table-preview {
     height: 260px;
     width: calc(100% - 30px);
@@ -2969,9 +2805,7 @@ a {
   .contact-icon {
     margin-bottom: 22px;
   }
-  .desktop-break {
-    display: none;
-  }
+
   .slider-slide {
     padding-top: 20vh;
   }
@@ -3117,6 +2951,10 @@ body.is-playing .rules-btn {
 }
 .game-view[hidden] {
   display: none !important;
+}
+/* Zones du HUD (hud.js) : sans boîte propre, la mise en page les ignore. */
+.cg-slot {
+  display: contents;
 }
 .coinche-stage {
   position: relative;
@@ -3536,13 +3374,13 @@ body.is-playing .rules-btn {
   text-align: center;
 }
 
-/* Finitions : verre dépoli sur la table, retours au survol. */
+/* Finitions : panneaux presque opaques sur la table (pas de flou
+   d'arrière-plan : le canevas est redessiné à chaque image, le flou serait
+   recalculé en continu), retours au survol. */
 .cg-bidbar,
 .cg-panel,
 .cg-banner {
-  background: #120d20d6;
-  -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  backdrop-filter: blur(14px) saturate(1.2);
+  background: #120d20f2;
 }
 .cg-chip,
 .cg-btn,

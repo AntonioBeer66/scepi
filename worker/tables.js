@@ -44,10 +44,16 @@ export class Tables extends DurableObject {
       .some((ws) => ws.deserializeAttachment()?.seat === seat);
   }
 
+  // Places d'une partie, pour ses clients (même forme que dans la liste).
   players(id) {
-    return this.tables
-      .list((m, s) => this.connected(m, s))
-      .find((t) => t.matchID === id).players;
+    const live = new Set(
+      this.ctx.getWebSockets(id).map((ws) => ws.deserializeAttachment()?.seat),
+    );
+    return this.tables.get(id).players.map((p, s) => ({
+      id: s,
+      name: p.name,
+      isConnected: live.has(s),
+    }));
   }
 
   save(id) {
@@ -55,11 +61,12 @@ export class Tables extends DurableObject {
     return m ? this.ctx.storage.put(KEY(id), m) : this.ctx.storage.delete(KEY(id));
   }
 
-  send(ws, id) {
+  // players : calculé une fois par diffusion, pas une fois par client.
+  send(ws, id, players = this.players(id)) {
     const att = ws.deserializeAttachment();
     if (!att?.ready) return;
     try {
-      ws.send(JSON.stringify({ type: "state", ...this.tables.view(id, att.seat), players: this.players(id) }));
+      ws.send(JSON.stringify({ type: "state", ...this.tables.view(id, att.seat), players }));
     } catch {
       // WebSocket déjà fermée : le nettoyage suivra
     }
@@ -67,7 +74,8 @@ export class Tables extends DurableObject {
 
   broadcast(id) {
     if (!this.tables.get(id)) return;
-    for (const ws of this.ctx.getWebSockets(id)) this.send(ws, id);
+    const players = this.players(id);
+    for (const ws of this.ctx.getWebSockets(id)) this.send(ws, id, players);
   }
 
   async maintain() {

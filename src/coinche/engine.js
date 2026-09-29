@@ -41,7 +41,7 @@ export const DURATION_MS = {
   ENCHERES: 30000,
   JEU: 30000,
   SURCOINCHE: 10000,
-  SCORE: 8000, // récapitulatif de la donne
+  SCORE: 4000, // récapitulatif de la donne
 };
 export const WIN_SCORE = 1010;
 

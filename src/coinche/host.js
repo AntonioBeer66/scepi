@@ -3,12 +3,12 @@
 // affiché 5 s). Tourne dans le navigateur du joueur hôte (voir game.js,
 // G.hote), ou dans le simulateur des tests avec une horloge virtuelle :
 // c'est le même code, donc les bots testés sont ceux qu'on joue.
-// Les délais des bots imitent un joueur (0,6 à 1,5 s pour jouer, 0,7 à 2,9 s
+// Les délais des bots imitent un joueur vif (0,35 à 0,8 s pour jouer, 0,5 à 1,7 s
 // pour réfléchir à une coinche) ; après un pli complet, tout attend que
 // l'écran l'ait montré puis ramassé.
 import { DURATION_MS, bots, teamOf } from "./engine.js";
 
-export const TRICK_SHOW_MS = 1650; // pli complet affiché (1,1 s) puis ramassé
+export const TRICK_SHOW_MS = 900; // pli complet affiché (0,6 s) puis ramassé
 
 // send(seat, action) transmet une action (seat null pour TIMEOUT).
 // decide : décisions des bots (les duels A/B en branchent d'autres).
@@ -61,7 +61,7 @@ export function createHost({
         if (G.tour === t) send(null, { type: "TIMEOUT", tour: t });
       });
       if ((G.phase === "ENCHERES" || G.phase === "JEU") && isBot(seat)) {
-        later(pause + 600 + random() * 900, () => {
+        later(pause + 350 + random() * 450, () => {
           if (G.tour === t) botSend(seat, decide.turnAction);
         });
       }
@@ -69,7 +69,7 @@ export function createHost({
         const id = G.contract.id;
         for (const s of [0, 1, 2, 3]) {
           if (teamOf(s) !== G.contract.equipePreneur || !isBot(s)) continue;
-          later(400 + random() * 3200, () => {
+          later(300 + random() * 1500, () => {
             if (
               G.phase === "SURCOINCHE" &&
               G.contract.id === id &&
@@ -88,7 +88,7 @@ export function createHost({
       const id = c.id;
       for (const s of [0, 1, 2, 3]) {
         if (teamOf(s) === c.equipePreneur || !isBot(s)) continue;
-        later(700 + random() * 2200, () => {
+        later(500 + random() * 1200, () => {
           if (
             G.phase === "ENCHERES" &&
             G.contract?.id === id &&
