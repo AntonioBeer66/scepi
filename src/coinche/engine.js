@@ -29,8 +29,8 @@ const RANK_NAME = {
 };
 const TRUMP_POINTS = { J: 20, 9: 14, A: 11, 10: 10, K: 4, Q: 3, 8: 0, 7: 0 };
 const PLAIN_POINTS = { A: 11, 10: 10, K: 4, Q: 3, J: 2, 9: 0, 8: 0, 7: 0 };
-const TRUMP_FORCE = { J: 8, 9: 7, A: 6, 10: 5, K: 4, Q: 3, 8: 2, 7: 1 };
-const PLAIN_FORCE = { A: 8, 10: 7, K: 6, Q: 5, J: 4, 9: 3, 8: 2, 7: 1 };
+export const TRUMP_FORCE = { J: 8, 9: 7, A: 6, 10: 5, K: 4, Q: 3, 8: 2, 7: 1 };
+export const PLAIN_FORCE = { A: 8, 10: 7, K: 6, Q: 5, J: 4, 9: 3, 8: 2, 7: 1 };
 export const ALLOWED_BIDS = [
   80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270,
 ];
@@ -41,7 +41,7 @@ export const DURATION_MS = {
   ENCHERES: 30000,
   JEU: 30000,
   SURCOINCHE: 10000,
-  SCORE: 5000,
+  SCORE: 8000, // récapitulatif de la donne
 };
 export const WIN_SCORE = 1010;
 
@@ -1703,6 +1703,12 @@ function computeScore() {
     atout: G.contract.atout,
     multiplicateur: G.multiplicateur,
     generale: !!G.contract.generale,
+    // Détail pour le récapitulatif affiché (par équipe).
+    preneur: G.contract.preneur,
+    points: G.pointsPlis.slice(),
+    plis: G.plisGagnes.slice(),
+    belote: beloteValide,
+    gains: preneurs === 0 ? [gainPreneurs, gainDefense] : [gainDefense, gainPreneurs],
   };
   G.history.unshift({
     donne: G.donneNumero - 1,

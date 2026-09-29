@@ -11,6 +11,7 @@ const SERVER =
   import.meta.env.VITE_COINCHE_SERVER ||
   `${location.protocol}//${location.hostname}:8001`;
 const SESSION_KEY = "scepi-coinche-session";
+const SOLO_KEY = "scepi-coinche-solo-match";
 const SEAT_LABELS = ["Nord", "Est", "Sud", "Ouest"];
 const SEAT_TEAM = ["Équipe A", "Équipe B", "Équipe A", "Équipe B"];
 const POLL_MS = 3000;
@@ -93,7 +94,12 @@ function render() {
     status.textContent = "";
   }
   const list = (tables || [])
-    .filter((t) => t.phase === "ATTENTE" || t.matchID === session?.matchID)
+    .filter(
+      (t) =>
+        t.phase === "ATTENTE" ||
+        t.matchID === session?.matchID ||
+        (!session && t.phase !== "TERMINEE"),
+    )
     .sort(
       (a, b) =>
         (a.table ?? 99) - (b.table ?? 99) || a.createdAt - b.createdAt,
@@ -104,12 +110,23 @@ function render() {
       const n = t.table ? t.table : 4 + ++ephemeral;
       const filled = t.players.filter((p) => p.name).length;
       const mine = session?.matchID === t.matchID;
-      return `<article class="lobby ${t.table ? "" : "is-ephemeral"}">
-      <span class="eyebrow">SALON ${String(n).padStart(2, "0")}${t.table ? "" : ' <span class="lobby-temp-tag">TEMPORAIRE</span>'}</span>
+      // Partie en cours chez d'autres : on peut la regarder.
+      const live = t.phase !== "ATTENTE" && !mine;
+      const seats = live
+        ? t.players
+            .map(
+              (p, i) => `<li class="seat-row is-taken"><span class="seat-tag"><b>${SEAT_LABELS[i]}</b><small>${SEAT_TEAM[i]}</small></span>
+            <span class="seat-occupant">${p.name ? esc(p.name) : "Ordinateur"}</span></li>`,
+            )
+            .join("")
+        : t.players.map((p, i) => seatMarkup(t, p, i)).join("");
+      return `<article class="lobby ${t.table ? "" : "is-ephemeral"}${live ? " is-live" : ""}">
+      <span class="eyebrow">SALON ${String(n).padStart(2, "0")}${t.table ? "" : ' <span class="lobby-temp-tag">TEMPORAIRE</span>'}${live ? ' <span class="lobby-live-tag">EN JEU</span>' : ""}</span>
       <h3>${esc(tableLabel(t, ephemeral))}</h3>
-      <ul class="seat-list">${t.players.map((p, i) => seatMarkup(t, p, i)).join("")}</ul>
-      <p class="caption">${filled}/4 places occupées · 2 équipes</p>
+      <ul class="seat-list">${seats}</ul>
+      <p class="caption">${live ? "Partie en cours" : `${filled}/4 places occupées`} · 2 équipes</p>
       ${mine && t.phase === "ATTENTE" ? `<button type="button" class="button primary seat-btn" data-action="start" data-match="${esc(t.matchID)}">Lancer la partie</button>` : ""}
+      ${live ? `<button type="button" class="button outline seat-btn" data-action="watch" data-match="${esc(t.matchID)}">Regarder</button>` : ""}
     </article>`;
     })
     .join("");
@@ -162,7 +179,23 @@ async function act(fn) {
   }
 }
 
-async function enterGame({ online, launch = false }) {
+// Partie solo en cours (identifiant boardgame.io), pour la reprendre après
+// un rechargement ; oubliée en quittant.
+function soloID(fresh) {
+  try {
+    // Nouvelle partie : on repart d'un stockage vide (voir session.js).
+    if (fresh)
+      for (const k of ["state", "initial", "metadata", "log"])
+        localStorage.removeItem(`scepi-coinche-solo_${k}`);
+    let id = fresh ? null : localStorage.getItem(SOLO_KEY);
+    if (!id) localStorage.setItem(SOLO_KEY, (id = `solo-${Date.now()}`));
+    return id;
+  } catch {
+    return `solo-${Date.now()}`;
+  }
+}
+
+async function enterGame({ online, launch = false, fresh = false, watch = null }) {
   clearTimeout(pollTimer);
   const { startSession } = await import("./session.js");
   $("#lobby-section").hidden = true;
@@ -171,6 +204,8 @@ async function enterGame({ online, launch = false }) {
     launch,
     server: SERVER,
     session,
+    soloID: online ? null : soloID(fresh),
+    watch,
     seatsFromTable: () =>
       (tables || [])
         .find((t) => t.matchID === session?.matchID)
@@ -179,8 +214,14 @@ async function enterGame({ online, launch = false }) {
         ),
     onExit: async () => {
       playing = null;
+      if (!online)
+        try {
+          localStorage.removeItem(SOLO_KEY);
+        } catch {
+          // stockage indisponible : rien à oublier
+        }
       $("#lobby-section").hidden = false;
-      if (online && session) {
+      if (online && session && !watch) {
         const { matchID, playerID, credentials } = session;
         session = null;
         saveSession(null);
@@ -216,7 +257,12 @@ function init() {
 
   grid.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
-    if (!button || !session) return;
+    if (!button) return;
+    if (button.dataset.action === "watch" && !session && !playing) {
+      enterGame({ online: true, watch: button.dataset.match });
+      return;
+    }
+    if (!session) return;
     if (button.dataset.action === "leave") {
       const { matchID, playerID, credentials } = session;
       act(async () => {
@@ -234,12 +280,22 @@ function init() {
     act(() => lobbyClient.createMatch("coinche", { numPlayers: 4 }));
   });
 
-  $("#solo-btn")?.addEventListener("click", () => {
+  const soloBtn = $("#solo-btn");
+  soloBtn?.addEventListener("click", () => {
     if (playing) return;
-    enterGame({ online: false });
+    enterGame({ online: false, fresh: true });
   });
+  if (soloBtn) soloBtn.disabled = false;
 
-  poll();
+  // Rechargé en pleine partie solo : on y retourne.
+  let resume = null;
+  try {
+    resume = localStorage.getItem(SOLO_KEY);
+  } catch {
+    // stockage indisponible
+  }
+  if (resume && !session) enterGame({ online: false });
+  else poll();
 }
 
 init();

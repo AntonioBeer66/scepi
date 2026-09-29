@@ -66,7 +66,12 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
   let G = null;
   const flashBlobs = {};
 
-  const compass = (s) => COMPASS[(s - me + 4) % 4];
+  // Spectateur (me = -1) : vue depuis le siège 0, équipes nommées.
+  const spectator = me < 0;
+  const anchor = spectator ? 0 : me;
+  const ours = spectator ? 0 : teamOf(me);
+  const [US, THEM] = spectator ? ["Nord-Sud", "Est-Ouest"] : ["Nous", "Eux"];
+  const compass = (s) => COMPASS[(s - anchor + 4) % 4];
   const seatName = (s) =>
     s === me
       ? "Vous"
@@ -111,12 +116,12 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
     if (G.phase === "SCORE" && prev?.phase !== "SCORE" && G.dernierResultat) {
       const r = G.dernierResultat;
       out.push(
-        `${r.reussi ? "Contrat réussi" : "Contrat chuté"} : ${r.gain} points. Nous ${G.scores[teamOf(me)]}, eux ${G.scores[1 - teamOf(me)]}.`,
+        `${r.reussi ? "Contrat réussi" : "Contrat chuté"} : ${r.gain} points. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
       );
     }
     if (G.phase === "TERMINEE" && prev?.phase !== "TERMINEE")
       out.push(
-        `Partie terminée. Nous ${G.scores[teamOf(me)]}, eux ${G.scores[1 - teamOf(me)]}.`,
+        `Partie terminée. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
       );
     if (
       (G.phase === "ENCHERES" || G.phase === "JEU") &&
@@ -169,7 +174,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
   }
 
   function renderTopbar() {
-    const us = teamOf(me);
+    const us = ours;
     const phase = {
       ENCHERES: "Enchères",
       SURCOINCHE: "Surcoinche possible",
@@ -184,13 +189,13 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
       `<button type="button" class="cg-icon" data-action="${action}" data-focus-key="${action}" aria-label="${label}"${pressed === undefined ? "" : ` aria-expanded="${pressed}"`}>${ICONS[icon]}<span>${label}</span></button>`;
     return `<div class="cg-topbar">
       <div class="cg-top-left">${renderContract()}</div>
-      <div class="cg-top-mid"><span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
+      <div class="cg-top-mid">${spectator ? '<span class="cg-watch">Spectateur</span>' : ""}<span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
         (G.phase === "ENCHERES" || G.phase === "JEU") && G.joueurActif === me
           ? '<span class="cg-yourturn">À vous</span>'
           : ""
       }</div>
       <div class="cg-top-right">
-        ${score(us, "Nous")}${score(1 - us, "Eux")}
+        ${score(us, US)}${score(1 - us, THEM)}
         ${iconBtn("toggle-history", "history", "Historique", ui.panel === "history")}
         ${G.lastTrick ? iconBtn("toggle-trick", "trick", "Dernier pli", ui.panel === "trick") : ""}
         ${iconBtn("rules", "rules", "Règles")}
@@ -201,9 +206,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
 
   function renderPanel() {
     if (ui.panel === "history") {
-      const us = teamOf(me);
+      const us = ours;
       return `<div class="cg-panel" role="region" aria-label="Historique des donnes">
-        <div class="cg-panel-scores"><span>Nous <b>${G.scores[us]}</b></span><span>Eux <b>${G.scores[1 - us]}</b></span></div>
+        <div class="cg-panel-scores"><span>${US} <b>${G.scores[us]}</b></span><span>${THEM} <b>${G.scores[1 - us]}</b></span></div>
         ${
           G.history.length
             ? `<ol class="cg-history">${G.history
@@ -227,7 +232,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
       });
       return `<div class="cg-panel" role="region" aria-label="Dernier pli">
         <div class="cg-lasttrick">${[0, 1, 2, 3]
-          .map((p) => (me + p) % 4)
+          .map((p) => (anchor + p) % 4)
           .map(
             (s) => `<figure class="${s === G.lastTrick.winnerSeat ? "is-winner" : ""}">
             <img src="../assets/images/cards/${bySeat[s].id}.png" alt="${esc(cardLabel(bySeat[s]))}">
@@ -243,11 +248,13 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
 
   function renderBidbar() {
     const canCoinche =
+      !spectator &&
       G.phase === "ENCHERES" &&
       G.contract &&
       !G.contract.coinche &&
       teamOf(me) !== G.contract.equipePreneur;
     const canSurcoinche =
+      !spectator &&
       G.phase === "SURCOINCHE" &&
       !G.contract.surcoinche &&
       teamOf(me) === G.contract.equipePreneur;
@@ -293,21 +300,39 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
   // ---- Résultat ------------------------------------------------------------------
 
   function renderBanner() {
-    const us = teamOf(me);
+    const us = ours;
     if (G.phase === "SCORE" && G.dernierResultat) {
       const r = G.dernierResultat;
       const won = (r.reussi ? r.preneurs : 1 - r.preneurs) === us;
-      return `<div class="cg-banner ${won ? "is-win" : "is-loss"}">
+      const them = 1 - us;
+      const row = (label, a, b) =>
+        `<tr><th scope="row">${label}</th><td>${a}</td><td>${b}</td></tr>`;
+      const beloteBy = r.belote ? teamOf(r.preneur) : -1;
+      return `<div class="cg-banner cg-recap ${won ? "is-win" : "is-loss"}">
         <b>${r.reussi ? "Contrat réussi" : "Contrat chuté"}</b>
-        <span>${r.generale ? "Générale" : bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · +${r.gain} pour ${won ? "nous" : "eux"}</span>
+        <span>${r.generale ? "Générale" : bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${esc(seatName(r.preneur))} ${r.preneur === me ? "preniez" : "prenait"}</span>
+        ${
+          r.points
+            ? `<table class="cg-recap-table">
+          <thead><tr><td></td><th scope="col">${US}</th><th scope="col">${THEM}</th></tr></thead>
+          <tbody>
+            ${row("Points des plis", r.points[us], r.points[them])}
+            ${row("Plis", r.plis[us], r.plis[them])}
+            ${r.belote ? row("Belote", beloteBy === us ? "✓" : "", beloteBy === them ? "✓" : "") : ""}
+            ${row("Marqué", `+${r.gains[us]}`, `+${r.gains[them]}`)}
+          </tbody>
+          <tfoot>${row("Total", G.scores[us], G.scores[them])}</tfoot>
+        </table>`
+            : ""
+        }
       </div>`;
     }
     if (G.phase === "TERMINEE") {
       const win = G.scores[us] > G.scores[1 - us];
       return `<div class="cg-banner ${win ? "is-win" : "is-loss"}">
-        <b>${win ? "Victoire !" : "Défaite"}</b>
-        <span>Nous ${G.scores[us]} · Eux ${G.scores[1 - us]}</span>
-        <button type="button" class="cg-btn is-primary" data-action="restart" data-focus-key="restart">Nouvelle partie</button>
+        <b>${spectator ? `Victoire ${win ? US : THEM}` : win ? "Victoire !" : "Défaite"}</b>
+        <span>${US} ${G.scores[us]} · ${THEM} ${G.scores[1 - us]}</span>
+        ${spectator ? "" : '<button type="button" class="cg-btn is-primary" data-action="restart" data-focus-key="restart">Nouvelle partie</button>'}
       </div>`;
     }
     return "";

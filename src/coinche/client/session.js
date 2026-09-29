@@ -4,7 +4,6 @@
 import { Client } from "boardgame.io/client";
 import { Local, SocketIO } from "boardgame.io/multiplayer";
 import { Coinche } from "../game.js";
-import { createHost } from "../host.js";
 import { createHud } from "./hud.js";
 import { createTable } from "./table-scene.js";
 
@@ -15,9 +14,21 @@ const SOLO_SEATS = [
   { type: "bot" },
 ];
 
-export function startSession({ online, launch, server, session, seatsFromTable, onExit }) {
-  const playerID = online ? session.playerID : "0";
-  const me = Number(playerID);
+const SOLO_STORAGE = "scepi-coinche-solo";
+
+export function startSession({
+  online,
+  launch,
+  server,
+  session,
+  soloID,
+  watch, // matchID d'une partie à regarder en spectateur
+  seatsFromTable,
+  onExit,
+}) {
+  // Spectateur : ni place ni identifiants ; le serveur n'envoie aucune main.
+  const playerID = watch ? undefined : online ? session.playerID : "0";
+  const me = watch ? -1 : Number(playerID);
   const client = Client({
     game: Coinche,
     numPlayers: 4,
@@ -26,21 +37,35 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
     ...(online
       ? {
           multiplayer: SocketIO({ server }),
-          matchID: session.matchID,
-          credentials: session.credentials,
+          matchID: watch || session.matchID,
+          credentials: watch ? undefined : session.credentials,
         }
-      : // boardgame.io garde ses serveurs locaux pour toute la page : une
-        // partie solo quittée ne doit pas ressortir à la suivante.
-        { multiplayer: Local(), matchID: `solo-${Date.now()}` }),
+      : // Solo : état gardé dans ce navigateur (reprise après rechargement),
+        // effacé en quittant ; soloID est propre à chaque partie.
+        {
+          multiplayer: Local({ persist: true, storageKey: SOLO_STORAGE }),
+          matchID: soloID,
+        }),
   });
 
   const view = document.querySelector("#game-view");
   view.hidden = false;
   document.body.classList.add("is-playing");
 
-  const host = createHost({
-    send: (seat, action) => client.moves.pourSiege(seat, action),
+  // Bots et délais tournent dans un worker (voir host-worker.js).
+  const hostWorker = new Worker(new URL("./host-worker.js", import.meta.url), {
+    type: "module",
   });
+  hostWorker.onmessage = ({ data }) => {
+    // Décision prise sur un état déjà dépassé (le jeu a avancé pendant
+    // l'aller-retour) : le serveur la refuserait, inutile de l'envoyer.
+    if (stopped || data.tour !== client.getState()?.G.tour) return;
+    client.moves.pourSiege(data.seat, data.action);
+  };
+  const host = {
+    update: (G) => hostWorker.postMessage({ type: "update", G }),
+    stop: () => hostWorker.postMessage({ type: "stop" }),
+  };
   const table = createTable(view.querySelector("#coinche-stage"), {
     me,
     onPlay: (id) => client.moves.agir({ type: "JOUER", carte: { id } }),
@@ -83,14 +108,16 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
     if (!state || stopped) return;
     const G = state.G;
     if (G.phase === "ATTENTE") {
-      if (!launched && (launch || !online)) {
+      // L'attente s'affiche avant le lancement : en solo, le transport local
+      // renvoie la partie lancée pendant l'appel à lancer() lui-même.
+      hud.waiting();
+      if (!launched && !watch && (launch || !online)) {
         const seats = online ? seatsFromTable() : SOLO_SEATS;
         if (seats) {
           launched = true;
           client.moves.lancer(seats);
         }
       }
-      hud.waiting();
       return;
     }
     if (!G.seats) return;
@@ -98,7 +125,7 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
       if (prev && G.donneNumero < prev.donneNumero) host.stop(); // partie relancée
       host.update(G);
     } else host.stop();
-    watchSeats(G);
+    if (!watch) watchSeats(G);
     hud.update(G, prev);
     table.update(G, prev);
     prev = G;
@@ -111,7 +138,11 @@ export function startSession({ online, launch, server, session, seatsFromTable, 
     if (stopped) return;
     stopped = true;
     unsubscribe();
-    host.stop();
+    hostWorker.terminate();
+    // Partie solo abandonnée : rien ne reste dans le navigateur.
+    // (wipe() de boardgame.io oublie le journal et l'état initial.)
+    const db = !online && client.transport.master?.storageAPI;
+    if (db) for (const m of [db.state, db.initial, db.metadata, db.log]) m?.delete(soloID);
     client.stop();
     table.destroy();
     hud.destroy();

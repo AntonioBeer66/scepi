@@ -13,13 +13,23 @@
 // Éventail : chaque carte pivote autour d'un point sous la main (angle
 // fixe entre deux cartes, ouverture bornée par la largeur disponible).
 import * as Phaser from "phaser";
-import { RANKS, SUITS, SUIT_SYMBOL, computeLegal, DURATION_MS } from "../engine.js";
+import {
+  RANKS,
+  SUITS,
+  SUIT_SYMBOL,
+  PLAIN_FORCE,
+  TRUMP_FORCE,
+  computeLegal,
+  DURATION_MS,
+  teamOf,
+} from "../engine.js";
 import { TRICK_SHOW_MS } from "../host.js";
 
 const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
 const CARD_RATIO = CARD_PX.h / CARD_PX.w;
 const POT = 512; // texture carrée puissance de deux : mipmaps possibles
 const SHADOW_K = 1.35; // l'ombre floue déborde de la carte
+const DRAG_MIN = 8; // px : en deçà, un clic ; au-delà, un glisser
 const TRICK_PAUSE_MS = 1100; // pli complet affiché, gagnant en évidence
 const COLLECT_MS = 550; // puis ramassé (total : TRICK_SHOW_MS de host.js)
 const CARD_IDS = SUITS.flatMap((s) => RANKS.map((r) => r + s));
@@ -37,14 +47,28 @@ const COLORS = {
 };
 const FONT = 'system-ui, "Segoe UI", sans-serif';
 
-const sortHand = (hand) =>
-  hand
+const isRed = (s) => s === "H" || s === "D";
+
+// Main triée comme on la tient : l'atout à gauche (une fois le contrat
+// connu), puis les couleurs en alternant rouge et noir ; dans chaque
+// couleur, de la plus forte à la plus faible (ordre de l'atout pour l'atout).
+function sortHand(hand, atout) {
+  const present = SUITS.filter((s) => hand.some((c) => c.suit === s));
+  const order = present.includes(atout) ? [atout] : [];
+  const rest = present.filter((s) => s !== atout);
+  while (rest.length) {
+    const last = order[order.length - 1];
+    const i = last ? rest.findIndex((s) => isRed(s) !== isRed(last)) : 0;
+    order.push(rest.splice(Math.max(i, 0), 1)[0]);
+  }
+  const force = (c) => (c.suit === atout ? TRUMP_FORCE : PLAIN_FORCE)[c.rank];
+  return hand
     .slice()
     .sort(
       (a, b) =>
-        SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit) ||
-        RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank),
+        order.indexOf(a.suit) - order.indexOf(b.suit) || force(b) - force(a),
     );
+}
 
 // Petit angle stable par carte, pour un pli posé à la main.
 function tilt(id) {
@@ -98,13 +122,26 @@ function bakeTextures(scene) {
   ctx.roundRect(64 - k / 2, 64 - k / 2, k, k, 10);
   ctx.fill();
   scene.textures.addCanvas("shadow", s);
+  // Étincelle des particules : point lumineux dégradé.
+  const p = document.createElement("canvas");
+  p.width = p.height = 32;
+  const pc = p.getContext("2d");
+  const grad = pc.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, "#fff");
+  grad.addColorStop(0.35, "#fff8");
+  grad.addColorStop(1, "#fff0");
+  pc.fillStyle = grad;
+  pc.fillRect(0, 0, 32, 32);
+  scene.textures.addCanvas("spark", p);
 }
 
 export function createTable(parent, { me, onPlay }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const dur = (ms) => (reduced ? 0 : ms);
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const posOf = (seat) => (seat - me + 4) % 4;
+  // Spectateur (me = -1) : la table vue depuis le siège 0.
+  const anchor = me < 0 ? 0 : me;
+  const posOf = (seat) => (seat - anchor + 4) % 4;
 
   let scene = null;
   let G = null;
@@ -175,8 +212,11 @@ export function createTable(parent, { me, onPlay }) {
       maxSpread,
       handY,
       seat: [
-        // Vous : coin bas gauche, au-dessus de l'éventail.
-        { x: left + r + 18, y: Math.min(bottom - r - 14, handTop - r - 8) },
+        // Vous : coin bas gauche, au-dessus de l'éventail (spectateur : le
+        // joueur Sud en bas au centre, comme Nord en haut).
+        me < 0
+          ? { x: cx, y: bottom - r - 10 }
+          : { x: left + r + 18, y: Math.min(bottom - r - 14, handTop - r - 8) },
         { x: right - r - 14, y: sideY },
         { x: cx, y: top + r + 10 },
         { x: left + r + 14, y: sideY },
@@ -280,11 +320,11 @@ export function createTable(parent, { me, onPlay }) {
         const n = G.hands[seat].length;
         // Décalé vers le centre de la table, le haut des cartes vers le joueur.
         const bw = L.r * 1.1;
-        const dir = [null, [-1, 0], [0, 1], [1, 0]][pos];
+        const dir = [[0, -1], [-1, 0], [0, 1], [1, 0]][pos];
         const off = L.r + bw * 1.1;
         const fan = scene.add
           .container(dir[0] * off, dir[1] * off)
-          .setRotation([0, Math.PI / 2, 0, -Math.PI / 2][pos]);
+          .setRotation([Math.PI, Math.PI / 2, 0, -Math.PI / 2][pos]);
         const bh = bw * CARD_RATIO;
         for (let i = 0; i < n; i++) {
           const a = (i - (n - 1) / 2) * 0.13;
@@ -404,8 +444,70 @@ export function createTable(parent, { me, onPlay }) {
     };
   }
 
+  const isPlayable = (id) =>
+    G &&
+    myTurnToPlay() &&
+    performance.now() >= blockedUntil &&
+    computeLegal(G.hands[me], G.pliCourant, G.contract.atout, me).some(
+      (x) => x.id === id,
+    );
+
+  // Carte de la main : clic pour la jouer, ou glisser-déposer vers le tapis
+  // (lâchée au-dessus de la main : jouée ; sinon elle reprend sa place).
+  function handCard(id) {
+    const box = cardBox(id, L.cardW, L.cardH);
+    const halo = scene.add.graphics();
+    box.addAt(halo, 1);
+    // Halo lumineux (filtre Glow de Phaser 4) sur la carte survolée.
+    const glow = reduced
+      ? null
+      : halo.enableFilters().filters.external.addGlow(COLORS.gold, 5, 0, 1, false, 8, 12);
+    if (glow) glow.active = false;
+    const o = { box, halo, glow, img: box.img, shadow: box.shadow, index: -1 };
+    const img = box.img;
+    img.setInteractive({ useHandCursor: true, draggable: true });
+    img.on("pointerover", () => {
+      hoverId = id;
+      placeHand(false);
+    });
+    img.on("pointerout", () => {
+      if (hoverId === id) hoverId = null;
+      if (!o.drag) placeHand(false);
+    });
+    img.on("pointerup", (pointer) => {
+      if (pointer.getDistance() > DRAG_MIN) return; // fin de glisser : voir dragend
+      if (isPlayable(id)) onPlay(id);
+    });
+    img.on("dragstart", (pointer) => {
+      if (!isPlayable(id)) return;
+      scene.tweens.killTweensOf(box);
+      o.drag = { dx: box.x - pointer.worldX, dy: box.y - pointer.worldY };
+      box.setDepth(90);
+      scene.tweens.add({
+        targets: box,
+        rotation: 0,
+        scale: 1.06,
+        duration: dur(120),
+      });
+    });
+    img.on("drag", (pointer) => {
+      if (!o.drag) return;
+      box.setPosition(pointer.worldX + o.drag.dx, pointer.worldY + o.drag.dy);
+    });
+    img.on("dragend", () => {
+      if (!o.drag) return;
+      o.drag = null;
+      if (box.y < L.handY - L.cardH * 0.75 && isPlayable(id)) {
+        onPlay(id);
+        // Coup refusé (réseau, délai) : la carte reprend sa place.
+        scene.time.delayedCall(800, () => hand.has(id) && placeHand(false));
+      } else placeHand(false);
+    });
+    return o;
+  }
+
   function placeHand(animateDeal) {
-    const cards = sortHand((G.hands[me] || []).filter(Boolean));
+    const cards = sortHand((G.hands[me] || []).filter(Boolean), G.contract?.atout);
     const ids = new Set(cards.map((c) => c.id));
     for (const [id, o] of hand)
       if (!ids.has(id)) {
@@ -418,41 +520,24 @@ export function createTable(parent, { me, onPlay }) {
         )
       : null;
     const n = cards.length;
+    const dealer = L.seat[posOf(G.donneur)];
     cards.forEach((c, i) => {
       let o = hand.get(c.id);
       const fresh = !o;
       if (fresh) {
-        const box = cardBox(c.id, L.cardW, L.cardH);
-        const halo = scene.add.graphics();
-        box.addAt(halo, 1);
-        box.img.setInteractive({ useHandCursor: true });
-        box.img.on("pointerover", () => {
-          hoverId = c.id;
-          placeHand(false);
-        });
-        box.img.on("pointerout", () => {
-          if (hoverId === c.id) hoverId = null;
-          placeHand(false);
-        });
-        box.img.on("pointerup", () => {
-          if (!G || !myTurnToPlay() || performance.now() < blockedUntil) return;
-          const ok = computeLegal(
-            G.hands[me],
-            G.pliCourant,
-            G.contract.atout,
-            me,
-          ).some((x) => x.id === c.id);
-          if (ok) onPlay(c.id);
-        });
-        o = { box, halo, img: box.img, shadow: box.shadow };
+        o = handCard(c.id);
         hand.set(c.id, o);
       }
+      if (o.drag) return;
+      const moved = !fresh && o.index !== i; // main retriée (atout connu)
+      o.index = i;
       const isLegal = legal ? legal.has(c.id) : false;
       const lifted = isLegal && (hoverId === c.id || focusId === c.id);
       sizeCard(o.box, L.cardW, L.cardH);
       o.img.setTint(legal && !isLegal ? 0x8a8499 : 0xffffff);
       o.shadow.setAlpha(lifted ? 0.75 : 0.55);
       o.halo.clear();
+      if (o.glow) o.glow.active = lifted;
       if (isLegal)
         o.halo
           .lineStyle(lifted ? 4 : 3, COLORS.gold, lifted ? 1 : 0.8)
@@ -469,18 +554,41 @@ export function createTable(parent, { me, onPlay }) {
       const y =
         s.y - Math.cos(s.a) * lift + (legal && !isLegal ? L.cardH * 0.05 : 0);
       o.box.setDepth(30 + i + (lifted ? 20 : 0));
-      if (fresh && animateDeal) {
-        o.box.setPosition(L.cx, L.cy).setScale(0.35).setAlpha(0).setRotation(0);
-        scene.tweens.add({
+      if (o.dealing) return; // la distribution la posera
+      if (fresh && animateDeal && !reduced) {
+        // Distribuée face cachée depuis le donneur, puis retournée.
+        o.dealing = true;
+        o.img.setTexture("c:back", "f");
+        sizeCard(o.box, L.cardW, L.cardH);
+        o.box.setPosition(dealer.x, dealer.y).setScale(0.3).setAlpha(0).setRotation(0);
+        scene.tweens.chain({
           targets: o.box,
-          x,
-          y,
-          rotation: s.a,
-          scale: 1,
-          alpha: 1,
-          delay: dur(i * 55),
-          duration: dur(420),
-          ease: "Back.easeOut",
+          tweens: [
+            {
+              x,
+              y,
+              rotation: s.a,
+              scale: 1,
+              alpha: 1,
+              delay: i * 70,
+              duration: 380,
+              ease: "Cubic.easeOut",
+            },
+            { scaleX: 0, duration: 110, ease: "Sine.easeIn" },
+            {
+              scaleX: 1,
+              duration: 130,
+              ease: "Sine.easeOut",
+              onStart: () => {
+                o.img.setTexture(`c:${c.id}`, "f");
+                sizeCard(o.box, L.cardW, L.cardH);
+              },
+            },
+          ],
+          onComplete: () => {
+            o.dealing = false;
+            if (G) placeHand(false);
+          },
         });
       } else if (fresh) {
         o.box.setPosition(x, y).setRotation(s.a);
@@ -493,12 +601,13 @@ export function createTable(parent, { me, onPlay }) {
           rotation: s.a,
           scale: lifted ? 1.04 : 1,
           alpha: 1,
-          duration: dur(200),
-          ease: "Cubic.easeOut",
+          duration: dur(moved ? 520 : 200),
+          ease: moved ? "Cubic.easeInOut" : "Cubic.easeOut",
         });
       }
     });
   }
+
 
   // ---- Pli ------------------------------------------------------------------------
 
@@ -560,6 +669,7 @@ export function createTable(parent, { me, onPlay }) {
         yoyo: true,
         ease: "Sine.easeInOut",
       });
+      if (teamOf(lastTrick.winnerSeat) === teamOf(me)) burst(top.x, top.y, 16);
     });
     scene.time.delayedCall(dur(TRICK_PAUSE_MS), () => {
       halo.destroy();
@@ -612,6 +722,8 @@ export function createTable(parent, { me, onPlay }) {
       clearTrick();
       hand.forEach((o) => o.box.destroy());
       hand.clear();
+      // Reprise en cours de pli (rechargement, reconnexion).
+      if (!prev) G.pliCourant.forEach(flyIn);
     } else {
       const trickDone = G.plisJoues > prev.plisJoues;
       const shown = [...(trickDone ? G.lastTrick.cards : []), ...G.pliCourant];
@@ -620,6 +732,40 @@ export function createTable(parent, { me, onPlay }) {
     }
     placeHand(newDonne);
     drawSeats(false);
+    if (!prev || reduced) return;
+    // Coinche, surcoinche : la table tremble.
+    const c = G.contract;
+    if (
+      (c?.coinche && !prev.contract?.coinche) ||
+      (c?.surcoinche && !prev.contract?.surcoinche)
+    )
+      scene.cameras.main.shake(320, 0.006);
+    // Donne gagnée par notre camp : pluie d'étincelles.
+    const r = G.dernierResultat;
+    if (G.phase === "SCORE" && prev.phase !== "SCORE" && r) {
+      const winners = r.reussi ? r.preneurs : 1 - r.preneurs;
+      if (winners === teamOf(me)) burst(L.cx, L.cy, 60, 1.6);
+    }
+  }
+
+  // Gerbe d'étincelles dorées et vertes (système de particules de Phaser).
+  function burst(x, y, count, power = 1) {
+    if (reduced) return;
+    const e = scene.add
+      .particles(x, y, "spark", {
+        speed: { min: 90 * power, max: 280 * power },
+        angle: { min: 0, max: 360 },
+        lifespan: { min: 500, max: 900 },
+        scale: { start: 0.55, end: 0 },
+        alpha: { start: 1, end: 0 },
+        gravityY: 260,
+        tint: [COLORS.gold, COLORS.gold, 0x8be04e, 0xffffff],
+        blendMode: "ADD",
+        emitting: false,
+      })
+      .setDepth(80);
+    e.explode(count);
+    scene.time.delayedCall(1000, () => e.destroy());
   }
 
   function relayout() {
@@ -660,6 +806,7 @@ export function createTable(parent, { me, onPlay }) {
       scene = this;
       bakeTextures(this);
       this.cameras.main.setOrigin(0, 0).setZoom(dpr);
+      this.input.dragDistanceThreshold = DRAG_MIN;
       ring = this.add.graphics().setDepth(7);
       relayout();
       if (queued) apply(queued);

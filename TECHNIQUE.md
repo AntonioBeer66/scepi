@@ -163,11 +163,12 @@ Le jeu est écrit dans `src/coinche/` et compilé par Vite dans `site/assets/js/
 | --- | --- |
 | `src/coinche/engine.js` | Règles, score et IA des bots (enchères par système + Monte-Carlo). État en JSON pur, sans minuteur ni affichage ; un délai écoulé est une action `TIMEOUT`. |
 | `src/coinche/game.js` | Partie [boardgame.io](https://boardgame.io) : coups validés par le moteur, chaque joueur ne reçoit que sa main (`playerView`). |
-| `src/coinche/host.js` | Hôte de table : fait jouer les bots et envoie les `TIMEOUT`. Tourne dans le navigateur du premier humain assis (il voit donc les mains des bots) ; si l'hôte se déconnecte, un autre humain reprend le rôle. |
-| `src/coinche/client/` | Salons (HTML), commandes (HTML accessible) et table [Phaser](https://phaser.io) (WebGL/Canvas, animations). Phaser n'est chargé qu'au lancement d'une partie. |
+| `src/coinche/host.js` | Hôte de table : fait jouer les bots et envoie les `TIMEOUT`. Tourne dans le navigateur du premier humain assis (il voit donc les mains des bots), dans un Web Worker (`client/host-worker.js`) : la réflexion des bots ne fige pas l'animation et un onglet en arrière-plan ne ralentit pas la table. Si l'hôte se déconnecte, un autre humain reprend le rôle. |
+| `src/coinche/client/` | Salons (HTML), commandes (HTML accessible) et table [Phaser](https://phaser.io) (WebGL, animations, particules, filtre Glow). Phaser n'est chargé qu'au lancement d'une partie. Cartes jouées au clic, au clavier ou par glisser-déposer. |
 | `server/index.js` | Serveur Node.js boardgame.io : salons, WebSocket, 4 tables permanentes, nettoyage des tables abandonnées, plafond de 40 tables. |
 
-- Solo contre trois bots : la partie tourne entièrement dans l'onglet, sans serveur.
+- Solo contre trois bots : la partie tourne entièrement dans l'onglet, sans serveur ; elle est gardée dans le navigateur (reprise après rechargement) et effacée en quittant.
+- Spectateurs : une partie en cours peut être regardée depuis le salon, sans aucune main visible.
 - Les parties vivent en mémoire du serveur : un redémarrage les efface.
 - Déconnexion : la place est gardée, les délais continuent (l'hôte joue d'office à 30 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
 
@@ -178,6 +179,7 @@ npm install
 npm run build     # recompiler le jeu après une modification de src/
 npm run server    # serveur de jeu sur le port 8001
 npm test          # moteur, stratégies des bots, parties de bots, partie boardgame.io
+npm run test:e2e  # partie solo dans un vrai navigateur (Playwright ; Edge/Chrome du poste à défaut)
 ```
 
 Hébergement du serveur à choisir : il faut un processus Node.js permanent, WebSocket et HTTPS (Render, Fly.io, VPS…). Le lancer avec `PORT` et `ORIGINS=https://scepinvaders.com`, puis compiler le site avec `VITE_COINCHE_SERVER=https://adresse-du-serveur npm run build`. Sans variable, le client vise le port 8001 de la même machine que la page.
