@@ -1,5 +1,7 @@
 Projet de site web de SCEPI
 
+**Bêta en ligne : [scepi-beta.scepi-site.workers.dev](https://scepi-beta.scepi-site.workers.dev)** (accès protégé par mot de passe, à demander au bureau).
+
 ## Aperçu de l'interface
 
 Une première ébauche statique des six pages se trouve dans `site/`. Elle applique la direction artistique SCEP Invaders : violet/or, logos existants, mascotte et accents verts pour la coinche. Les illustrations complémentaires sont réalisées en CSS et en SVG, sans images tierces.
@@ -8,15 +10,14 @@ La page d'accueil s'ouvre sur un diaporama plein écran inspiré du style Tesla 
 
 Les textes du site s'appuient sur le rapport d'activité S2 2025-2026 remis à l'ESCP et sur le dossier de financement Switch 2 : mission officielle centrée sur les jeux vidéo, les jeux de société/cartes et les nouvelles technologies (pas d'axe animé), tournoi de poker avec l'Autorité Nationale des Jeux, tournois internes (Mario Kart, Smash Bros), partenariat Nintendo au Career Fair, prêt de la Switch au BDE pour l'ACA.
 
-Depuis la racine du dépôt, lancer un serveur local avec Python :
+Pour tout lancer en local (site et coinche en ligne), double-cliquer sur `launch_site.cmd` (Windows) ou `launch_site.sh` (macOS), ou bien :
 
 ```sh
-python -m http.server 8000 --bind 127.0.0.1 --directory site
+npm install
+npm start
 ```
 
-Ouvrir ensuite `http://127.0.0.1:8000/`. Le dossier `site/` est autonome pour l'hébergement statique : le jeu de coinche y est déjà compilé.
-
-La coinche se joue seul contre l'ordinateur sans rien d'autre. Pour les tables en ligne, lancer aussi le serveur de jeu (`npm install` puis `npm run server`) ; voir le [cadrage technique](TECHNIQUE.md#6-coinche-en-ligne) pour la compilation et l'hébergement.
+Ouvrir ensuite `http://localhost:8000/`. Le site et le serveur de jeu forment un seul Cloudflare Worker ; `npm run deploy` publie la bêta. Voir le [cadrage technique](TECHNIQUE.md#6-coinche-en-ligne) pour l'architecture et l'hébergement.
 
 Pas encore de formulaire, d'inscription ni de connexion Instagram. Les textes sont une proposition de présentation et les informations non fournies restent signalées comme à venir. Les originaux des logos restent dans `Logos/`, avec des copies de diffusion dans `site/assets/images/`.
 
