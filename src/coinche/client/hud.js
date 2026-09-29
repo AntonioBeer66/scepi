@@ -235,7 +235,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard 
           .map((p) => (anchor + p) % 4)
           .map(
             (s) => `<figure class="${s === G.lastTrick.winnerSeat ? "is-winner" : ""}">
-            <img src="../../assets/images/cards/${bySeat[s].id}.png" alt="${esc(cardLabel(bySeat[s]))}">
+            <img src="../../assets/images/coinche/cards/${bySeat[s].id}.png" alt="${esc(cardLabel(bySeat[s]))}">
             <figcaption>${esc(seatName(s))}</figcaption></figure>`,
           )
           .join("")}</div>

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "node scripts/sync-echecs.mjs && vite build",
     "dev": "vite build --watch",
     "server": "node server/index.js",
     "test": "node tests/coinche-strategies.test.js && node tests/coinche-bots.test.js && node tests/coinche-game.test.js",
