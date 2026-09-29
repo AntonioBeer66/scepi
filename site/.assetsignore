@@ -1,0 +1,2 @@
+# Trop gros pour Cloudflare (25 Mo max) : relayé par worker/index.js.
+assets/echecs/stockfish.wasm
