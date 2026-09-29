@@ -471,11 +471,13 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   if (!spectator) {
     const box = document.createElement("div");
     box.className = "cg-emotes";
-    box.innerHTML = `<div class="cg-emote-list" hidden>${EMOTES.map(
-      (e) =>
-        `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e}">${e}</button>`,
-    ).join("")}</div>
-      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="Émoticônes">😀</button>`;
+    box.innerHTML = `<div class="cg-emote-list" hidden>${[...EMOTES]
+      .map(
+        ([e, taunt]) =>
+          `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e} ${taunt}"><span aria-hidden="true">${e}</span><b>${taunt}</b></button>`,
+      )
+      .join("")}</div>
+      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="Émoticônes">😈</button>`;
     root.append(box);
     const list = box.querySelector(".cg-emote-list");
     const toggle = box.querySelector(".cg-emote-toggle");

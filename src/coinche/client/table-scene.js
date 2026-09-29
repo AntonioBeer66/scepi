@@ -25,6 +25,7 @@ import {
   teamOf,
 } from "../engine.js";
 import { TRICK_SHOW_MS } from "../host.js";
+import { EMOTES } from "../online/tables.js";
 
 const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
 const CARD_RATIO = CARD_PX.h / CARD_PX.w;
@@ -913,20 +914,44 @@ export function createTable(parent, { me, onPlay }) {
       focusId = id;
       if (scene && G) placeHand(false);
     },
-    // Émoticône rapide d'un siège : au-dessus de son avatar, monte et s'efface.
+    // Émoticône rapide d’un siège : bulle de provocation au-dessus de son
+    // avatar, qui surgit en rebondissant, se secoue, puis s’envole.
     showEmote(seat, emote) {
       if (!scene || !L) return;
       const { x, y } = L.seat[posOf(seat)];
-      const t = txt(x, y - L.r - 6, emote, { fontSize: `${Math.round(L.r * 1.3)}px` })
-        .setOrigin(0.5, 1)
-        .setDepth(85);
-      scene.tweens.add({
-        targets: t,
-        y: t.y - L.r,
-        alpha: { from: 1, to: 0 },
-        delay: dur(1300),
-        duration: dur(700),
-        onComplete: () => t.destroy(),
+      const r = L.r;
+      const face = txt(0, 0, emote, { fontSize: `${Math.round(r * 1.5)}px` }).setOrigin(0.5, 1);
+      const taunt = txt(0, 2, (EMOTES.get(emote) || "").toUpperCase(), {
+        fontSize: `${Math.round(r * 0.55)}px`,
+        fontStyle: "900 italic",
+        color: COLORS.goldCss,
+        stroke: COLORS.ink,
+        strokeThickness: 4,
+      }).setOrigin(0.5, 0);
+      const w = Math.max(face.width, taunt.width) + 20;
+      const h = face.height + taunt.height + 8;
+      const bg = scene.add.graphics();
+      bg.fillStyle(0xd62839, 1).lineStyle(3, COLORS.gold, 1);
+      bg.fillRoundedRect(-w / 2, -face.height - 4, w, h, 14).strokeRoundedRect(-w / 2, -face.height - 4, w, h, 14);
+      // Sous l’avatar pour les sièges du haut ; au-dessus sinon, pointe vers lui.
+      const below = y < L.cy;
+      const foot = h - face.height - 5;
+      if (!below) bg.fillTriangle(-8, foot, 8, foot, 0, foot + 12);
+      const bx = Phaser.Math.Clamp(x, w / 2 + 8, parent.clientWidth - w / 2 - 8);
+      const by = below ? y + r + face.height + 10 : y - r - taunt.height - 16;
+      const box = scene.add
+        .container(bx, by, [bg, face, taunt])
+        .setDepth(85)
+        .setScale(0)
+        .setAngle(Phaser.Math.Between(-10, 10));
+      scene.tweens.chain({
+        targets: box,
+        tweens: [
+          { scale: 1, duration: dur(260), ease: "Back.easeOut" },
+          { angle: box.angle > 0 ? -6 : 6, duration: dur(70), yoyo: true, repeat: 3 },
+          { y: box.y - r, alpha: 0, delay: dur(1100), duration: dur(450), ease: "Quad.easeIn" },
+        ],
+        onComplete: () => box.destroy(),
       });
     },
     destroy() {

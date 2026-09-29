@@ -5,7 +5,8 @@
 //   npm start  (dans un autre terminal), puis :
 //   node tests/coinche-online-e2e.js
 // BASE : adresse du site (défaut http://localhost:8000) ; PASSWORD : mot
-// de passe du site s'il en a un (sinon SITE_PASSWORD de .dev.vars).
+// de passe du site s'il en a un (sinon SITE_PASSWORD de .dev.vars) ;
+// MOBILE=1 : téléphones tactiles (390 × 844) au lieu d'écrans de PC.
 import assert from "assert";
 import fs from "fs";
 import { chromium } from "playwright";
@@ -33,7 +34,11 @@ const errors = [];
 
 // Un visiteur : son propre navigateur (cookies, stockage), connecté au site.
 async function visitor(label) {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const ctx = await browser.newContext(
+    process.env.MOBILE
+      ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }
+      : { viewport: { width: 1440, height: 900 } },
+  );
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${label} : ${e}`));
   // Émoticônes reçues par WebSocket (voir le test d'émoticône plus bas).
@@ -86,12 +91,14 @@ try {
   assert.ok(matchID, "aucune table libre");
   const sit = async (page, seat, name) => {
     const form = page.locator(`form[data-match="${matchID}"][data-seat="${seat}"]`);
-    await form.locator("input").fill(name);
+    // Saisie lente : le salon se rafraîchit entre-temps sans l'effacer.
+    await form.locator("input").pressSequentially(name);
+    await page.waitForTimeout(4500);
+    assert.strictEqual(await form.locator("input").inputValue(), name, "pseudo effacé par le rafraîchissement");
     await form.locator("button").click();
     await page.waitForSelector(".seat-occupant em");
   };
   await sit(alice, 0, "Alice");
-  await bob.waitForTimeout(3500); // le salon de Bob se rafraîchit
   await sit(bob, 2, "Bob");
 
   await alice.click(`[data-action="start"][data-match="${matchID}"]`);
@@ -100,14 +107,15 @@ try {
   assert.match(await phase(alice), /Donne 1/);
   assert.match(await phase(bob), /Donne 1/);
 
-  // Émoticône d'Alice (siège 0) relayée par le serveur jusqu'à Bob.
-  await alice.click(".cg-emote-toggle");
-  await alice.click('.cg-emote[data-emote="👍"]');
-  for (let i = 0; i < 25 && !bob.emotes.length; i++) await bob.waitForTimeout(200);
-  assert.deepStrictEqual(bob.emotes[0], { type: "emote", seat: 0, emote: "👍" }, "émoticône reçue par Bob");
-
   // Deux plis joués à deux humains + deux bots (hôte : Alice).
   await until(async () => /Pli [3-8]\/8|Donne [2-9]/.test(await phase(bob)), [alice, bob]);
+
+  // Émoticône d'Alice (siège 0) relayée par le serveur jusqu'à Bob (en jeu :
+  // sur téléphone, le bouton est masqué pendant les enchères).
+  await alice.click(".cg-emote-toggle");
+  await alice.click('.cg-emote[data-emote="😭"]');
+  for (let i = 0; i < 25 && !bob.emotes.length; i++) await bob.waitForTimeout(200);
+  assert.deepStrictEqual(bob.emotes[0], { type: "emote", seat: 0, emote: "😭" }, "émoticône reçue par Bob");
 
   // Spectateur : voit la partie, sans aucune commande de jeu.
   const watcher = await visitor("Spectateur");

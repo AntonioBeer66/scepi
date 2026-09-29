@@ -169,7 +169,7 @@ export class Tables extends DurableObject {
     }
     // Émoticône d'un joueur assis : relayée à toute la table, une par
     // seconde au plus (rien n'est enregistré).
-    if (msg?.type === "emote" && att.ready && att.seat != null && EMOTES.includes(msg.emote)) {
+    if (msg?.type === "emote" && att.ready && att.seat != null && EMOTES.has(msg.emote)) {
       const now = Date.now();
       if (now - (att.lastEmote || 0) < 1000) return;
       ws.serializeAttachment({ ...att, lastEmote: now });

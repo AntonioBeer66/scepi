@@ -3606,54 +3606,86 @@ body.is-playing .rules-btn {
   gap: 8px;
 }
 .cg-emote-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
   gap: 6px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #120d20f2;
-  box-shadow: 0 10px 30px #000a;
+  padding: 8px;
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  background: #1a0710f5;
+  box-shadow: 0 10px 30px #000a, 0 0 24px #d6283966;
 }
 .cg-emote-list[hidden] {
   display: none;
 }
 .cg-emote,
 .cg-emote-toggle {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: none;
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
   line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
 }
+.cg-emote {
+  min-height: 40px;
+  padding: 4px 12px 4px 6px;
+  border: 1px solid #ff5b5b66;
+  background: linear-gradient(135deg, #d62839, #8f1022);
+  color: #fff;
+  font-size: 22px;
+  transition: transform 0.12s;
+}
+.cg-emote b {
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 #000;
+}
 .cg-emote:hover,
 .cg-emote:focus-visible {
-  background: #ffffff14;
+  transform: scale(1.08) rotate(-3deg);
+  border-color: var(--gold);
+}
+.cg-emote:active {
+  transform: scale(0.94);
 }
 .cg-emote-toggle {
+  justify-content: center;
   width: 48px;
   height: 48px;
-  border-color: var(--line);
-  background: #120d20f2;
+  border: 2px solid var(--gold);
+  background: #d62839;
+  font-size: 26px;
   box-shadow: 0 6px 18px #0008;
+  transition: transform 0.12s;
 }
 .cg-emote-toggle[aria-expanded="true"] {
-  border-color: var(--gold);
+  transform: rotate(-12deg);
 }
 .cg-emote:focus-visible,
 .cg-emote-toggle:focus-visible {
   outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
+@media (prefers-reduced-motion: reduce) {
+  .cg-emote,
+  .cg-emote-toggle {
+    transition: none;
+    transform: none !important;
+  }
+}
 /* Portrait étroit : l'éventail occupe tout le bas, le bouton se pose au-dessus. */
 @media (max-width: 640px) {
   .cg-emotes {
     bottom: var(--cg-hand, 200px);
+  }
+  /* Pendant les enchères, la barre prend toute la largeur : bouton masqué. */
+  #game-hud:has(.cg-bidbar) .cg-emotes {
+    display: none;
   }
 }

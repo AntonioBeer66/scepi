@@ -8,8 +8,17 @@
 import { Coinche, MAX_NAME } from "../game.js";
 
 // Émoticônes rapides (bouton en bas à droite de la table) : seules celles-ci
-// circulent entre joueurs.
-export const EMOTES = ["👍", "😂", "😮", "😡", "🔥", "👏"];
+// circulent entre joueurs ; chacune avec sa petite phrase de provocation.
+export const EMOTES = new Map([
+  ["😂", "Skill issue"],
+  ["😭", "Ouin ouin"],
+  ["🤡", "L bozo"],
+  ["🎬", "Absolutes kino"],
+  ["🥱", "GG EZ"],
+  ["😳", "Eh beh"],
+  ["💪", "Solide"],
+  ["🗿", "Built different"],
+]);
 
 export const PERMANENT_TABLES = 4;
 export const MAX_MATCHES = 40;

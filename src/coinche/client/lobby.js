@@ -120,7 +120,7 @@ function render() {
         (a.table ?? 99) - (b.table ?? 99) || a.createdAt - b.createdAt,
     );
   let ephemeral = 0;
-  grid.innerHTML = list
+  const html = list
     .map((t) => {
       const n = t.table ? t.table : 4 + ++ephemeral;
       const filled = t.players.filter((p) => p.name).length;
@@ -145,6 +145,22 @@ function render() {
     </article>`;
     })
     .join("");
+  // Rafraîchi toutes les quelques secondes : on ne reconstruit que si ça a
+  // changé, en gardant les pseudos en cours de saisie et le focus.
+  if (html !== grid.dataset.html) {
+    const typed = [...grid.querySelectorAll("input")].filter((i) => i.value);
+    const focus = document.activeElement?.closest("#lobby-grid") && document.activeElement;
+    grid.innerHTML = grid.dataset.html = html;
+    for (const old of typed) {
+      const input = document.getElementById(old.id);
+      if (input) input.value = old.value;
+    }
+    const again = focus?.id && document.getElementById(focus.id);
+    if (again) {
+      again.focus();
+      if (again.setSelectionRange) again.setSelectionRange(focus.selectionStart, focus.selectionEnd);
+    }
+  }
   const newBtn = $("#new-lobby-btn");
   if (newBtn) newBtn.disabled = !tables || !!session;
 }
