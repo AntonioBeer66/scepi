@@ -44,12 +44,18 @@
     botThinking = false,
     engine;
   const $ = (id) => document.querySelector(id);
-  function setChessGameMode(active) {
+  let revealHeaderOnPageScroll;
+  function setChessGameMode(active, revealHeaderAfterScroll = false) {
     const page = document.documentElement;
     const header = document.querySelector(".header");
+    if (revealHeaderOnPageScroll) {
+      window.removeEventListener("scroll", revealHeaderOnPageScroll);
+      revealHeaderOnPageScroll = null;
+    }
     page.classList.toggle("is-chess-game", active);
     header?.classList.toggle("is-chess-game-header", active);
     if (active) {
+      header?.classList.add("is-chess-game-header");
       requestAnimationFrame(() => {
         const boardShell = document.querySelector(".chess-board-shell");
         if (!boardShell) return;
@@ -63,18 +69,19 @@
           behavior: "smooth",
         });
       });
+    } else if (revealHeaderAfterScroll) {
+      header?.classList.add("is-chess-game-header");
+      revealHeaderOnPageScroll = () => {
+        header?.classList.remove("is-chess-game-header");
+        window.removeEventListener("scroll", revealHeaderOnPageScroll);
+        revealHeaderOnPageScroll = null;
+      };
+      window.addEventListener("scroll", revealHeaderOnPageScroll, {
+        passive: true,
+        once: true,
+      });
     }
   }
-  ["wheel", "touchmove"].forEach((eventName) =>
-    document.addEventListener(
-      eventName,
-      (event) => {
-        if (document.documentElement.classList.contains("is-chess-game"))
-          event.preventDefault();
-      },
-      { passive: false },
-    ),
-  );
   if (
     typeof Chess.prototype.is_checkmate !== "function" &&
     typeof Chess.prototype.in_checkmate === "function"
@@ -566,6 +573,7 @@
     renderEndStatus();
     setTimeout(() => {
       renderEndStatus();
+      setChessGameMode(false, true);
       showGameEndModal(title);
       updateEndDialogue(title);
     }, 500);
