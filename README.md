@@ -76,3 +76,7 @@ Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adap
 - Informations pour contacter l'association.
 - Propositions de partenariat.
 - Liens vers LinkedIn et Instagram, également accessibles dans le pied de page du site.
+
+## Appli Android
+
+`android/` contient une appli minimale qui ouvre la bêta en plein écran dans une WebView. Compilation (JDK 17 et SDK Android requis) : `cd android && ./gradlew assembleDebug`, l'APK sort dans `android/build/outputs/apk/debug/scepi-debug.apk`.
