@@ -44,6 +44,37 @@
     botThinking = false,
     engine;
   const $ = (id) => document.querySelector(id);
+  function setChessGameMode(active) {
+    const page = document.documentElement;
+    const header = document.querySelector(".header");
+    page.classList.toggle("is-chess-game", active);
+    header?.classList.toggle("is-chess-game-header", active);
+    if (active) {
+      requestAnimationFrame(() => {
+        const boardShell = document.querySelector(".chess-board-shell");
+        if (!boardShell) return;
+        const target =
+          window.scrollY +
+          boardShell.getBoundingClientRect().top +
+          boardShell.offsetHeight / 2 -
+          window.innerHeight / 2;
+        window.scrollTo({
+          top: Math.max(0, target),
+          behavior: "smooth",
+        });
+      });
+    }
+  }
+  ["wheel", "touchmove"].forEach((eventName) =>
+    document.addEventListener(
+      eventName,
+      (event) => {
+        if (document.documentElement.classList.contains("is-chess-game"))
+          event.preventDefault();
+      },
+      { passive: false },
+    ),
+  );
   if (
     typeof Chess.prototype.is_checkmate !== "function" &&
     typeof Chess.prototype.in_checkmate === "function"
@@ -97,6 +128,7 @@
     );
     $("#chess-start").addEventListener("click", () => {
       gameStarted = true;
+      setChessGameMode(true);
       reset();
     });
   }
@@ -468,6 +500,7 @@
         .addEventListener("click", () => {
           close();
           gameStarted = false;
+          setChessGameMode(false);
           reset();
           const selected = profiles[$("#chess-profile").value];
           if (selected)
@@ -1162,6 +1195,7 @@
     document
       .querySelector(".chess-side-panel")
       ?.classList.remove("is-game-ended");
+    if (!gameStarted) setChessGameMode(false);
     document
       .querySelector("#chess-game-end-modal")
       ?.classList.remove("is-visible");

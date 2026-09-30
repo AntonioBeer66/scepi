@@ -3417,6 +3417,19 @@ html {
   backdrop-filter: blur(14px) saturate(1.3);
   -webkit-backdrop-filter: blur(14px) saturate(1.3);
 }
+.header.is-chess-game-header {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+.header:not(.is-chess-game-header) {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
 
 /* Cartes « projecteur » (classe posée par main.js) : un halo doré suit le
    pointeur et allume le bord le plus proche. Souris seulement. */
