@@ -2943,7 +2943,7 @@ body.is-playing .rules-btn {
   font-weight: 800;
   box-shadow: 0 10px 30px #000a;
   pointer-events: none;
-  animation: cg-toast 1.6s ease both;
+  animation: cg-toast 2.4s ease both;
 }
 @keyframes cg-toast {
   0% { opacity: 0; transform: scale(0.8); }

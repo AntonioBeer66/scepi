@@ -179,7 +179,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     el.setAttribute("aria-hidden", "true");
     el.textContent = text;
     root.append(el);
-    setTimeout(() => el.remove(), 1600);
+    setTimeout(() => el.remove(), 2400);
   }
 
   // ---- Barre de jeu ------------------------------------------------------------
@@ -207,8 +207,10 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const live = G.phase === "JEU" && G.contract;
     const belote =
       live && G.belote.rebeloteDeclared ? G.contract.equipePreneur : -1;
+    // Décompte de la donne en cours : la belote du preneur y compte (+20),
+    // pas au score de la partie.
     const score = (t, label) =>
-      `<span class="cg-score${t === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[t]}</b>${live ? `<em>+${G.pointsPlis[t]}${t === belote ? ` <i title="Belote">+${BELOTE_BONUS}</i>` : ""}</em>` : ""}</span>`;
+      `<span class="cg-score${t === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[t]}</b>${live ? `<em${t === belote ? ` title="Dont ${BELOTE_BONUS} de belote"` : ""}>+${G.pointsPlis[t] + (t === belote ? BELOTE_BONUS : 0)}${t === belote ? " <i>♛</i>" : ""}</em>` : ""}</span>`;
     const iconBtn = (action, icon, label, pressed) =>
       `<button type="button" class="cg-icon" data-action="${action}" data-focus-key="${action}" aria-label="${label}"${pressed === undefined ? "" : ` aria-expanded="${pressed}"`}>${ICONS[icon]}<span>${label}</span></button>`;
     return `<div class="cg-topbar">
@@ -352,6 +354,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
             ${row("Points des plis", r.points[us], r.points[them])}
             ${row("Plis", r.plis[us], r.plis[them])}
             ${r.belote ? row("Belote", beloteCell(r, us), beloteCell(r, them)) : ""}
+            ${r.beloteBonus ? row("Décompte", r.points[us] + (teamOf(r.preneur) === us ? r.beloteBonus : 0), r.points[them] + (teamOf(r.preneur) === them ? r.beloteBonus : 0)) : ""}
             ${row("Marqué", `+${r.gains[us]}`, `+${r.gains[them]}`)}
           </tbody>
           <tfoot>${row("Total", G.scores[us], G.scores[them])}</tfoot>

@@ -216,7 +216,9 @@ export function createTable(parent, { me, onPlay }) {
     const d = trickH * 0.55;
     // Éventail : rayon proportionnel à la carte, ouverture bornée.
     const R = cardH * 4;
-    const avail = Math.max(0, W - cardW * 1.7 - 24);
+    // Écran étroit (téléphone) : l'éventail va presque jusqu'aux bords,
+    // chaque carte dépasse davantage de sa voisine (plus facile à toucher).
+    const avail = Math.max(0, W - cardW * (portrait ? 1.4 : 1.7) - 24);
     const maxSpread = 2 * Math.asin(Math.min(1, avail / (2 * R)));
     const sideY = cy - (portrait ? tableH * 0.12 : 0);
     // Vous : au-dessus de l'éventail, à gauche ; sur un écran peu haut
@@ -306,10 +308,12 @@ export function createTable(parent, { me, onPlay }) {
       return { t: "Surcoinche", alert: true };
     if (c?.coincheur === seat) return { t: "Coinche", alert: true };
     const bidding = G.phase === "ENCHERES" || G.phase === "SURCOINCHE";
+    // Belote du preneur : sa propre bulle, bien visible (le contrat reste
+    // affiché en haut de l'écran).
+    if (c?.preneur === seat && !bidding && G.belote.beloteDeclared)
+      return { t: G.belote.rebeloteDeclared ? "Rebelote ! +20" : "Belote !", lead: true };
     if (c?.preneur === seat && (bidding || G.phase === "JEU" || G.phase === "SCORE")) {
-      let t = bidLabel(c.montant, c.atout) + (G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "");
-      if (!bidding && G.belote.beloteDeclared)
-        t += G.belote.rebeloteDeclared ? " · Rebelote" : " · Belote";
+      const t = bidLabel(c.montant, c.atout) + (G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "");
       return { t, lead: true };
     }
     if (!bidding) return null;
@@ -527,6 +531,22 @@ export function createTable(parent, { me, onPlay }) {
     });
     zone.on("pointerup", (pointer) => {
       if (pointer.getDistance() > DRAG_MIN) return; // fin de glisser : voir dragend
+      // Second toucher sur la carte déjà soulevée, là où sa voisine de droite
+      // la recouvre dans la pile des zones : c'est elle qu'on joue. (Phaser
+      // choisit la zone touchée par son rang dans la liste d'affichage, où
+      // les zones invisibles n'ont pas de place : la profondeur n'y change
+      // rien. Sans ce détour, la carte la plus à gauche, qui ne dépasse que
+      // d'une bande étroite, était presque impossible à poser.)
+      const sel = touchSel && touchSel !== id && hand.get(touchSel);
+      if (
+        pointer.wasTouch &&
+        sel &&
+        isPlayable(touchSel) &&
+        scene.input.hitTestPointer(pointer).includes(sel.zone)
+      ) {
+        onPlay(touchSel);
+        return;
+      }
       if (!isPlayable(id)) return;
       // Au doigt, pas de survol pour voir la carte avant : un premier
       // toucher la soulève, un second la joue (ou la glisser vers le tapis).
