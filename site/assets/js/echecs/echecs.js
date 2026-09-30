@@ -549,23 +549,23 @@
     gameEnded = true;
     document.querySelector(".chess-side-panel")?.classList.add("is-game-ended");
     status("Historique");
-    const statusArea = $("#chess-status");
-    if (statusArea) {
+    const renderEndStatus = () => {
+      const statusArea = $("#chess-status");
+      if (!statusArea) return;
       statusArea.innerHTML =
         '<button type="button" class="button outline chess-toggle-end">Résultat</button>';
-      statusArea
-        .querySelector(".chess-toggle-end")
-        .addEventListener("click", () => {
-          const modal = $("#chess-game-end-modal");
-          if (modal?.classList.contains("is-visible"))
-            modal.classList.remove("is-visible");
-          else {
-            showGameEndModal(title);
-            updateEndDialogue(title);
-          }
-        });
-    }
+      statusArea.querySelector(".chess-toggle-end").addEventListener("click", () => {
+        const modal = $("#chess-game-end-modal");
+        if (modal?.classList.contains("is-visible")) modal.classList.remove("is-visible");
+        else {
+          showGameEndModal(title);
+          updateEndDialogue(title);
+        }
+      });
+    };
+    renderEndStatus();
     setTimeout(() => {
+      renderEndStatus();
       showGameEndModal(title);
       updateEndDialogue(title);
     }, 500);
