@@ -75,6 +75,11 @@ const v2 = tables.view(t1, 2).G;
 assert.ok(v2.hands[2].every(Boolean) && [0, 1, 3].every((s) => nulls(v2.hands[s])));
 const spectator = tables.view(t1, null).G;
 assert.ok([0, 1, 2, 3].every((s) => nulls(spectator.hands[s])), "le spectateur ne voit aucune main");
+for (const peek of [0, 1, 2, 3]) {
+  const v = tables.view(t1, null, peek).G;
+  assert.ok([0, 1, 2, 3].every((s) => (s === peek ? v.hands[s].every(Boolean) : nulls(v.hands[s]))), "spectateur : une seule main");
+}
+assert.ok(tables.view(t1, null, 7).G.hands.every(nulls), "siège inconnu : aucune main");
 
 // Coups refusés sans rien changer : hors tour, bot joué par un non-hôte.
 const before = JSON.stringify(tables.get(t1).G);
@@ -171,9 +176,10 @@ assert.strictEqual(tables.all().length, MAX_MATCHES);
 // Historique : une ligne par partie terminée, CSV pour Excel (« ; », BOM),
 // pseudos protégés ; semaine qui change le lundi.
 const row = historyRow(finished, Date.UTC(2026, 8, 29, 12));
+assert.strictEqual(row[0], "2026-09-29 14:00", "date et heure de Paris");
 assert.deepStrictEqual(row.slice(2, 7), ["Alice<script> & Bob", "Ordinateur & Ordinateur", ...end.scores, end.scores[0] > end.scores[1] ? "Équipe 1" : "Équipe 2"]);
 const csv = historyCSV([row, ["x", "y", "=HYPERLINK(1)", 'a"b;c', 1, 2, "z", 3]]);
-assert.ok(csv.startsWith("﻿\"Date\";"));
+assert.ok(csv.startsWith("﻿\"Date et heure\";"));
 assert.ok(csv.includes(`"'=HYPERLINK(1)";"a""b;c";1;2`), csv);
 assert.strictEqual(csv.trim().split("\r\n").length, 3);
 const coinched = historyRow(

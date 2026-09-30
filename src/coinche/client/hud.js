@@ -215,7 +215,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       `<button type="button" class="cg-icon" data-action="${action}" data-focus-key="${action}" aria-label="${label}"${pressed === undefined ? "" : ` aria-expanded="${pressed}"`}>${ICONS[icon]}<span>${label}</span></button>`;
     return `<div class="cg-topbar">
       <div class="cg-top-left">${renderContract()}</div>
-      <div class="cg-top-mid">${spectator ? '<span class="cg-watch">Spectateur</span>' : ""}<span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
+      <div class="cg-top-mid">${spectator ? '<span class="cg-watch" title="Touchez un joueur pour voir ses cartes">Spectateur · touchez un joueur</span>' : ""}<span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
         (G.phase === "ENCHERES" || G.phase === "JEU") && G.joueurActif === me
           ? '<span class="cg-yourturn">À vous</span>'
           : ""

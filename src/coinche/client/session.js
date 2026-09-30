@@ -81,9 +81,15 @@ export function startSession({
       hostWorker.postMessage({ type: "stop" });
     },
   };
+  // Spectateur : il suit d'abord un joueur au hasard ; toucher un autre
+  // joueur montre sa main (le serveur l'envoie).
+  const peek = watch ? Math.floor(Math.random() * 4) : null;
+  if (watch) client.peek(peek);
   const table = createTable(view.querySelector("#coinche-stage"), {
     me,
+    peek,
     onPlay: (id) => client.moves.agir({ type: "JOUER", carte: { id } }),
+    onPeek: watch ? (seat) => client.peek(seat) : null,
   });
   const hud = createHud(view, {
     me,

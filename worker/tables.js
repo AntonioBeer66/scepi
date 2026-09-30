@@ -17,6 +17,7 @@
 // args } ; il reçoit { type: "state", G, stateID, players } à chaque
 // changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
 // { type: "emote", emote } → { type: "emote", seat, emote } à toute la table.
+// Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
 import { DurableObject } from "cloudflare:workers";
 import {
   createTables,
@@ -75,7 +76,7 @@ export class Tables extends DurableObject {
     const att = ws.deserializeAttachment();
     if (!att?.ready) return;
     try {
-      ws.send(JSON.stringify({ type: "state", ...this.tables.view(id, att.seat), players }));
+      ws.send(JSON.stringify({ type: "state", ...this.tables.view(id, att.seat, att.peek), players }));
     } catch {
       // WebSocket déjà fermée : le nettoyage suivra
     }
@@ -195,6 +196,12 @@ export class Tables extends DurableObject {
       ws.serializeAttachment({ id, seat: ok ? seat : null, ready: true });
       if (ok) this.broadcast(id); // les autres le voient connecté
       else this.send(ws, id);
+      return;
+    }
+    // Spectateur : regarde la main d'un joueur (il peut en changer).
+    if (msg?.type === "peek" && att.ready && att.seat == null) {
+      ws.serializeAttachment({ ...att, peek: msg.seat });
+      this.send(ws, id);
       return;
     }
     // Émoticône d'un joueur assis : relayée à toute la table, une par

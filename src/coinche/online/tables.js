@@ -37,7 +37,7 @@ const MAX_ARGS = 3;
 // zéro chaque semaine (lundi 0 h UTC) pour rester petit.
 export const weekOf = (t) => Math.floor((t / 86400000 + 3) / 7); // semaine depuis un lundi
 const HISTORY_HEAD = [
-  "Date", "Table", "Équipe 1", "Équipe 2", "Score 1", "Score 2", "Gagnant", "Donnes",
+  "Date et heure", "Table", "Équipe 1", "Équipe 2", "Score 1", "Score 2", "Gagnant", "Donnes",
   "Coinches", "Surcoinches",
 ];
 
@@ -53,7 +53,9 @@ export function historyRow(m, t) {
   };
   const [s1, s2] = m.G.scores;
   return [
-    new Date(t).toLocaleString("fr-FR", { timeZone: "Europe/Paris" }),
+    // « 2026-09-30 21:45 », heure de Paris : lu comme date et heure par
+    // tous les tableurs, quelle que soit leur langue (pas « 30/09/2026 »).
+    new Date(t).toLocaleString("sv-SE", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" }),
     m.table ? `Table ${m.table}` : "Salon",
     team(0, 2),
     team(1, 3),
@@ -219,13 +221,16 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
       return true;
     },
 
-    // Ce qu'un siège (null : spectateur) a le droit de voir.
-    view(id, seat) {
+    // Ce qu'un siège (null : spectateur) a le droit de voir. Spectateur :
+    // la seule main du joueur qu'il regarde (peek), même si c'est l'hôte.
+    view(id, seat, peek = null) {
       const m = matches.get(id);
-      return {
-        G: Coinche.playerView({ G: m.G, playerID: seat == null ? null : String(seat) }),
-        stateID: m.stateID,
-      };
+      const G = Coinche.playerView({ G: m.G, playerID: seat == null ? null : String(seat) });
+      if (seat == null && seatOk(peek) && G.hands) {
+        G.hands = G.hands.map((h, s) => (s === peek ? m.G.hands[s] : h));
+        G.mainsInitiales = G.mainsInitiales.map((h, s) => (s === peek ? m.G.mainsInitiales[s] : h));
+      }
+      return { G, stateID: m.stateID };
     },
   };
 }

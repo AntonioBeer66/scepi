@@ -2,7 +2,8 @@
 // même interface que le client boardgame.io qu'utilise session.js :
 // moves.<coup>(...args), subscribe(fn), getState(), matchData, start(), stop().
 // En plus : sendEmote(e) et onEmote(fn(seat, e)) pour les émoticônes rapides,
-// onGone(fn) quand la table est effacée (tous les joueurs partis).
+// onGone(fn) quand la table est effacée (tous les joueurs partis),
+// peek(seat) pour qu'un spectateur voie la main d'un joueur.
 // Reconnexion automatique (délai croissant) si la connexion tombe.
 export function OnlineClient({ api, matchID, playerID, credentials }) {
   let ws = null;
@@ -13,6 +14,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
   const subs = new Set();
   let emoteFn = null;
   let goneFn = null; // la table n'existe plus (partie arrêtée)
+  let peekSeat = null; // spectateur : main regardée, redemandée à la reconnexion
   const notify = () => subs.forEach((fn) => fn(state));
 
   const client = {
@@ -37,6 +39,10 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
     sendEmote(emote) {
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "emote", emote }));
     },
+    peek(seat) {
+      peekSeat = seat;
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "peek", seat }));
+    },
     onEmote(fn) {
       emoteFn = fn;
     },
@@ -60,6 +66,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
       retry = 0;
       // Identifiants dans le premier message plutôt que dans l'adresse.
       ws.send(JSON.stringify({ type: "hello", playerID, credentials }));
+      if (peekSeat != null) ws.send(JSON.stringify({ type: "peek", seat: peekSeat }));
     };
     ws.onmessage = (event) => {
       let msg;

@@ -173,7 +173,7 @@ Le jeu est écrit dans `src/coinche/` et compilé par Vite dans `site/assets/js/
 | `src/coinche/client/` | Salons (HTML), commandes (HTML accessible) et table [Phaser](https://phaser.io) (WebGL, animations, particules). Phaser n'est chargé qu'au lancement d'une partie. Cartes jouées au clic, au clavier ou par glisser-déposer. En ligne : `online-client.js` (WebSocket) ; en solo : boardgame.io et son serveur local dans l'onglet. |
 
 - Solo contre trois bots : la partie tourne entièrement dans l'onglet, sans serveur ; elle est gardée dans le navigateur (reprise après rechargement) et effacée en quittant.
-- Spectateurs : une partie en cours peut être regardée depuis le salon, sans aucune main visible.
+- Spectateurs : une partie en cours peut être regardée depuis le salon ; le spectateur suit la main d'un joueur tiré au hasard et en change en touchant un autre avatar (jamais plus d'une main visible).
 - Les parties en ligne sont enregistrées par le Durable Object : elles survivent à sa mise en veille ; une partie inactive 30 min est effacée.
 - Déconnexion : la place est gardée, le client se reconnecte seul, les délais continuent (l'hôte joue d'office à 30 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
 

@@ -144,15 +144,18 @@ function bakeTextures(scene) {
   scene.textures.addCanvas("spark", p);
 }
 
-export function createTable(parent, { me, onPlay }) {
+export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const dur = (ms) => (reduced ? 0 : ms);
   // 2× au plus : au-delà, plus de deux fois plus de pixels à peindre pour
   // un gain invisible à distance d'écran.
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  // Spectateur (me = -1) : la table vue depuis le siège 0.
-  const anchor = me < 0 ? 0 : me;
-  const posOf = (seat) => (seat - anchor + 4) % 4;
+  // Siège dont on voit la main, en bas : vous ; spectateur (me = -1) : le
+  // joueur qu'il regarde (peek), ou aucun (-1, table vue depuis le siège 0).
+  let view = me >= 0 ? me : (peek ?? -1);
+  const posOf = (seat) => (seat - Math.max(view, 0) + 4) % 4;
+  // Noms des bots (« Bot Nord ») : fixes, même quand le spectateur change de joueur.
+  const compassOf = (seat) => COMPASS[(seat - Math.max(me, 0) + 4) % 4];
 
   let scene = null;
   let G = null;
@@ -244,9 +247,9 @@ export function createTable(parent, { me, onPlay }) {
       maxSpread,
       handY,
       seat: [
-        // Vous (voir mine) ; spectateur : le
+        // Vous ou le joueur regardé (voir mine) ; spectateur sans main : le
         // joueur Sud en bas au centre, comme Nord en haut.
-        me < 0 ? { x: cx, y: bottom - r - 10 } : mine,
+        view < 0 ? { x: cx, y: bottom - r - 10 } : mine,
         { x: right - r - 14, y: sideY },
         { x: cx, y: top + r + 10 },
         { x: left + r + 14, y: sideY },
@@ -348,12 +351,12 @@ export function createTable(parent, { me, onPlay }) {
         seat === me
           ? "Vous"
           : bot && G.seats[seat].name === "Ordinateur"
-            ? `Bot ${COMPASS[pos]}`
+            ? `Bot ${compassOf(seat)}`
             : G.seats[seat].name;
       const box = scene.add.container(x, y).setDepth(8);
 
       // Dos des cartes restantes, en petit éventail tourné vers le centre.
-      if (seat !== me) {
+      if (seat !== view) {
         const n = G.hands[seat].length;
         // Décalé vers le centre de la table, le haut des cartes vers le joueur.
         const bw = L.r * 1.1;
@@ -384,6 +387,12 @@ export function createTable(parent, { me, onPlay }) {
         .lineStyle(2, active ? COLORS.gold : 0xffffff, active ? 1 : 0.18)
         .strokeCircle(0, 0, L.r);
       box.add(disc);
+      // Spectateur : toucher l'avatar montre la main de ce joueur.
+      if (onPeek && seat !== view) {
+        const hit = scene.add.zone(0, 0, L.r * 2.4, L.r * 2.4);
+        hit.setInteractive({ useHandCursor: true }).on("pointerup", () => setView(seat));
+        box.add(hit);
+      }
       box.add(
         txt(0, 0, seat === me ? "Vous" : bot ? "IA" : initials(name), {
           fontSize: `${Math.round(L.r * (seat === me ? 0.5 : 0.62))}px`,
@@ -497,7 +506,7 @@ export function createTable(parent, { me, onPlay }) {
   function handState() {
     if (cacheFor !== G) {
       cacheFor = G;
-      sorted = sortHand((G.hands[me] || []).filter(Boolean), G.contract?.atout);
+      sorted = sortHand((G.hands[view] || []).filter(Boolean), G.contract?.atout);
       legal = myTurnToPlay()
         ? new Set(computeLegal(sorted, G.pliCourant, G.contract.atout, me).map((c) => c.id))
         : null;
@@ -520,7 +529,7 @@ export function createTable(parent, { me, onPlay }) {
     // voisine, qui se soulèverait à son tour, et ainsi de suite.
     const zone = scene.add.zone(0, 0, 1, 1);
     const o = { box, halo, zone, index: -1, key: null };
-    zone.setInteractive({ useHandCursor: true, draggable: true });
+    zone.setInteractive({ useHandCursor: me >= 0, draggable: me >= 0 }); // spectateur : main à regarder seulement
     zone.on("pointerover", () => {
       hoverId = id;
       placeHand(false);
@@ -866,6 +875,18 @@ export function createTable(parent, { me, onPlay }) {
       .setDepth(80);
     e.explode(count);
     scene.time.delayedCall(1000, () => e.destroy());
+  }
+
+  function setView(seat) {
+    view = seat;
+    onPeek(seat);
+    hand.forEach((o) => {
+      o.box.destroy();
+      o.zone.destroy();
+    });
+    hand.clear();
+    cacheFor = null;
+    relayout(); // sièges, main et pli replacés autour du nouveau joueur
   }
 
   function relayout() {

@@ -47,6 +47,7 @@ async function visitor(label) {
   page.on("websocket", (ws) =>
     ws.on("framereceived", ({ payload }) => {
       if (String(payload).includes('"type":"emote"')) page.emotes.push(JSON.parse(payload));
+      if (String(payload).includes('"type":"state"')) page.lastG = JSON.parse(payload).G;
     }),
   );
   await page.goto(`${BASE}/jeux/coinche/`);
@@ -124,6 +125,18 @@ try {
   await watcher.waitForSelector(".cg-watch", { timeout: 20000 });
   assert.match(await phase(watcher), /Donne/);
   assert.strictEqual(await watcher.locator(".hand-buttons button, .cg-bidbar").count(), 0);
+  // Il suit la main d'un seul joueur (tiré au hasard), jamais deux.
+  const seen = (G) => [0, 1, 2, 3].filter((s) => G?.hands[s].some(Boolean));
+  await until(async () => seen(watcher.lastG).length === 1, [alice], 20000, "main regardée");
+  // Toucher le joueur de droite (avatar, placé comme dans table-scene.js) : sa main à lui.
+  const next = (seen(watcher.lastG)[0] + 1) % 4;
+  await watcher.waitForFunction(() => document.querySelector(".cg-felt")?.offsetWidth > 100); // table chargée
+  const box = await watcher.locator("#coinche-stage").boundingBox();
+  const cardH = Math.max(84, Math.min(box.height * 0.26, 210, box.width < box.height * 0.9 ? box.width * 0.24 * 1.4 : 999));
+  const r = Math.round(Math.max(20, Math.min(30, Math.min(box.width, box.height) * 0.035)));
+  const sideY = (10 + box.height - cardH * 0.72) / 2 - (box.width < box.height * 0.9 ? (box.height - cardH * 0.72 - 10) * 0.12 : 0);
+  await watcher.mouse.click(box.x + box.width - 10 - r - 14, box.y + sideY);
+  await until(async () => seen(watcher.lastG).join() === String(next), [alice], 20000, "autre main regardée");
 
   // Bob quitte : un bot prend sa place, sous son pseudo marqué « (bot) »,
   // et la partie continue.
