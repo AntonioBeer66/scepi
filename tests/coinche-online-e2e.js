@@ -37,7 +37,7 @@ const errors = [];
 async function visitor(label) {
   const ctx = await browser.newContext(
     process.env.MOBILE
-      ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }
+      ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 }
       : { viewport: { width: 1440, height: 900 } },
   );
   const page = await ctx.newPage();
@@ -135,7 +135,7 @@ try {
   const cardH = Math.max(84, Math.min(box.height * 0.26, 210, box.width < box.height * 0.9 ? box.width * 0.24 * 1.4 : 999));
   const r = Math.round(Math.max(20, Math.min(30, Math.min(box.width, box.height) * 0.035)));
   const sideY = (10 + box.height - cardH * 0.72) / 2 - (box.width < box.height * 0.9 ? (box.height - cardH * 0.72 - 10) * 0.12 : 0);
-  await watcher.mouse.click(box.x + box.width - 10 - r - 14, box.y + sideY);
+  await (process.env.MOBILE ? watcher.touchscreen.tap : watcher.mouse.click).call(process.env.MOBILE ? watcher.touchscreen : watcher.mouse, box.x + box.width - 10 - r - 14, box.y + sideY);
   await until(async () => seen(watcher.lastG).join() === String(next), [alice], 20000, "autre main regardée");
 
   // Bob quitte : un bot prend sa place, sous son pseudo marqué « (bot) »,

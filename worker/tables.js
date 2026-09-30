@@ -228,6 +228,9 @@ export class Tables extends DurableObject {
         await this.save(id);
         if (was !== "TERMINEE" && this.tables.get(id).G.phase === "TERMINEE") await this.record(id);
         this.broadcast(id);
+        // Le lobby ne l'appelle que s'il est ouvert : ici, une partie où
+        // plus personne ne joue (bots seuls) se ferme aussi à temps.
+        await this.maintain();
       }
     }
   }

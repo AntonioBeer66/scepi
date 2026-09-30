@@ -10,6 +10,7 @@ import { bots, tuning } from "../src/coinche/engine.js";
 import { createHost } from "../src/coinche/host.js";
 import {
   ABANDON_MS,
+  AFK_MS,
   createTables,
   EMPTY_MS,
   historyCSV,
@@ -168,6 +169,19 @@ assert.ok(tables.get(t3), "reconnexion encore possible");
 now += 2;
 tables.maintain(() => false);
 assert.ok(!tables.get(t3), "abandonnée : arrêtée");
+
+// Humain connecté qui ne joue plus (bots et coups d'office seuls) : partie
+// arrêtée après AFK_MS sans coup de sa part ; un coup relance le délai.
+const t4 = tables.create().id;
+tables.join(t4, 0, "Alice");
+assert.ok(tables.move(t4, 0, "lancer", [botSeats]));
+now += AFK_MS - 1;
+assert.ok(tables.move(t4, 0, "pourSiege", [0, { type: "TIMEOUT", tour: tables.get(t4).G.tour }]), "coup d'office accepté");
+tables.maintain(() => true);
+assert.ok(tables.get(t4), "pas encore");
+now += 2;
+tables.maintain(() => true);
+assert.ok(!tables.get(t4), "personne ne joue : arrêtée");
 
 // Plafond de tables.
 while (tables.create());

@@ -3,7 +3,8 @@
 // Remplace le serveur boardgame.io : mêmes coups (game.js), même vue par
 // joueur (playerView), mêmes règles d'entretien (4 tables permanentes,
 // salons temporaires, parties abandonnées effacées).
-// Une partie : { id, table, createdAt, updatedAt, stateID, G, players } ;
+// Une partie : { id, table, createdAt, updatedAt, activeAt, stateID, G, players } ;
+// activeAt : dernier coup d'un humain pour lui-même (lancer, agir).
 // players[s] = { name, credentials } (name null : place libre).
 import { Coinche, MAX_NAME } from "../game.js";
 
@@ -29,6 +30,7 @@ export const MAX_MATCHES = 40;
 export const IDLE_MS = 30 * 60 * 1000; // partie ou salon abandonné
 export const EMPTY_MS = 10 * 60 * 1000; // salon temporaire jamais rejoint
 export const ABANDON_MS = 2 * 60 * 1000; // partie lancée sans humain connecté
+export const AFK_MS = 5 * 60 * 1000; // partie lancée où aucun humain ne joue (bots seuls)
 const INVALID_MOVE = "INVALID_MOVE"; // valeur rendue par les coups refusés
 const MOVES = new Set(Object.keys(Coinche.moves));
 const MAX_ARGS = 3;
@@ -117,7 +119,9 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
     // effacées et créées (à répercuter sur le stockage).
     // Partie lancée : effacée dès que tous les humains l'ont quittée, ou
     // après ABANDON_MS sans aucun d'eux connecté (onglets fermés) ; personne
-    // pour l'héberger, elle ne ferait qu'occuper une table.
+    // pour l'héberger, elle ne ferait qu'occuper une table. Aussi après
+    // AFK_MS sans qu'aucun humain ne joue lui-même (les bots et les coups
+    // joués d'office par l'hôte ne comptent pas) : table rendue au lobby.
     // connected(id, siège) : voir list ; absent, tout le monde l'est.
     maintain(connected = () => true) {
       const t = now();
@@ -132,6 +136,7 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
         if (
           (started && empty) ||
           (started && t - (seen.get(m.id) ?? t) > ABANDON_MS) ||
+          (started && t - (m.activeAt ?? m.updatedAt) > AFK_MS) ||
           idle > IDLE_MS ||
           (m.G.phase === "ATTENTE" && empty && !m.table && idle > EMPTY_MS) ||
           (m.G.phase === "ATTENTE" && m.table && waiting.has(m.table))
@@ -218,6 +223,7 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
       m.G = out === undefined ? draft : out;
       m.stateID++;
       m.updatedAt = now();
+      if (name === "agir" || name === "lancer") m.activeAt = m.updatedAt;
       return true;
     },
 
