@@ -1,0 +1,99 @@
+{
+  "username": "haiming-lu",
+  "games": 18,
+  "own_moves": 829,
+  "rates_per_own_move": {
+    "pawn_moves": 0.261,
+    "captures": 0.256,
+    "castles": 0.022,
+    "checks": 0.112,
+    "promotions": 0.004
+  },
+  "by_color": {
+    "white": {
+      "games": 9,
+      "wins": 2
+    },
+    "black": {
+      "games": 9,
+      "wins": 3
+    }
+  },
+  "preferred_opening_sequences": [
+    [
+      "c7c5 b8c6 c5d4 e7e5",
+      3
+    ],
+    [
+      "c2c4 b1c3 g2g3 f1g2",
+      3
+    ],
+    [
+      "c2c4 d2d4 b1c3 c1d2",
+      2
+    ],
+    [
+      "c7c5 b8c6 d7d6 g8f6",
+      2
+    ],
+    [
+      "c2c4 d2d4 b1c3 e2e4",
+      1
+    ],
+    [
+      "c2c4 d2d4 g2g3 b1d2",
+      1
+    ],
+    [
+      "c7c5 b8c6 g7g6 f8g7",
+      1
+    ],
+    [
+      "e7e5 b8c6 g8f6 d7d5",
+      1
+    ],
+    [
+      "g8f6 e7e6 d7d5 c7c5",
+      1
+    ],
+    [
+      "c7c5 b8c6 g8f6 g7g6",
+      1
+    ],
+    [
+      "e2e4 g1f3 b1c3 f1c4",
+      1
+    ],
+    [
+      "c2c4 d2d4 e2e3 b1c3",
+      1
+    ]
+  ],
+  "common_second_moves": [
+    [
+      "b8c6",
+      8
+    ],
+    [
+      "d2d4",
+      5
+    ],
+    [
+      "b1c3",
+      3
+    ],
+    [
+      "e7e6",
+      1
+    ],
+    [
+      "g1f3",
+      1
+    ]
+  ],
+  "bot_usage": {
+    "style_weight": 0.24,
+    "randomness": 0.42,
+    "training_move_weight": 0.82
+  }
+}

@@ -134,7 +134,19 @@ async function serve(request, env, url) {
     if (origin && origin !== url.origin) return new Response("Origine refusée.", { status: 403 });
     return env.TABLES.get(env.TABLES.idFromName("salon")).fetch(request);
   }
-  const res = await env.ASSETS.fetch(request);
+  // Static pages live under /site, while the chess engine and profiles have
+  // one canonical copy under /src/echecs. Keep both URLs backed by those
+  // source locations instead of duplicating chess assets into site/assets.
+  const assetUrl = new URL(request.url);
+  if (assetUrl.pathname.startsWith("/src/echecs/")) {
+    // Keep the canonical chess source path unchanged.
+  } else if (assetUrl.pathname.startsWith("/site/")) {
+    // Keep already-prefixed site paths unchanged; the asset handler resolves
+    // /site/ to its index document.
+  } else {
+    assetUrl.pathname = `/site${assetUrl.pathname === "/" ? "/index.html" : assetUrl.pathname}`;
+  }
+  const res = await env.ASSETS.fetch(new Request(assetUrl, request));
   // Rien de la bêta ne doit être indexé ni partagé par un cache public.
   const out = new Response(res.body, res);
   out.headers.set("x-robots-tag", "noindex");

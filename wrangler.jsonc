@@ -9,7 +9,7 @@
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
   "assets": {
-    "directory": "./site",
+    "directory": ".",
     "binding": "ASSETS",
     // Le Worker vérifie l'accès avant de servir le moindre fichier.
     "run_worker_first": true,

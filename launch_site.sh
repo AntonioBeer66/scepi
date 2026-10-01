@@ -28,6 +28,7 @@ fi
 
 needs_dependency_install() {
   [ ! -d "node_modules" ] && return 0
+  [ ! -x "node_modules/.bin/wrangler" ] && return 0
 
   # Rolldown uses a platform-specific optional package. npm can leave that
   # package out when node_modules was installed on another machine/platform.
@@ -71,7 +72,7 @@ npm run build || {
 
 # Site + coinche en ligne, comme sur la bêta (Cloudflare Workers en local).
 echo "Démarrage du site et de la coinche en ligne (port 8000)..."
-npx wrangler dev --port 8000 &
+./node_modules/.bin/wrangler dev --port 8000 --persist-to /tmp/scepi-wrangler-state &
 SITE_PID=$!
 
 cleanup() {

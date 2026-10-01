@@ -4,7 +4,7 @@
   const files = "abcdefgh",
     glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" },
     pieceSvg = (type, color = "w") =>
-      `<img class="chess-piece-svg" src="../../assets/images/echecs/cburnett/${color}${type.toUpperCase()}.svg" alt="" draggable="false">`;
+      `<img class="chess-piece-svg" src="/assets/images/echecs/cburnett/${color}${type.toUpperCase()}.svg" alt="" draggable="false">`;
   const soundFiles = {
     move: "move.wav",
     capture: "capture.wav",
@@ -14,7 +14,7 @@
   const playSound = (name) => {
     const file = soundFiles[name];
     if (!file) return;
-    const audio = new Audio(`../../assets/audio/echecs/${file}`);
+    const audio = new Audio(`/assets/audio/echecs/${file}`);
     audio.volume = 0.55;
     audio.play().catch(() => {});
   };
@@ -194,8 +194,8 @@
         profile.id,
         {
           ...profile,
-          file: `../../assets/echecs/${profile.model}`,
-          profile: `../../assets/echecs/${profile.style}`,
+          file: `../../../src/echecs/${profile.model}`,
+          profile: `../../../src/echecs/${profile.style}`,
           copy: profile.description,
         },
       ]),
@@ -321,7 +321,7 @@
   class StockfishEngine {
     constructor() {
       const script = new URL(
-        "../../assets/echecs/stockfish.js",
+        "../../../src/echecs/stockfish.js",
         document.baseURI,
       );
       this.worker = new Worker(script);
@@ -2016,7 +2016,7 @@
   if (boardFooter && navigation)
     boardFooter.insertBefore(navigation, $("#chess-reset"));
   if (boardFooter && sidePanel) sidePanel.appendChild(boardFooter);
-  fetch("../../assets/echecs/config.json")
+  fetch("../../../src/echecs/config.json")
     .then((response) => response.json())
     .then((config) => {
       config.profiles.forEach((profile) => {
