@@ -3,6 +3,30 @@ document.documentElement.classList.add("js");
 const toggle = document.querySelector(".menu-toggle");
 const navigation = document.querySelector("#navigation");
 
+// Lien transversal vers la rubrique Actualités, y compris sur les pages
+// historiques qui partagent le même script de navigation.
+if (
+  navigation &&
+  ![...navigation.querySelectorAll("a")].some(
+    (link) => link.textContent.trim().toLowerCase() === "actus",
+  )
+) {
+  const actusLink = document.createElement("a");
+  // Les pages sont ouvertes directement depuis le dossier `site` :
+  // l'accueil est à sa racine, les autres rubriques sont dans un sous-dossier.
+  const isSiteSubpage =
+    window.location.pathname.includes("/site/") &&
+    !window.location.pathname.endsWith("/site/index.html");
+  actusLink.href = isSiteSubpage
+    ? "../actus/index.html"
+    : "./actus/index.html";
+  actusLink.textContent = "Actus";
+  if (window.location.pathname.includes("/actus/")) {
+    actusLink.setAttribute("aria-current", "page");
+  }
+  navigation.insertBefore(actusLink, navigation.lastElementChild);
+}
+
 function closeMenu(returnFocus = false) {
   navigation.classList.remove("is-open");
   toggle.setAttribute("aria-expanded", "false");
