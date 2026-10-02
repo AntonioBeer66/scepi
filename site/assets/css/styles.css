@@ -3682,40 +3682,41 @@ html.is-chess-game {
 .lx-game:hover .lx-board .p3 {
   translate: 25% -100%;
 }
-.lx-levels {
+.lx-bot-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
+  margin-top: 24px;
 }
-.lx-levels li {
-  display: grid;
-  grid-template-columns: 40px 70px 1fr 40px;
+.lx-bot-card {
+  display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 14px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #181127;
 }
-.lx-levels img {
-  width: 40px;
-  height: 40px;
+.lx-bot-card img {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: cover;
   border-radius: 50%;
   border: 2px solid var(--gold);
-  background: var(--gold);
 }
-.lx-levels small {
+.lx-bot-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.lx-bot-grid-status {
+  grid-column: 1 / -1;
+  margin: 0;
   color: var(--muted);
-  text-align: right;
-}
-.lx-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(
-      90deg,
-      var(--gold) calc(var(--lvl) * 100%),
-      transparent 0
-    ),
-    #ffffff14;
+  font-size: 13px;
 }
 .lx-steps {
   display: grid;

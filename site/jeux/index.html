@@ -115,25 +115,13 @@
           <span class="eyebrow">JEU DE PLATEAU · 1 JOUEUR</span>
           <h2>Échecs</h2>
           <p>
-            Choisissez votre adversaire parmi trois profils, du plus calme au
-            plus coriace. Ils commentent la partie pendant que vous jouez.
+            Choisissez votre adversaire parmi les profils disponibles, du plus
+            calme au plus coriace. Ils commentent la partie pendant que vous
+            jouez.
           </p>
-          <ul class="lx-levels">
-            <li>
-              <img src="../assets/images/echecs/lea.png" alt="" /><b>Léa</b
-              ><span class="lx-bar" style="--lvl: 0.6"></span><small>900</small>
-            </li>
-            <li>
-              <img src="../assets/images/echecs/mathieu.png" alt="" /><b
-                >Mathieu</b
-              ><span class="lx-bar" style="--lvl: 0.67"></span
-              ><small>1000</small>
-            </li>
-            <li>
-              <img src="../assets/images/echecs/arno.png" alt="" /><b>Arno</b
-              ><span class="lx-bar" style="--lvl: 1"></span><small>1500</small>
-            </li>
-          </ul>
+          <div class="lx-bot-grid" id="lx-chess-bots" aria-label="Profils de bots">
+            <p class="lx-bot-grid-status">Chargement des profils…</p>
+          </div>
           <div class="lx-actions">
             <a class="button primary" href="./echecs/index.html"
               >Jouer aux échecs</a
@@ -200,6 +188,7 @@
         >
       </section>
     </main>
+    <script src="../assets/js/ludotheque.js" defer></script>
     <footer class="footer">
       <div class="container footer-inner">
         <a class="brand" href="../index.html"
