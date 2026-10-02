@@ -3305,6 +3305,14 @@ body.is-playing .rules-btn {
   font-size: 14px;
   margin: 0;
 }
+@media (min-width: 761px) {
+  .home-pillar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}
 
 /* Jouer maintenant : les deux jeux du site */
 
