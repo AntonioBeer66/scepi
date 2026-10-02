@@ -1,7 +1,7 @@
 {
   "username": "haiming-lu",
-  "games": 18,
-  "own_moves": 829,
+  "games": 65,
+  "own_moves": 2395,
   "rates_per_own_move": {
     "pawn_moves": 0.261,
     "captures": 0.256,
@@ -11,12 +11,12 @@
   },
   "by_color": {
     "white": {
-      "games": 9,
-      "wins": 2
+      "games": 35,
+      "wins": 16
     },
     "black": {
-      "games": 9,
-      "wins": 3
+      "games": 30,
+      "wins": 14
     }
   },
   "preferred_opening_sequences": [
@@ -92,8 +92,8 @@
     ]
   ],
   "bot_usage": {
-    "style_weight": 0.24,
+    "style_weight": 0.28,
     "randomness": 0.42,
-    "training_move_weight": 0.82
+    "training_move_weight": 0.88
   }
 }
