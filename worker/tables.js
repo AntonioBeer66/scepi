@@ -30,6 +30,8 @@ import {
 const MAX_MESSAGE = 8 * 1024; // un coup tient en quelques centaines d'octets
 const KEY = (id) => `m:${id}`;
 const HISTORY = "historique"; // { week, rows } : la semaine en cours seulement
+const ARTICLE_PREFIX = "article:";
+const MAX_ARTICLE = 12 * 1024 * 1024;
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -110,6 +112,30 @@ export class Tables extends DurableObject {
   async fetch(request) {
     const url = new URL(request.url);
     const parts = url.pathname.split("/").filter(Boolean); // api, tables, id, action
+    if (parts[0] === "api" && parts[1] === "articles") {
+      const articleId = parts[2];
+      if (request.method === "GET") {
+        if (articleId) {
+          const article = await this.ctx.storage.get(`${ARTICLE_PREFIX}${articleId}`);
+          return article ? json(article) : json({ error: "ARTICLE_INTRouvable" }, 404);
+        }
+        const saved = await this.ctx.storage.list({ prefix: ARTICLE_PREFIX });
+        const articles = [...saved.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
+        return json(articles);
+      }
+      if (request.method === "POST" || (request.method === "PUT" && articleId)) {
+        const length = Number(request.headers.get("content-length") || 0);
+        if (length > MAX_ARTICLE) return json({ error: "ARTICLE_TROP_VOL要UX" }, 413);
+        let body;
+        try { body = await request.json(); } catch { return json({ error: "JSON_INVALIDE" }, 400); }
+        if (!body?.title || !body?.summary || !body?.body || !body?.image) return json({ error: "CHAMPS_MANQUANTS" }, 400);
+        const id = articleId || crypto.randomUUID();
+        const article = { id, title: String(body.title).slice(0, 120), summary: String(body.summary).slice(0, 280), body: String(body.body), image: String(body.image), gallery: Array.isArray(body.gallery) ? body.gallery.map(String).slice(0, 20) : [], date: body.date || new Date().toISOString() };
+        await this.ctx.storage.put(`${ARTICLE_PREFIX}${id}`, article);
+        return json(article, request.method === "POST" ? 201 : 200);
+      }
+      return json({ error: "METHODE_REFUSEE" }, 405);
+    }
     if (url.pathname === "/api/historique.csv" && request.method === "GET") {
       const saved = await this.ctx.storage.get(HISTORY);
       const rows = saved?.week === weekOf(Date.now()) ? saved.rows : [];

@@ -217,6 +217,29 @@ a {
   display: none;
 }
 
+/* Actualités ------------------------------------------------------- */
+.actus-toolbar { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 42px; }
+.actus-list { display: grid; gap: 22px; max-width: 980px; }
+.actus-card { display: grid; grid-template-columns: minmax(180px, 280px) 1fr; gap: 28px; padding: 18px; border: 1px solid var(--line); background: #ffffff08; transition: transform .18s, border-color .18s; }
+.actus-card:hover { transform: translateY(-3px); border-color: #f4c60066; }
+.actus-card img { width: 100%; height: 180px; object-fit: cover; background: var(--brand); }
+.actus-card h2 { font-size: clamp(1.45rem, 3vw, 2.2rem); margin: 10px 0; }
+.actus-meta { color: var(--gold); font: 11px Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+.actus-empty { padding: 40px; border: 1px dashed #ffffff33; color: var(--muted); }
+.article-shell { max-width: 900px; }
+.article-back { display: inline-block; margin: 22px 0 34px; }
+.article-cover { width: 100%; max-height: 520px; object-fit: cover; margin: 20px 0 38px; }
+.article-body { font-size: 1.08rem; }
+.article-body p { max-width: 72ch; }
+.article-body img { display: block; width: min(100%, 760px); margin: 30px 0; }
+.article-actions { display: flex; gap: 14px; flex-wrap: wrap; margin: 22px 0; }
+.actus-form { max-width: 820px; display: grid; gap: 20px; }
+.actus-form label { display: grid; gap: 8px; color: var(--muted); font: 12px Consolas, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.actus-form input, .actus-form textarea { width: 100%; border: 1px solid #ffffff2b; background: #ffffff0a; color: var(--text); padding: 14px; font: inherit; }
+.actus-form textarea { min-height: 180px; resize: vertical; }
+.actus-form small { color: var(--muted); font: 12px Consolas, monospace; }
+@media (max-width: 700px) { .actus-toolbar, .actus-card { display: block; } .actus-card img { margin-bottom: 18px; } .actus-toolbar .button { display: inline-block; margin-top: 18px; } }
+
 /* Hero (pages secondaires) ------------------------------------------ */
 
 .hero {
