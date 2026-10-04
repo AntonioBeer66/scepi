@@ -11,6 +11,22 @@
     checkmate: "checkmate.wav",
     castle: "castle.wav",
   };
+  // Android WebView does not reliably expose file:///android_asset JSON via
+  // fetch(). XHR can read the packaged file and reports status 0 on success.
+  function loadJson(path) {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open("GET", path);
+      request.onload = () => {
+        if ((request.status >= 200 && request.status < 300) || request.status === 0) {
+          try { resolve(JSON.parse(request.responseText)); }
+          catch (error) { reject(error); }
+        } else reject(new Error(`HTTP ${request.status}`));
+      };
+      request.onerror = () => reject(new Error("Impossible de charger le fichier"));
+      request.send();
+    });
+  }
   const playSound = (name) => {
     const file = soundFiles[name];
     if (!file) return;
@@ -1170,23 +1186,16 @@
     $("#chess-profile-copy").textContent = profile.copy;
     try {
       const responses = await Promise.all([
-        fetch(profile.file),
-        fetch(profile.profile),
+        loadJson(profile.file),
+        loadJson(profile.profile),
       ]);
-      model = await responses[0].json();
-      styleProfile = await responses[1].json();
+      model = responses[0];
+      styleProfile = responses[1];
     } catch (error) {
       model = null;
       styleProfile = null;
     }
     reset();
-    if (window.location.protocol === "file:") {
-      status(
-        "Serveur local requis",
-        "Lancez « python3 -m http.server 8000 --directory site » puis ouvrez http://127.0.0.1:8000.",
-      );
-      return;
-    }
     if (!engine) {
       try {
         engine = new StockfishEngine();
@@ -2016,8 +2025,7 @@
   if (boardFooter && navigation)
     boardFooter.insertBefore(navigation, $("#chess-reset"));
   if (boardFooter && sidePanel) sidePanel.appendChild(boardFooter);
-  fetch("../../../src/echecs/config.json")
-    .then((response) => response.json())
+  loadJson("../../../src/echecs/config.json")
     .then((config) => {
       config.profiles.forEach((profile) => {
         profile.selection_dialogue = Array.isArray(profile.selection_dialogue)

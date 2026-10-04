@@ -11,12 +11,14 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.webkit.WebViewAssetLoader;
 
 public class MainActivity extends Activity {
-    static final String SITE = "https://scepi-beta.scepi-site.workers.dev/";
+    static final String SITE = "https://appassets.androidplatform.net/site/index.html";
 
     private WebView web;
 
@@ -24,16 +26,36 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         web = new WebView(this);
+        WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/site/", new RepositoryPathHandler(this, "site"))
+                .addPathHandler("/assets/", new RepositoryPathHandler(this, "site/assets"))
+                .addPathHandler("/src/", new RepositoryPathHandler(this, "src"))
+                .build();
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return loader.shouldInterceptRequest(request.getUrl());
+            }
+
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+                Uri u = Uri.parse(url);
+                return loader.shouldInterceptRequest(u);
+            }
+
             // Liens hors du site (mailto, réseaux sociaux…) : appli dédiée.
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
                 Uri u = r.getUrl();
-                if (Uri.parse(SITE).getHost().equals(u.getHost())) return false;
+                // Les pages et ressources locales restent dans la WebView.
+                // Après la première navigation, les pages sont file:// URLs.
+                // Elles doivent rester dans la WebView, pas être envoyées à
+                // une application externe via ACTION_VIEW.
+                if ("appassets.androidplatform.net".equals(u.getHost())) return false;
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) {}
                 return true;
             }

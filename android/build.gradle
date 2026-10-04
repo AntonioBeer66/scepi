@@ -1,6 +1,11 @@
-// Appli Android : le site de la bêta en plein écran dans une WebView.
+// Appli Android : la version du site présente dans ../site, embarquée
+// directement dans l'APK et affichée en plein écran dans une WebView.
 //   gradlew assembleDebug  ->  build/outputs/apk/debug/app-debug.apk
 plugins { id "com.android.application" version "8.7.3" }
+
+dependencies {
+    implementation "androidx.webkit:webkit:1.12.1"
+}
 
 android {
     namespace "fr.scepi.app"
@@ -16,4 +21,26 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    // Le contenu web est copié depuis le dépôt au moment du build : aucun
+    // serveur web ni URL distante n'est nécessaire pour lancer l'application.
+    sourceSets {
+        main {
+            assets.srcDirs = ["$buildDir/generated/web-assets"]
+        }
+    }
 }
+
+// Les profils d'échecs et les modèles sont référencés par le site sous
+// /src/echecs. Ils doivent donc conserver ce chemin dans l'APK local.
+tasks.register("copyChessAssets", Copy) {
+    from("../site")
+    into("$buildDir/generated/web-assets/site")
+    doLast {
+        copy {
+            from("../src/echecs")
+            into("$buildDir/generated/web-assets/src/echecs")
+        }
+    }
+}
+tasks.named("preBuild").configure { dependsOn("copyChessAssets") }

@@ -4,7 +4,10 @@
 
   fetch("../../src/echecs/config.json")
     .then((response) => {
-      if (!response.ok) throw new Error("Impossible de charger les profils");
+      // Les réponses file:///android_asset/... ont un statut 0 dans WebView
+      // même lorsque le fichier local a bien été trouvé.
+      if (!response.ok && response.status !== 0)
+        throw new Error("Impossible de charger les profils");
       return response.json();
     })
     .then(({ profiles = [] }) => {

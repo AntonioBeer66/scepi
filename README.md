@@ -79,4 +79,20 @@ Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adap
 
 ## Appli Android
 
-`android/` contient une appli minimale qui ouvre la bêta en plein écran dans une WebView. Compilation (JDK 17 et SDK Android requis) : `cd android && ./gradlew assembleDebug`, l'APK sort dans `android/build/outputs/apk/debug/scepi-debug.apk`.
+`android/` contient l'application native Android. Le contenu de `site/` est
+embarqué dans l'APK au moment de la compilation et ouvert localement dans une
+WebView : l'application ne dépend donc pas d'une URL web pour afficher le
+site. Les liens externes (réseaux sociaux, e-mail, etc.) continuent à être
+ouverts par Android.
+
+Prérequis : JDK 17 et SDK Android. Depuis la racine du dépôt :
+
+```sh
+cd android
+./gradlew assembleDebug
+```
+
+L'APK est généré dans
+`android/build/outputs/apk/debug/app-debug.apk`. Pour reconstruire après
+une modification du site, relancer la même commande : `site/` est relu à
+chaque build.
