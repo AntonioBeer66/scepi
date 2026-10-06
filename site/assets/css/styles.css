@@ -190,19 +190,21 @@ a {
   gap: 12px;
   flex-shrink: 0;
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: 19px;
   font-weight: 800;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.1em;
   line-height: 1;
 }
 /* Emblème couleur entier, sans recadrage (DIRECTION_ARTISTIQUE.md). */
 .brand img {
   width: auto;
-  height: 64px;
+  height: 56px;
 }
-.brand b {
-  color: var(--gold);
-  font-weight: inherit;
+.brand-sub {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.27em;
+  margin-top: 7px;
 }
 .header nav {
   display: flex;
@@ -2111,10 +2113,10 @@ a {
   }
   .brand {
     gap: 10px;
-    font-size: 19px;
+    font-size: 16px;
   }
   .brand img {
-    height: 50px;
+    height: 48px;
   }
   .header nav {
     width: 100%;
