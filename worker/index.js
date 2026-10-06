@@ -153,9 +153,22 @@ async function serve(request, env, url, isPublic = false) {
     // Keep already-prefixed site paths unchanged; the asset handler resolves
     // /site/ to its index document.
   } else {
-    assetUrl.pathname = `/site${assetUrl.pathname === "/" ? "/index.html" : assetUrl.pathname}`;
+    // « / » → « /site/ » (et non /site/index.html, que le gestionnaire
+    // d'assets redirige vers /site/ : l'accueil passait par une redirection).
+    assetUrl.pathname = `/site${assetUrl.pathname}`;
   }
-  const res = await env.ASSETS.fetch(new Request(assetUrl, request));
+  let res = await env.ASSETS.fetch(new Request(assetUrl, request));
+  // Redirection du gestionnaire d'assets (…/index.html → …/) : adresse
+  // publique sans le préfixe /site, qui ne doit jamais s'afficher.
+  const location = res.headers.get("location");
+  if (location) {
+    const to = new URL(location, assetUrl);
+    if (to.origin === url.origin && to.pathname.startsWith("/site/")) {
+      to.pathname = to.pathname.slice(5);
+      res = new Response(res.body, res);
+      res.headers.set("location", to.pathname + to.search);
+    }
+  }
   if (isPublic) return res;
   // Rien de la bêta ne doit être indexé ni partagé par un cache public.
   const out = new Response(res.body, res);
