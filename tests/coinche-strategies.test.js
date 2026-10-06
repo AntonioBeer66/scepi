@@ -74,7 +74,7 @@ setup({ hands: hands('JH 9H AH 7H AD 10D AC 8C'), contract: contract(1, 80, 'S')
 check('Intervention Valet-9-As avec une fausse carte : 130', bid(api.botDecideBid(0)), '130H');
 setup({ hands: hands('KH QH 7H AS 8S 7D 8D 7C'), contract: contract(2, 110, 'H'), bidMemo: [{ supported: true }, {}, {}, {}],
   donneAnnonces: [{ seat: 2, montant: 80, atout: 'H' }, { seat: 0, montant: 100, atout: 'H' }, { seat: 2, montant: 110, atout: 'H' }] });
-check('Reprendre de 10 pour marquer sa belote', bid(api.botDecideBid(0)), '120H');
+check('Belote chez le partenaire preneur : elle compte déjà, pas de reprise', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('JH 9H 8H 7H AS 7S 8D 7C'), contract: contract(2, 110, 'H'), passesConsecutives: 1,
   donneAnnonces: [{ seat: 0, montant: 100, atout: 'H' }, { seat: 2, montant: 110, atout: 'H' }] });
 check('Ne pas soutenir sa propre couleur relancée par le partenaire', bid(api.botDecideBid(0)), 'passe');

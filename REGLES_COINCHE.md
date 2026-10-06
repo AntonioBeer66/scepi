@@ -17,7 +17,7 @@ Les conventions ci-dessous rendent les points incomplets du manuel exécutables.
 | Partenaire maître et couleur demandée absente | Toute carte autorisée, y compris un atout inférieur à celui du partenaire. |
 | Capot beloté | Contrat distinct à 270 ; huit plis ET belote valide, sinon chute sans repli à 250. |
 | Générale | Enchère la plus haute (au-dessus de 270) : le preneur doit remporter les huit plis à lui seul (aucun pli pour son partenaire). Il entame le premier pli. Vaut 250 (comme un capot), multiplié par la coinche. |
-| Belote | Déclaration automatique : dès que le Roi puis la Dame d'atout du preneur sont joués, Belote puis Rebelote sont annoncées sans action du joueur (humain ou bot). |
+| Belote | Celle de l'équipe preneuse : preneur ou partenaire (même s'il a été remonté). Déclaration automatique : dès que le Roi puis la Dame d'atout de son détenteur sont joués, Belote puis Rebelote sont annoncées sans action du joueur (humain ou bot). |
 | Délais techniques | 30 s par enchère, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
 
 Le délai de **30 secondes par carte**, avec carte légale aléatoire à expiration, vient du README du projet. Les règles fondamentales de cartes et de score proviennent des articles 5 à 11 et de l'annexe 1 du manuel. Le mélange et la désignation du donneur sont simplifiés pour le jeu en ligne.
@@ -149,7 +149,7 @@ Fournir reste obligatoire sur son partenaire. Sans couleur demandée, couper sur
 
 ## 8. Belote et rebelote
 
-- Au verrouillage du contrat, repérer si un même preneur possède dans sa main initiale le roi ET la dame d'atout. Lui seul est admissible au bonus ; la belote défensive ne rapporte rien.
+- Au verrouillage du contrat, repérer si le preneur ou son partenaire possède dans sa main initiale le roi ET la dame d'atout (le même joueur les deux). L'équipe preneuse est seule admissible au bonus, que le détenteur ait pris ou que son partenaire l'ait remonté ; la belote défensive ne rapporte rien.
 - Déclaration automatique, sans action du joueur : dès que la première de ces deux cartes est jouée, Belote est annoncée ; dès que la seconde est jouée, Rebelote l'est. L'ordre roi/dame est libre. Ce comportement est identique pour un siège humain ou un bot — aucun bouton, aucune fenêtre à guetter.
 - Le bonus devient valide quand les deux cartes ont été jouées (donc les deux annonces faites).
 - Belote valide : +20 au décompte des points de la donne pour les preneurs, à condition qu'ils aient fait au moins 81 points de plis ; elle les aide seulement à réussir leur contrat (seuil abaissé, section 9) et n'ajoute rien au score de la partie. Un capot beloté l'exige déjà pour ses 270.
@@ -216,6 +216,8 @@ Appliquer les gains une seule fois par donne. Ne pas ajouter les points de plis,
 | 250 coinché, huit / sept plis | 500 aux preneurs / 320 à la défense. |
 | 270, huit plis sans rebelote valide | Chute selon convention V1. |
 | 270 surcoinché, huit plis avec belote valide | 1 080 aux preneurs ; victoire. |
+| 80 remonté à 130 par le partenaire, belote de l'ouvreur, 116 points de plis | Belote/Rebelote annoncées par l'ouvreur ; réussite (116 + 20). |
+| Belote en défense, ou Roi et Dame d'atout séparés entre preneur et partenaire | Aucune annonce, rien de compté. |
 | Deuxième carte de belote jouée sur le dernier pli | Rebelote s'annonce avant la résolution du pli ; le score qui suit en tient compte. |
 | Même carte envoyée deux fois, ou après timeout | Un seul jeu, aucune modification rétroactive. |
 | Reconnexion en cours de tour | Main restante et échéance inchangées. |

@@ -3,7 +3,7 @@
 // bloqué (le moteur refuse alors l'action et le délai de 30 s expire), si
 // une partie ne se termine pas, ou si une donne est mal arbitrée. Chaque donne
 // est recomptée ici indépendamment du moteur : gagnant et points des plis,
-// belote/rebelote (le preneur seul, Roi et Dame d'atout en main initiale),
+// belote/rebelote (preneur ou partenaire, Roi et Dame d'atout en main initiale),
 // Générale (8 atouts en main initiale : capot beloté gagné d'office, jamais
 // coinché par un bot) et score. Une partie sur quatre commence par une
 // Générale imposée, qu'une donne au hasard ne produit presque jamais.
@@ -64,11 +64,13 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       const c = G.contract;
       const pre = c.equipePreneur;
       const main = G.mainsInitiales[c.preneur];
-      const belote = ['K', 'Q'].every((r) => main.some((x) => x.suit === c.atout && x.rank === r));
+      const holder = [c.preneur, (c.preneur + 2) % 4].find((s) =>
+        ['K', 'Q'].every((r) => G.mainsInitiales[s].some((x) => x.suit === c.atout && x.rank === r))) ?? null;
+      const belote = holder !== null;
       const huitAtouts = main.every((x) => x.suit === c.atout);
       assert.deepStrictEqual([...G.pointsPlis], pts, `${where()} : points des plis`);
       assert.deepStrictEqual([...G.plisGagnes], plis, `${where()} : nombre de plis`);
-      assert.strictEqual(G.belote.holder, belote ? c.preneur : null, `${where()} : détenteur de la belote`);
+      assert.strictEqual(G.belote.holder, holder, `${where()} : détenteur de la belote`);
       assert.strictEqual(G.belote.beloteDeclared && G.belote.rebeloteDeclared, belote, `${where()} : belote/rebelote`);
       assert.strictEqual(!!c.huitAtouts, huitAtouts && c.montant === 270, `${where()} : marqueur huit atouts (270 seulement)`);
 

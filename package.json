@@ -7,7 +7,7 @@
     "dev": "vite build --watch",
     "start": "npm run build && wrangler dev --port 8000",
     "deploy": "npm run build && wrangler deploy",
-    "test": "node tests/coinche-strategies.test.js && node tests/coinche-bots.test.js && node tests/coinche-game.test.js && node tests/coinche-tables.test.js && node tests/coinche-rules.test.js && node tests/coinche-cas.test.js",
+    "test": "node tests/coinche-strategies.test.js && node tests/coinche-bots.test.js && node tests/coinche-game.test.js && node tests/coinche-tables.test.js && node tests/coinche-rules.test.js && node tests/coinche-cas.test.js && node tests/coinche-belote.test.js",
     "test:e2e": "npm run build && node tests/coinche-e2e.js"
   },
   "dependencies": {

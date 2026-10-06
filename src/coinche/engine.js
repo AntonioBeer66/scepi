@@ -38,8 +38,8 @@ export const GENERALE = 500;
 export const ALLOWED_BIDS = [
   80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270, GENERALE,
 ];
-// Belote du preneur : +20 au décompte de la donne (pas au score de la
-// partie) s'il fait au moins 81 points de plis.
+// Belote de l'équipe preneuse (preneur ou partenaire) : +20 au décompte de
+// la donne (pas au score de la partie) si elle fait au moins 81 points de plis.
 export const BELOTE_BONUS = 20;
 const BELOTE_MIN = 81;
 
@@ -318,15 +318,15 @@ function botTurnAction(seat) {
 //     100  4 atouts avec Valet ou 9 et As/10, ou 5 atouts belotés + un As
 //     110 / 120 / 130  Valet + 9 et 3 / 2 / 1 fausses cartes ; 0 = capot
 //   Soutien du partenaire : +20 Valet, +10 9 second, +10 par As hors atout,
-//     −10 si court à l'atout, +20 belote (seul le preneur la marque, on
-//     relance donc pour le devenir), puis on retire un palier de prudence :
+//     −10 si court à l'atout, +20 belote (elle compte pour l'équipe), puis
+//     on retire un palier de prudence :
 //     un contrat chuté donne 160 à l'adversaire, 10 points de plus ne
 //     valent jamais ce risque.
 //   Capot quand les As annoncés (« clefs ») couvrent les fausses cartes
 //     de l'ouvreur.
 //   Compétition : soutenir le partenaire en « forçant » de 10, deux fois au
 //     plus par ligne ; au-dessus de l'adversaire, surenchérir seulement si
-//     la donne simulée le vaut mieux que le laisser jouer (voir étape 4).
+//     la donne simulée le vaut mieux que le laisser jouer (voir étape 3).
 //   Ouverture au barème, sauf contrat que la simulation voit chuter une
 //     fois sur deux ; 80 hors barème s'il réussit 7 fois sur 10.
 //   Ces barèmes ont été calibrés en simulation (parties bots contre bots
@@ -485,7 +485,7 @@ function raiseBy(seat, suit) {
 // couleur, chaque palier) : au-delà de ce temps total, celles qui restent
 // répondent « je ne sais pas » et le barème décide.
 const BID_DECISION_MS = 400;
-const COMPETE_MARGIN = 60; // voir l'étape 4
+const COMPETE_MARGIN = 60; // voir l'étape 3
 let bidDeadline = Infinity;
 function botDecideBid(seat) {
   bidDeadline = tuning.now() + BID_DECISION_MS;
@@ -644,21 +644,7 @@ function decideBid(seat) {
     }
   }
 
-  // 3. Ma belote dans l'atout de mon partenaire preneur : elle ne compte
-  // que pour le preneur, je reprends de 10 pour 20 points de belote.
-  if (
-    ours &&
-    cur.preneur === partner &&
-    cur.type === "NUMERIQUE" &&
-    hasBelote(hand, cur.atout) &&
-    !memo.beloteRetake
-  ) {
-    memo.beloteRetake = true;
-    const o = offer(cur.montant + 10, cur.atout);
-    if (o) return o;
-  }
-
-  // 4. Intervenir au-dessus de l'adversaire : par espérance simulée, pas
+  // 3. Intervenir au-dessus de l'adversaire : par espérance simulée, pas
   // au barème. Le laisser jouer vaut −P·M + (1−P)·160 (sa réussite P jouée
   // sur nos mondes, comme pour la coinche) ; surenchérir au minimum dans
   // notre meilleure couleur vaut p·min − (1−p)·160. On ne surenchérit que
@@ -689,7 +675,7 @@ function decideBid(seat) {
     }
   }
 
-  // 5. Ouvrir au barème (il renseigne le partenaire : l'ouverture « à
+  // 4. Ouvrir au barème (il renseigne le partenaire : l'ouverture « à
   // l'espérance » seule perdait 1,7 pt/donne), mais pas un contrat que la
   // simulation voit chuter une fois sur deux (+2,3 pts/donne) ; et ouvrir
   // 80 hors barème quand la simulation le réussit 7 fois sur 10 (+1,5).
@@ -1413,15 +1399,15 @@ function mcWorlds(seat, n) {
   const size = {};
   for (const s of others) size[s] = 8 - G.plisJoues - (played.has(s) ? 1 : 0);
   if (others.reduce((t, s) => t + size[s], 0) !== unknown.length) return [];
-  // Belote annoncée : la carte de la rebelote est chez le preneur.
+  // Belote annoncée : la carte de la rebelote est chez son détenteur.
   const pinned = {};
   if (
     G.belote.beloteDeclared &&
     !G.belote.rebeloteDeclared &&
-    G.contract.preneur !== seat
+    G.belote.holder !== seat
   ) {
     const id = (G.belote.kingPlayed ? "Q" : "K") + atout;
-    if (!G.seen[id] && !mine.has(id)) pinned[id] = G.contract.preneur;
+    if (!G.seen[id] && !mine.has(id)) pinned[id] = G.belote.holder;
   }
   let w = null;
   for (let tries = 0; !w && tries < 20; tries++)
@@ -1478,12 +1464,15 @@ function mcWorlds(seat, n) {
 }
 
 // La belote comptera-t-elle dans ce monde ? Annoncée : oui. Roi ou Dame
-// tombé sans annonce : non. Sinon, le preneur (imaginé) la tient-il ?
+// tombé sans annonce : non. Sinon, le preneur ou son partenaire (imaginés)
+// la tiennent-ils ?
 function worldBelote(seat, world) {
   const { atout, preneur } = G.contract;
   if (G.belote.beloteDeclared) return true;
   if (G.seen["K" + atout] || G.seen["Q" + atout]) return false;
-  return hasBelote(preneur === seat ? G.hands[seat] : world[preneur], atout);
+  return [preneur, partnerOf(preneur)].some((s) =>
+    hasBelote(s === seat ? G.hands[seat] : world[s], atout),
+  );
 }
 
 function simPlay(sim, seat, carte) {
@@ -1712,18 +1701,12 @@ function botChooseCard(seat) {
 }
 
 // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
-// Dame d'atout du preneur sont joués — aucun bouton, aucune fenêtre à
-// guetter. Le bonus ne dépend que des cartes réellement en main, donc
-// l'automatiser ne triche pas : humain et bots sont logés à la même
-// enseigne, et un bot ne pouvait de toute façon jamais déclarer lui-même
-// avant ce changement.
+// Dame d'atout du détenteur (preneur ou partenaire) sont joués — aucun
+// bouton, aucune fenêtre à guetter. Le bonus ne dépend que des cartes
+// réellement en main, donc l'automatiser ne triche pas : humain et bots
+// sont logés à la même enseigne.
 function declareBeloteIfNeeded(seat, carte) {
-  if (
-    !G.contract ||
-    seat !== G.contract.preneur ||
-    carte.suit !== G.contract.atout
-  )
-    return;
+  if (!G.contract || carte.suit !== G.contract.atout) return;
   if (carte.rank !== "K" && carte.rank !== "Q") return;
   if (G.belote.holder !== seat) return;
   if (carte.rank === "K") G.belote.kingPlayed = true;
@@ -1773,7 +1756,7 @@ function computeScore() {
   let gainDefense = 0;
   if (reussi) gainPreneurs = contractValue(G.contract) * G.multiplicateur;
   else gainDefense = 160 * G.multiplicateur;
-  // Belote du preneur : +20 au décompte de la donne (pour faire le contrat,
+  // Belote des preneurs : +20 au décompte de la donne (pour faire le contrat,
   // voir contratReussi) s'il a fait au moins 81 points de plis ; rien au
   // score de la partie. Déjà comprise dans le capot beloté.
   const beloteBonus =
@@ -1994,14 +1977,13 @@ function act(seat, action) {
 }
 
 function lockContractAndStartPlay() {
-  const preneurHand = G.mainsInitiales[G.contract.preneur];
-  const hasKing = preneurHand.some(
-    (c) => c.suit === G.contract.atout && c.rank === "K",
-  );
-  const hasQueen = preneurHand.some(
-    (c) => c.suit === G.contract.atout && c.rank === "Q",
-  );
-  G.belote.holder = hasKing && hasQueen ? G.contract.preneur : null;
+  // Belote de l'équipe preneuse : le preneur ou son partenaire (qui a pu
+  // ouvrir avant d'être remonté) tient Roi et Dame d'atout.
+  const { preneur, atout } = G.contract;
+  G.belote.holder =
+    [preneur, partnerOf(preneur)].find((s) =>
+      hasBelote(G.mainsInitiales[s], atout),
+    ) ?? null;
   // Générale : la main initiale du preneur tenait les 8 cartes de
   // l'atout. Ce n'est pas un contrat à part — il se joue et se score
   // exactement comme le capot beloté qu'il est déjà (270) — seulement un

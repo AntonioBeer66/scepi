@@ -311,9 +311,9 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       return { t: "Surcoinche", alert: true };
     if (c?.coincheur === seat) return { t: "Coinche", alert: true };
     const bidding = G.phase === "ENCHERES" || G.phase === "SURCOINCHE";
-    // Belote du preneur : sa propre bulle, bien visible (le contrat reste
-    // affiché en haut de l'écran).
-    if (c?.preneur === seat && !bidding && G.belote.beloteDeclared)
+    // Belote (preneur ou partenaire) : bulle chez son détenteur, bien
+    // visible (le contrat reste affiché en haut de l'écran).
+    if (G.belote.holder === seat && !bidding && G.belote.beloteDeclared)
       return { t: G.belote.rebeloteDeclared ? "Rebelote ! +20" : "Belote !", lead: true };
     if (c?.preneur === seat && (bidding || G.phase === "JEU" || G.phase === "SCORE")) {
       const t = bidLabel(c.montant, c.atout) + (G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "");
