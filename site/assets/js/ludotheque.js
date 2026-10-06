@@ -18,8 +18,6 @@
         )
         .join("");
     })
-    .catch(() => {
-      grid.innerHTML =
-        '<p class="lx-bot-grid-status">Les profils sont momentanément indisponibles.</p>';
-    });
+    // Profils introuvables : on retire la grille, le bouton « Jouer » suffit.
+    .catch(() => grid.remove());
 })();

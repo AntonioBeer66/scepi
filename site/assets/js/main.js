@@ -1,11 +1,23 @@
+// Ce qui est déjà à l'écran au chargement s'affiche sans fondu : mesuré
+// avant d'ajouter .js (qui masque le reste), sinon la transition se joue.
+// Tout devient de toute façon visible au bout de 2,5 s (vieux téléphones où
+// l'observateur se déclenche mal) : jamais de bouton caché.
+const revealTargets = document.querySelectorAll(".reveal, .reveal-stagger");
+revealTargets.forEach((el) => {
+  if (el.getBoundingClientRect().top < window.innerHeight)
+    el.classList.add("is-visible");
+});
 document.documentElement.classList.add("js");
 
 const toggle = document.querySelector(".menu-toggle");
 const navigation = document.querySelector("#navigation");
 // Racine du site en chemin relatif, tirée du lien du logo (« ../../ » selon
 // la profondeur) : juste en ligne comme en ouvrant les fichiers de site/.
+// Sans « ?. » : les WebView Android d'avant Chrome 80 refuseraient tout le
+// fichier, menu mobile compris.
+const brandLink = document.querySelector(".brand");
 const siteRoot = (
-  document.querySelector(".brand")?.getAttribute("href") || "/index.html"
+  (brandLink && brandLink.getAttribute("href")) || "/index.html"
 ).replace(/index\.html$/, "");
 
 // Lien transversal vers la rubrique Actualités, y compris sur les pages
@@ -26,9 +38,14 @@ if (
 }
 
 // Bouton « Appli Android » en bas de chaque page (APK compilé depuis
-// android/, voir README) ; masqué dans l'appli elle-même (WebView : « ; wv) »).
+// android/, voir README) : proposé seulement sur Android, et masqué dans
+// l'appli elle-même (WebView : « ; wv) »).
 const footerSocial = document.querySelector(".footer-social");
-if (footerSocial && !navigator.userAgent.includes("; wv)")) {
+if (
+  footerSocial &&
+  /Android/i.test(navigator.userAgent) &&
+  !navigator.userAgent.includes("; wv)")
+) {
   const app = document.createElement("a");
   app.className = "footer-app";
   app.href = `${siteRoot}assets/app/scepinvaders.apk`;
@@ -64,7 +81,10 @@ matchMedia("(min-width: 761px)").addEventListener("change", () => closeMenu());
 // dans le champ de vision plutôt que d'être toutes visibles d'un bloc au
 // chargement. Le CSS ne cache ces éléments (opacity:0) que sous .js — sans
 // JavaScript ou sans IntersectionObserver, tout reste visible d'emblée.
-const revealTargets = document.querySelectorAll(".reveal, .reveal-stagger");
+// Le marquage de ce qui est déjà à l'écran se fait tout en haut, avant .js.
+setTimeout(() => {
+  revealTargets.forEach((el) => el.classList.add("is-visible"));
+}, 2500);
 if (revealTargets.length && "IntersectionObserver" in window) {
   const revealObserver = new IntersectionObserver(
     (entries) => {
@@ -97,6 +117,7 @@ if (matchMedia("(hover: hover)").matches) {
 
 // Bouton « Copier » (adresse e-mail de la page Contact).
 for (const btn of document.querySelectorAll("[data-copy]")) {
+  btn.setAttribute("aria-live", "polite");
   btn.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(btn.dataset.copy);

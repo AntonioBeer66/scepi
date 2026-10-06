@@ -18,8 +18,10 @@ echo Compilation du jeu de coinche...
 call npm run build || goto :erreur
 
 rem Site + coinche en ligne, comme sur la beta (Cloudflare Workers en local).
+rem L'etat local (tables, actus) va dans %TEMP% : s'il restait dans .wrangler\, a
+rem l'interieur du dossier servi, il relancerait le serveur en boucle.
 echo Demarrage du site et de la coinche en ligne (port 8000)...
-start "SCEP - site" cmd /k node_modules\.bin\wrangler.cmd dev --port 8000
+start "SCEP - site" cmd /k node_modules\.bin\wrangler.cmd dev --port 8000 --persist-to "%TEMP%\scepi-wrangler-state"
 
 rem Ouvre le navigateur des que le site repond (2 minutes au plus).
 echo Attente du serveur...
