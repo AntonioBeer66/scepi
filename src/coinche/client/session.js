@@ -5,7 +5,7 @@
 import { Client } from "boardgame.io/client";
 import { Local } from "boardgame.io/multiplayer";
 import { Coinche } from "../game.js";
-import { TRICK_SHOW_MS } from "../host.js";
+import { trickPause } from "../host.js";
 import { createHud } from "./hud.js";
 import { OnlineClient } from "./online-client.js";
 import { createTable } from "./table-scene.js";
@@ -127,7 +127,7 @@ export function startSession({
   }
 
   // Dernière carte en main, à son tour : aucun choix, elle part toute seule
-  // (le temps de voir le pli se remplir).
+  // presque aussitôt (le pli précédent ramassé d'abord).
   let autoTour = null;
   function autoLastCard(G) {
     if (G.phase !== "JEU" || G.joueurActif !== me || G.hands[me]?.length !== 1) return;
@@ -137,7 +137,7 @@ export function startSession({
     setTimeout(() => {
       if (!stopped && client.getState()?.G.tour === t)
         client.moves.agir({ type: "JOUER", carte: { id } });
-    }, 500 + (G.pliCourant.length ? 0 : TRICK_SHOW_MS)); // pli précédent ramassé d'abord
+    }, 150 + trickPause(G));
   }
 
   let stopped = false;

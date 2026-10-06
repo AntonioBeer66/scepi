@@ -2653,6 +2653,10 @@ body.is-playing .header {
   box-shadow: 0 18px 50px #000c;
   text-align: center;
 }
+/* Le résultat attend que le dernier pli ait été vu (LAST_TRICK_SHOW_MS, host.js). */
+.cg-recap {
+  animation: bannerIn 0.3s 2.5s both;
+}
 .cg-banner.is-loss {
   border-color: #ff5b5b;
 }

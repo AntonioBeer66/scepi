@@ -24,7 +24,7 @@ import {
   DURATION_MS,
   teamOf,
 } from "../engine.js";
-import { TRICK_SHOW_MS } from "../host.js";
+import { trickPause } from "../host.js";
 import { EMOTES } from "../online/tables.js";
 
 const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
@@ -32,8 +32,7 @@ const CARD_RATIO = CARD_PX.h / CARD_PX.w;
 const POT = 512; // texture carrée puissance de deux : mipmaps possibles
 const SHADOW_K = 1.35; // l'ombre floue déborde de la carte
 const DRAG_MIN = 8; // px : en deçà, un clic ; au-delà, un glisser
-const TRICK_PAUSE_MS = 600; // pli complet affiché, gagnant en évidence
-const COLLECT_MS = 300; // puis ramassé (total : TRICK_SHOW_MS de host.js)
+const COLLECT_MS = 300; // ramassage du pli, à la fin de trickPause (host.js)
 const CARD_IDS = SUITS.flatMap((s) => RANKS.map((r) => r + s));
 const FAN_STEP = Phaser.Math.DegToRad(6.5);
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
@@ -755,7 +754,8 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     ids.forEach((id) => trick.delete(id));
     const halo = scene.add.graphics().setDepth(14);
     sweeping.push(...boxes, halo);
-    blockedUntil = performance.now() + dur(TRICK_PAUSE_MS + COLLECT_MS);
+    const hold = trickPause(G) - COLLECT_MS; // gagnant en évidence
+    blockedUntil = performance.now() + dur(hold + COLLECT_MS);
     const winner = lastTrick.cards.find((e) => e.siege === lastTrick.winnerSeat);
     const top = boxes.find((b) => b.id === winner?.carte.id);
     scene.time.delayedCall(dur(250), () => {
@@ -781,7 +781,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       });
       if (teamOf(lastTrick.winnerSeat) === teamOf(me)) burst(top.x, top.y, 16);
     });
-    scene.time.delayedCall(dur(TRICK_PAUSE_MS), () => {
+    scene.time.delayedCall(dur(hold), () => {
       halo.destroy();
       const to = L.seat[posOf(lastTrick.winnerSeat)];
       scene.tweens.add({
@@ -813,12 +813,8 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   // complet, elle attend que la table l'ait ramassé (comme l'hôte).
   function startTimer(prev) {
     if (prev && G.tour === prev.tour && timer) return;
-    const pause =
-      G.lastTrick && !G.pliCourant.length && G.phase !== "SURCOINCHE"
-        ? TRICK_SHOW_MS
-        : 0;
     timer = {
-      start: performance.now() + pause,
+      start: performance.now() + trickPause(G),
       total: DURATION_MS[G.phase] || 0,
     };
   }
