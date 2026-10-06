@@ -19,6 +19,7 @@ import {
 import { EMOTES } from "../online/tables.js";
 
 const RED_SUITS = new Set(["H", "D"]);
+const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
 const FLASH = {
   coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1100 },
@@ -207,7 +208,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const live = G.phase === "JEU" && G.contract;
     const belote =
       live && G.belote.rebeloteDeclared ? G.contract.equipePreneur : -1;
-    // Décompte de la donne en cours : la belote du preneur y compte (+20),
+    // Décompte de la donne en cours : la belote des preneurs y compte (+20),
     // pas au score de la partie.
     const score = (t, label) =>
       `<span class="cg-score${t === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[t]}</b>${live ? `<em${t === belote ? ` title="Dont ${BELOTE_BONUS} de belote"` : ""}>+${G.pointsPlis[t] + (t === belote ? BELOTE_BONUS : 0)}${t === belote ? " <i>♛</i>" : ""}</em>` : ""}</span>`;
@@ -287,11 +288,18 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const coinche = canCoinche
       ? '<button type="button" class="cg-btn is-danger" data-action="coincher" data-focus-key="coincher">Coincher</button>'
       : "";
+    // Apparition du bouton pour ce contrat : un clic trop rapide après (doigt
+    // encore sur « Annoncer » ou « Passer ») ne coinche pas par erreur.
+    if (canCoinche && ui.coincheFor !== G.contract.id) {
+      ui.coincheFor = G.contract.id;
+      ui.coincheShownAt = Date.now();
+    }
     if (canSurcoinche)
       return `<div class="cg-bidbar"><span class="cg-prompt">Vous êtes coinchés</span>
         <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button></div>`;
     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
-      return coinche ? `<div class="cg-bidbar">${coinche}</div>` : "";
+      // Seul, sur le côté : jamais à la place d'« Annoncer » ou « Passer ».
+      return coinche ? `<div class="cg-bidbar is-coinche">${coinche}</div>` : "";
 
     const min = G.contract ? G.contract.montant : 0;
     const options = ALLOWED_BIDS.filter((b) => b > min);
@@ -333,7 +341,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       const them = 1 - us;
       const row = (label, a, b) =>
         `<tr><th scope="row">${label}</th><td>${a}</td><td>${b}</td></tr>`;
-      // Belote du preneur : +20 dès 81 points de plis ; déjà comprise
+      // Belote des preneurs : +20 dès 81 points de plis ; déjà comprise
       // dans un capot beloté.
       const beloteCell = (res, t) =>
         teamOf(res.preneur) !== t
@@ -448,7 +456,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ui.suit = null;
       ui.bidMin = undefined;
     } else if (action === "passer") onAction({ type: "PASSER" });
-    else if (action === "coincher") onAction({ type: "COINCHER" });
+    else if (action === "coincher") {
+      if (Date.now() - (ui.coincheShownAt || 0) >= COINCHE_ARM_MS) onAction({ type: "COINCHER" });
+    }
     else if (action === "surcoincher") onAction({ type: "SURCOINCHER" });
     else if (action === "toggle-history" || action === "toggle-trick") {
       const p = action === "toggle-history" ? "history" : "trick";

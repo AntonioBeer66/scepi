@@ -2720,6 +2720,16 @@ body.is-playing .header {
 .cg-bidbar.is-open {
   width: min(660px, calc(100vw - 16px));
 }
+/* « Coincher » seul (pas votre tour) : à droite, loin de l'endroit où
+   étaient « Annoncer » et « Passer » ; dans la barre ouverte, à l'écart. */
+.cg-bidbar.is-coinche {
+  left: auto;
+  right: calc(12px + env(safe-area-inset-right));
+  translate: none;
+}
+.cg-actions .is-danger {
+  margin-left: 22px;
+}
 .cg-prompt {
   flex-basis: 100%;
   color: var(--gold);
