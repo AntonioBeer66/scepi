@@ -79,11 +79,12 @@ async function shot(html, w, h, out, type = "png") {
   return out;
 }
 
-// Site : favicons (Google veut un multiple de 48 px), icône iOS, aperçu des liens.
-const square = icon({});
-for (const s of [16, 32, 48, 64, 96, 192]) await shot(square, s, s, path.join(IMG, `favicon-${s}.png`));
-await shot(square, 512, 512, path.join(IMG, "icon-512.png"));
-await shot(square, 180, 180, path.join(IMG, "apple-touch-icon.png"));
+// Site : favicons (Google veut un multiple de 48 px) sur fond transparent,
+// l'emblème seul ; l'icône iOS garde un fond (iOS mettrait du noir derrière).
+const bare = icon({ bg: "transparent", logo: 0.96 });
+for (const s of [16, 32, 48, 64, 96, 192]) await shot(bare, s, s, path.join(IMG, `favicon-${s}.png`));
+await shot(bare, 512, 512, path.join(IMG, "icon-512.png"));
+await shot(icon({}), 180, 180, path.join(IMG, "apple-touch-icon.png"));
 await shot(og, 1200, 630, path.join(IMG, "og-scepi.jpg"), "jpeg");
 
 // favicon.ico : 16, 32 et 48 px en PNG dans un conteneur ICO.
