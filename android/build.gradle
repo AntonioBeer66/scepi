@@ -1,4 +1,4 @@
-// Appli Android : le site de la bêta en plein écran dans une WebView.
+// Appli Android : scepinvaders.com en plein écran dans une WebView.
 //   gradlew assembleDebug  ->  build/outputs/apk/debug/app-debug.apk
 plugins { id "com.android.application" version "8.7.3" }
 
@@ -9,8 +9,8 @@ android {
         applicationId "fr.scepi.app"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

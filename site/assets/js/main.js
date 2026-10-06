@@ -2,6 +2,11 @@ document.documentElement.classList.add("js");
 
 const toggle = document.querySelector(".menu-toggle");
 const navigation = document.querySelector("#navigation");
+// Racine du site en chemin relatif, tirée du lien du logo (« ../../ » selon
+// la profondeur) : juste en ligne comme en ouvrant les fichiers de site/.
+const siteRoot = (
+  document.querySelector(".brand")?.getAttribute("href") || "/index.html"
+).replace(/index\.html$/, "");
 
 // Lien transversal vers la rubrique Actualités, y compris sur les pages
 // historiques qui partagent le même script de navigation.
@@ -12,19 +17,24 @@ if (
   )
 ) {
   const actusLink = document.createElement("a");
-  // Les pages sont ouvertes directement depuis le dossier `site` :
-  // l'accueil est à sa racine, les autres rubriques sont dans un sous-dossier.
-  const isSiteSubpage =
-    window.location.pathname.includes("/site/") &&
-    !window.location.pathname.endsWith("/site/index.html");
-  actusLink.href = isSiteSubpage
-    ? "../actus/index.html"
-    : "./actus/index.html";
+  actusLink.href = `${siteRoot}actus/index.html`;
   actusLink.textContent = "Actus";
   if (window.location.pathname.includes("/actus/")) {
     actusLink.setAttribute("aria-current", "page");
   }
   navigation.insertBefore(actusLink, navigation.lastElementChild);
+}
+
+// Bouton « Appli Android » en bas de chaque page (APK compilé depuis
+// android/, voir README) ; masqué dans l'appli elle-même (WebView : « ; wv) »).
+const footerSocial = document.querySelector(".footer-social");
+if (footerSocial && !navigator.userAgent.includes("; wv)")) {
+  const app = document.createElement("a");
+  app.className = "footer-app";
+  app.href = `${siteRoot}assets/app/scepinvaders.apk`;
+  app.setAttribute("download", "");
+  app.innerHTML = '<span aria-hidden="true">↓</span> Appli Android';
+  footerSocial.after(app);
 }
 
 function closeMenu(returnFocus = false) {

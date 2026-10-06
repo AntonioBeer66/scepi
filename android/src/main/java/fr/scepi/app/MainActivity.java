@@ -16,7 +16,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
-    static final String SITE = "https://scepi-beta.scepi-site.workers.dev/";
+    static final String SITE = "https://scepinvaders.com/";
 
     private WebView web;
 

@@ -771,6 +771,25 @@ a {
   color: #a295b5;
   margin-top: 6px;
 }
+/* Bouton « Appli Android » (ajouté par main.js) */
+.footer-app {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.footer-app:hover,
+.footer-app:focus-visible {
+  background: var(--gold);
+  color: var(--bg);
+}
 .footer-bottom {
   padding-block: 20px;
   border-top: 1px solid var(--line);

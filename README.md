@@ -1,6 +1,6 @@
 Projet de site web de SCEPI
 
-**Bêta en ligne : [scepi-beta.scepi-site.workers.dev](https://scepi-beta.scepi-site.workers.dev)** (accès protégé par mot de passe, à demander au bureau).
+**Site en ligne : [scepinvaders.com](https://scepinvaders.com)** ; appli Android téléchargeable en bas de chaque page.
 
 ## Aperçu de l'interface
 
@@ -17,7 +17,7 @@ npm install
 npm start
 ```
 
-Ouvrir ensuite `http://localhost:8000/`. Le site et le serveur de jeu forment un seul Cloudflare Worker ; `npm run deploy` publie la bêta. Voir le [cadrage technique](TECHNIQUE.md#6-coinche-en-ligne) pour l'architecture et l'hébergement.
+Ouvrir ensuite `http://localhost:8000/`. Le site et le serveur de jeu forment un seul Cloudflare Worker ; `npm run deploy` publie le site sur scepinvaders.com. Voir le [cadrage technique](TECHNIQUE.md#6-coinche-en-ligne) pour l'architecture et l'hébergement.
 
 Pas encore de formulaire, d'inscription ni de connexion Instagram. Les textes sont une proposition de présentation et les informations non fournies restent signalées comme à venir. Les originaux des logos restent dans `Logos/`, avec des copies de diffusion dans `site/assets/images/`.
 
@@ -79,4 +79,4 @@ Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adap
 
 ## Appli Android
 
-`android/` contient une appli minimale qui ouvre la bêta en plein écran dans une WebView. Compilation (JDK 17 et SDK Android requis) : `cd android && ./gradlew assembleDebug`, l'APK sort dans `android/build/outputs/apk/debug/scepi-debug.apk`.
+`android/` contient une appli minimale qui ouvre scepinvaders.com en plein écran dans une WebView. Compilation (JDK 17 et SDK Android requis) : `cd android && ./gradlew assembleDebug`, l'APK sort dans `android/build/outputs/apk/debug/scepi-debug.apk` ; le copier en `site/assets/app/scepinvaders.apk` (bouton « Appli Android » du pied de page) en augmentant `versionCode` dans `android/build.gradle`.

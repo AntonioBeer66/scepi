@@ -1,22 +1,21 @@
-// Bêta sur Cloudflare Workers, protégée par mot de passe (worker/index.js),
-// avec la coinche en ligne dans un Durable Object (worker/tables.js).
+// Site scepinvaders.com sur Cloudflare Workers, avec la coinche en ligne et
+// les actus dans un Durable Object (worker/tables.js).
 //   npm start                                (local : http://localhost:8000)
 //   npx wrangler login                       (une fois, dans le navigateur)
-//   npx wrangler secret put SITE_PASSWORD    (une fois)
 //   npx wrangler secret put ARTICLES_PASSWORD (une fois : publier/modifier les actus)
 //   npm run deploy
-// Site public (scepinvaders.com) : environnement « production », Worker et
-// stockage séparés de la bêta, sans mot de passe d'accès.
-//   npx wrangler secret put ARTICLES_PASSWORD --env production   (une fois)
-//   npm run deploy:prod
 {
-  "name": "scepi-beta",
+  "name": "scepi",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-01",
+  "routes": [
+    { "pattern": "scepinvaders.com", "custom_domain": true },
+    { "pattern": "www.scepinvaders.com", "custom_domain": true },
+  ],
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
-    // Le Worker vérifie l'accès avant de servir le moindre fichier.
+    // Le Worker passe avant les fichiers : API, www et adresses sans /site.
     "run_worker_first": true,
   },
   "durable_objects": {
@@ -24,19 +23,4 @@
   },
   // Stockage SQLite : celui de l'offre gratuite des Durable Objects.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tables"] }],
-  "env": {
-    "production": {
-      "name": "scepi",
-      "routes": [
-        { "pattern": "scepinvaders.com", "custom_domain": true },
-        { "pattern": "www.scepinvaders.com", "custom_domain": true },
-      ],
-      "vars": { "PUBLIC_SITE": "1" },
-      "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": true },
-      "durable_objects": {
-        "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
-      },
-      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tables"] }],
-    },
-  },
 }

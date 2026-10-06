@@ -189,11 +189,11 @@ node tests/coinche-online-e2e.js   # multijoueur de bout en bout (npm start dans
 npm run deploy    # compile et publie sur Cloudflare
 ```
 
-En local, sans `.dev.vars`, le site n'a pas de mot de passe ; avec un fichier `.dev.vars` contenant `SITE_PASSWORD=…`, il en a un comme en ligne.
+Publier, modifier ou supprimer une actu demande le mot de passe des articles : secret `ARTICLES_PASSWORD` (`npx wrangler secret put ARTICLES_PASSWORD`), jamais dans le dépôt ; en local, une ligne `ARTICLES_PASSWORD=…` dans `.dev.vars`.
 
-#### Bêta
+#### Hébergement
 
-- **Cloudflare Workers, offre gratuite, protégée par mot de passe** : `npm run deploy` ; mot de passe en secret (`npx wrangler secret put SITE_PASSWORD`), jamais dans le dépôt. Le Durable Object tient dans l'offre gratuite (stockage SQLite, WebSocket hibernables : il ne consomme rien entre deux coups).
+- **Cloudflare Workers, offre gratuite, sur scepinvaders.com** : `npm run deploy`. Domaine enregistré chez OVH, DNS délégué à Cloudflare ; les mails restent chez OVH (enregistrements MX et SPF en « DNS only »). Le Durable Object tient dans l'offre gratuite (stockage SQLite permanent, WebSocket hibernables : il ne consomme rien entre deux coups).
 - Les échecs y sont bloqués : leur moteur (Stockfish, 99 Mo) a été retiré, trop lourd pour l'hébergement gratuit (le jeu complet reste sur la branche `pre-deploiement`).
 
 ### Première version jouable proposée
