@@ -1703,8 +1703,7 @@ a {
   z-index: 2;
   background: #d84545 !important;
   box-shadow:
-    inset 0 0 0 3px #ff6b6bcc,
-    0 0 14px 5px #e33e3e99;
+    inset 0 0 0 3px #ff6b6bcc;
   transition: none !important;
   animation: none !important;
 }
@@ -1728,8 +1727,7 @@ a {
   z-index: 2;
   box-shadow:
     inset 0 0 0 4px var(--gold),
-    inset 0 0 0 8px #24173555,
-    0 0 14px 5px #e33e3e99;
+    inset 0 0 0 8px #24173555;
 }
 .chess-piece {
   z-index: 3;
@@ -2638,11 +2636,12 @@ body.is-playing .header {
   grid-template-columns: 34px 1fr 1fr auto;
   gap: 8px;
   padding: 6px 10px;
-  border-left: 3px solid var(--green);
-  background: #ffffff08;
+  border-radius: 8px;
+  /* Contrat réussi (vert) ou chuté (rouge) : une teinte de fond, pas une barre latérale. */
+  background: #39ff140f;
 }
 .cg-history li.ko {
-  border-left-color: #ff5b5b;
+  background: #ff5b5b14;
 }
 .cg-empty {
   margin: 0;
@@ -3345,7 +3344,6 @@ body.is-playing .header {
   --tone: var(--gold);
   padding: 28px 26px 30px;
   border: 1px solid var(--line);
-  border-top: 3px solid var(--tone);
   border-radius: 12px;
   background: #120d1d;
 }
