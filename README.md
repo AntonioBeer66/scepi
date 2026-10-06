@@ -1,6 +1,6 @@
 Projet de site web de SCEPI
 
-**Site en ligne : [scepinvaders.com](https://scepinvaders.com)** ; appli Android téléchargeable en bas de chaque page.
+**Site en ligne : [www.scepinvaders.com](https://www.scepinvaders.com)** ; appli Android téléchargeable en bas de chaque page.
 
 ## Aperçu de l'interface
 
@@ -79,4 +79,4 @@ Voir la [spécification du moteur de coinche en ligne](REGLES_COINCHE.md) : adap
 
 ## Appli Android
 
-`android/` contient une appli minimale qui ouvre scepinvaders.com en plein écran dans une WebView. Compilation (JDK 17 et SDK Android requis) : `cd android && ./gradlew assembleDebug`, l'APK sort dans `android/build/outputs/apk/debug/scepi-debug.apk` ; le copier en `site/assets/app/scepinvaders.apk` (bouton « Appli Android » du pied de page) en augmentant `versionCode` dans `android/build.gradle`.
+`android/` contient une appli minimale qui ouvre www.scepinvaders.com en plein écran dans une WebView. Compilation (JDK 17 et SDK Android requis) : `cd android && ./gradlew assembleDebug`, l'APK sort dans `android/build/outputs/apk/debug/scepi-debug.apk` ; le copier en `site/assets/app/scepinvaders.apk` (bouton « Appli Android » du pied de page) en augmentant `versionCode` dans `android/build.gradle`.

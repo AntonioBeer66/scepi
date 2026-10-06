@@ -16,7 +16,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
-    static final String SITE = "https://scepinvaders.com/";
+    static final String SITE = "https://www.scepinvaders.com/";
 
     private WebView web;
 
@@ -30,10 +30,12 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(false);
         web.setWebViewClient(new WebViewClient() {
             // Liens hors du site (mailto, réseaux sociaux…) : appli dédiée.
+            // Avec ou sans www : le site renvoie l'un vers l'autre.
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+                String host = r.getUrl().getHost();
+                if ("www.scepinvaders.com".equals(host) || "scepinvaders.com".equals(host)) return false;
                 Uri u = r.getUrl();
-                if (Uri.parse(SITE).getHost().equals(u.getHost())) return false;
                 try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception ignored) {}
                 return true;
             }

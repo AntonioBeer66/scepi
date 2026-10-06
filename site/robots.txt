@@ -1,4 +1,4 @@
 # Cloudflare ajoute devant ce fichier ses règles pour les robots d'IA
 # (réglages « AI Crawl Control » du domaine). Le formulaire des actus est
 # écarté par sa balise noindex, pas ici (Google doit pouvoir la lire).
-Sitemap: https://scepinvaders.com/sitemap.xml
+Sitemap: https://www.scepinvaders.com/sitemap.xml

@@ -2,13 +2,13 @@
 <!-- Pages du site pour les moteurs de recherche (les articles des actus sont
      trouvés depuis /actus/). Ajouter ici toute nouvelle page. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://scepinvaders.com/</loc></url>
-  <url><loc>https://scepinvaders.com/asso/</loc></url>
-  <url><loc>https://scepinvaders.com/evenements/</loc></url>
-  <url><loc>https://scepinvaders.com/jeux/</loc></url>
-  <url><loc>https://scepinvaders.com/jeux/coinche/</loc></url>
-  <url><loc>https://scepinvaders.com/jeux/echecs/</loc></url>
-  <url><loc>https://scepinvaders.com/actus/</loc></url>
-  <url><loc>https://scepinvaders.com/contact/</loc></url>
-  <url><loc>https://scepinvaders.com/mentions-legales/</loc></url>
+  <url><loc>https://www.scepinvaders.com/</loc></url>
+  <url><loc>https://www.scepinvaders.com/asso/</loc></url>
+  <url><loc>https://www.scepinvaders.com/evenements/</loc></url>
+  <url><loc>https://www.scepinvaders.com/jeux/</loc></url>
+  <url><loc>https://www.scepinvaders.com/jeux/coinche/</loc></url>
+  <url><loc>https://www.scepinvaders.com/jeux/echecs/</loc></url>
+  <url><loc>https://www.scepinvaders.com/actus/</loc></url>
+  <url><loc>https://www.scepinvaders.com/contact/</loc></url>
+  <url><loc>https://www.scepinvaders.com/mentions-legales/</loc></url>
 </urlset>

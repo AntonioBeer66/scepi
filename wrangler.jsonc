@@ -1,4 +1,4 @@
-// Site scepinvaders.com sur Cloudflare Workers, avec la coinche en ligne et
+// Site www.scepinvaders.com sur Cloudflare Workers, avec la coinche en ligne et
 // les actus dans un Durable Object (worker/tables.js).
 //   npm start                                (local : http://localhost:8000)
 //   npx wrangler login                       (une fois, dans le navigateur)

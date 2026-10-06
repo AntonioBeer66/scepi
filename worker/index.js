@@ -5,9 +5,10 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    // www renvoie vers l'adresse principale (une seule adresse pour Google).
-    if (url.hostname.startsWith("www.")) {
-      url.hostname = url.hostname.slice(4);
+    // Adresse principale : www.scepinvaders.com (celle de la propriété Search
+    // Console de l'asso) ; scepinvaders.com y renvoie, une seule adresse pour Google.
+    if (url.hostname === "scepinvaders.com") {
+      url.hostname = "www.scepinvaders.com";
       return Response.redirect(url.toString(), 301);
     }
     if (url.pathname.startsWith("/api/")) {
