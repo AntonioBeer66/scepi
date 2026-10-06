@@ -23,6 +23,8 @@ export const EMOTES = new Map([
   ["😔", "Sadge"],
   ["🅰️", "Sous A"],
   ["❓", "???"],
+  ["🤔", "Hmmmmm"],
+  ["🤷", "Bah"],
 ]);
 
 export const PERMANENT_TABLES = 4;
