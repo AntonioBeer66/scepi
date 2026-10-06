@@ -10,6 +10,7 @@ import { DURATION_MS, bots, teamOf } from "./engine.js";
 
 export const TRICK_SHOW_MS = 900; // pli complet affiché (0,6 s) puis ramassé
 const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une annonce
+const LAST_CARD_MS = 700; // dernière carte d'un humain, jouée d'office
 
 // send(seat, action) transmet une action (seat null pour TIMEOUT).
 // decide : décisions des bots (les duels A/B en branchent d'autres).
@@ -69,6 +70,13 @@ export function createHost({
         [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
           ? COINCHE_WINDOW_MS
           : 0;
+      // Dernière carte d'un humain : jouée pour lui (TIMEOUT avant l'heure,
+      // seule carte légale), sans attendre son clic.
+      if (G.phase === "JEU" && !isBot(seat) && G.hands[seat].length === 1) {
+        later(pause + LAST_CARD_MS, () => {
+          if (G.tour === t) send(null, { type: "TIMEOUT", tour: t });
+        });
+      }
       if ((G.phase === "ENCHERES" || G.phase === "JEU") && isBot(seat)) {
         later(pause + coincheWindow + 350 + random() * 450, () => {
           if (G.tour === t) botSend(seat, decide.turnAction);

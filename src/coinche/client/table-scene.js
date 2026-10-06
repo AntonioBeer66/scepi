@@ -51,6 +51,11 @@ const FONT = 'system-ui, "Segoe UI", sans-serif';
 
 const isRed = (s) => s === "H" || s === "D";
 
+// roundRect du canevas 2D manque aux navigateurs mobiles anciens (Safari
+// < 16, Chrome < 99) : sans lui, aucune carte ne s'affichait. Coins droits alors.
+const roundRect = (ctx, x, y, w, h, r) =>
+  ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h);
+
 // Main triée comme on la tient : l'atout à gauche (une fois le contrat
 // connu), puis les couleurs en alternant rouge et noir ; dans chaque
 // couleur, de la plus forte à la plus faible (ordre de l'atout pour l'atout).
@@ -110,14 +115,14 @@ function bakeTextures(scene) {
     const ctx = c.getContext("2d");
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(1, 1, w, h, rad);
+    roundRect(ctx, 1, 1, w, h, rad);
     ctx.clip();
     ctx.drawImage(scene.textures.get(key).getSourceImage(), 1, 1, w, h);
     ctx.restore();
     ctx.lineWidth = 3;
     ctx.strokeStyle = key === "back" ? "#ffffff55" : "#00000026";
     ctx.beginPath();
-    ctx.roundRect(2.5, 2.5, w - 3, h - 3, rad - 1.5);
+    roundRect(ctx, 2.5, 2.5, w - 3, h - 3, rad - 1.5);
     ctx.stroke();
     scene.textures.addCanvas(`c:${key}`, c).add("f", 0, 0, 0, w + 2, h + 2);
   }
@@ -128,7 +133,7 @@ function bakeTextures(scene) {
   ctx.filter = "blur(8px)";
   ctx.fillStyle = "#000";
   ctx.beginPath();
-  ctx.roundRect(64 - k / 2, 64 - k / 2, k, k, 10);
+  roundRect(ctx, 64 - k / 2, 64 - k / 2, k, k, 10);
   ctx.fill();
   scene.textures.addCanvas("shadow", s);
   // Étincelle des particules : point lumineux dégradé.
