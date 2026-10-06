@@ -9,6 +9,7 @@
 import { DURATION_MS, bots, teamOf } from "./engine.js";
 
 export const TRICK_SHOW_MS = 900; // pli complet affiché (0,6 s) puis ramassé
+const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une annonce
 
 // send(seat, action) transmet une action (seat null pour TIMEOUT).
 // decide : décisions des bots (les duels A/B en branchent d'autres).
@@ -60,8 +61,16 @@ export function createHost({
       later(pause + DURATION_MS[G.phase], () => {
         if (G.tour === t) send(null, { type: "TIMEOUT", tour: t });
       });
+      // Annonce toute fraîche face à un humain en défense : le bot suivant
+      // laisse le temps de la coincher avant de la recouvrir.
+      const last = G.phase === "ENCHERES" ? G.bidLog.at(-1) : null;
+      const coincheWindow =
+        last?.montant &&
+        [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
+          ? COINCHE_WINDOW_MS
+          : 0;
       if ((G.phase === "ENCHERES" || G.phase === "JEU") && isBot(seat)) {
-        later(pause + 350 + random() * 450, () => {
+        later(pause + coincheWindow + 350 + random() * 450, () => {
           if (G.tour === t) botSend(seat, decide.turnAction);
         });
       }
