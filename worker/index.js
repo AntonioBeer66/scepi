@@ -86,6 +86,15 @@ function loginPage(next, error) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // Site public (wrangler.jsonc, env « production ») : ni mot de passe ni
+    // noindex ; www renvoie vers l'adresse principale (une seule pour Google).
+    if (env.PUBLIC_SITE === "1") {
+      if (url.hostname.startsWith("www.")) {
+        url.hostname = url.hostname.slice(4);
+        return Response.redirect(url.toString(), 301);
+      }
+      return serve(request, env, url, true);
+    }
     const password = env.SITE_PASSWORD;
     // Sans mot de passe : ouvert seulement en local (wrangler dev, clone
     // frais) ; en ligne, tout est refusé plutôt qu'exposé.
@@ -126,7 +135,7 @@ export default {
 };
 
 // Après le contrôle d'accès : API de la coinche en ligne, ou fichiers du site.
-async function serve(request, env, url) {
+async function serve(request, env, url, isPublic = false) {
   if (url.pathname.startsWith("/api/")) {
     // Seules les pages du site appellent l'API (pas un autre site qui
     // profiterait du cookie d'un joueur).
@@ -147,6 +156,7 @@ async function serve(request, env, url) {
     assetUrl.pathname = `/site${assetUrl.pathname === "/" ? "/index.html" : assetUrl.pathname}`;
   }
   const res = await env.ASSETS.fetch(new Request(assetUrl, request));
+  if (isPublic) return res;
   // Rien de la bêta ne doit être indexé ni partagé par un cache public.
   const out = new Response(res.body, res);
   out.headers.set("x-robots-tag", "noindex");

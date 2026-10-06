@@ -5,6 +5,10 @@
 //   npx wrangler secret put SITE_PASSWORD    (une fois)
 //   npx wrangler secret put ARTICLES_PASSWORD (une fois : publier/modifier les actus)
 //   npm run deploy
+// Site public (scepinvaders.com) : environnement « production », Worker et
+// stockage séparés de la bêta, sans mot de passe d'accès.
+//   npx wrangler secret put ARTICLES_PASSWORD --env production   (une fois)
+//   npm run deploy:prod
 {
   "name": "scepi-beta",
   "main": "worker/index.js",
@@ -20,4 +24,19 @@
   },
   // Stockage SQLite : celui de l'offre gratuite des Durable Objects.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tables"] }],
+  "env": {
+    "production": {
+      "name": "scepi",
+      "routes": [
+        { "pattern": "scepinvaders.com", "custom_domain": true },
+        { "pattern": "www.scepinvaders.com", "custom_domain": true },
+      ],
+      "vars": { "PUBLIC_SITE": "1" },
+      "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": true },
+      "durable_objects": {
+        "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tables"] }],
+    },
+  },
 }
