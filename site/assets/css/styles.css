@@ -3705,6 +3705,9 @@ html.is-chess-game {
   gap: 12px 22px;
   margin-top: 30px;
 }
+.lx-actions .outline {
+  margin-top: 0;
+}
 .lx-link {
   font-size: 13px;
   font-weight: 700;
