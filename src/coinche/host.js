@@ -19,6 +19,22 @@ export const trickPause = (G) =>
       ? LAST_TRICK_SHOW_MS
       : TRICK_SHOW_MS;
 const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une annonce
+// G n'est que du JSON. Pas de structuredClone ni de .at() ici : sur un
+// navigateur ancien (Safari < 15.4, Chrome < 98), l'hôte plantait et les
+// bots ne faisaient plus que « passer » à l'expiration de leur délai.
+const clone = (G) => JSON.parse(JSON.stringify(G));
+
+// Ce qu'un bot a le droit de voir : sa main, rien de celles des autres (même
+// de son partenaire bot, que l'hôte connaît), ni leur mémoire d'enchère ;
+// une belote pas encore annoncée reste secrète. Il devine le reste.
+export function seatView(G, seat) {
+  const g = clone(G);
+  g.hands = g.hands.map((h, s) => (s === seat ? h : h.map(() => null)));
+  g.mainsInitiales = g.mainsInitiales.map((h, s) => (s === seat ? h : []));
+  g.bidMemo = g.bidMemo.map((m, s) => (s === seat ? m : null));
+  if (!g.belote.beloteDeclared && g.belote.holder !== seat) g.belote.holder = null;
+  return g;
+}
 
 // send(seat, action) transmet une action (seat null pour TIMEOUT).
 // decide : décisions des bots (les duels A/B en branchent d'autres).
@@ -41,10 +57,10 @@ export function createHost({
     pending.add(id);
   }
 
-  // Le bot décide sur une copie (l'état reçu peut être figé) ; sa mémoire
-  // d'enchère voyage avec son action.
+  // Le bot décide sur sa propre vue (une copie : l'état reçu peut être figé) ;
+  // sa mémoire d'enchère voyage avec son action.
   function botSend(seat, decision) {
-    const g = structuredClone(G);
+    const g = seatView(G, seat);
     const action = decision(g, seat);
     if (!action) return;
     send(seat, {
@@ -69,7 +85,7 @@ export function createHost({
       });
       // Annonce toute fraîche face à un humain en défense : le bot suivant
       // laisse le temps de la coincher avant de la recouvrir.
-      const last = G.phase === "ENCHERES" ? G.bidLog.at(-1) : null;
+      const last = G.phase === "ENCHERES" ? G.bidLog[G.bidLog.length - 1] : null;
       const coincheWindow =
         last?.montant &&
         [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
@@ -89,7 +105,7 @@ export function createHost({
               G.phase === "SURCOINCHE" &&
               G.contract.id === id &&
               !G.contract.surcoinche &&
-              decide.wantsToSurcoinche(structuredClone(G), s)
+              decide.wantsToSurcoinche(seatView(G, s), s)
             )
               send(s, { type: "SURCOINCHER" });
           });
@@ -108,7 +124,7 @@ export function createHost({
             G.phase === "ENCHERES" &&
             G.contract?.id === id &&
             !G.contract.coinche &&
-            decide.wantsToCoinche(structuredClone(G), s)
+            decide.wantsToCoinche(seatView(G, s), s)
           )
             send(s, { type: "COINCHER" });
         });

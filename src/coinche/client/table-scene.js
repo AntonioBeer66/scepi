@@ -510,7 +510,13 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   function handState() {
     if (cacheFor !== G) {
       cacheFor = G;
-      sorted = sortHand((G.hands[view] || []).filter(Boolean), G.contract?.atout);
+      // Aux enchères, l'atout de votre propre dernière annonce (ou remontée) :
+      // la main ne bouge pas à chaque annonce des autres. Au jeu, le contrat.
+      const atout =
+        G.phase === "ENCHERES"
+          ? G.bidLog.filter((e) => e.seat === view && e.atout).pop()?.atout
+          : G.contract?.atout;
+      sorted = sortHand((G.hands[view] || []).filter(Boolean), atout);
       legal = myTurnToPlay()
         ? new Set(computeLegal(sorted, G.pliCourant, G.contract.atout, me).map((c) => c.id))
         : null;

@@ -10,7 +10,7 @@ export default defineConfig({
   build: {
     outDir: "site/assets/js/coinche",
     emptyOutDir: true,
-    target: "es2022",
+    target: "es2020", // syntaxe récente (??=, champs de classe) transpilée : téléphones anciens
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: "src/coinche/client/lobby.js",
