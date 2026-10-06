@@ -2325,7 +2325,8 @@ a {
 body.is-playing {
   overflow: hidden;
 }
-body.is-playing .rules-btn {
+body.is-playing .rules-btn,
+body.is-playing .header {
   display: none;
 }
 .game-view {
