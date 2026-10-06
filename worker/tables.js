@@ -31,7 +31,17 @@ const MAX_MESSAGE = 8 * 1024; // un coup tient en quelques centaines d'octets
 const KEY = (id) => `m:${id}`;
 const HISTORY = "historique"; // { week, rows } : la semaine en cours seulement
 const ARTICLE_PREFIX = "article:";
-const MAX_ARTICLE = 12 * 1024 * 1024;
+// Une valeur du stockage d'un Durable Object (SQLite) tient en 2 Mo : un
+// article, photos comprises (réduites par actus.js), doit rester en dessous.
+const MAX_ARTICLE = 1900 * 1024;
+
+// Comparaison à temps constant (empreintes de même longueur). Le client
+// envoie le mot de passe encodé (encodeURIComponent : accents admis en en-tête).
+async function articlesPasswordOk(expected, given) {
+  if (!expected || !given) return false;
+  const hash = async (s) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return crypto.subtle.timingSafeEqual(await hash(encodeURIComponent(expected)), await hash(given));
+}
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -117,21 +127,39 @@ export class Tables extends DurableObject {
       if (request.method === "GET") {
         if (articleId) {
           const article = await this.ctx.storage.get(`${ARTICLE_PREFIX}${articleId}`);
-          return article ? json(article) : json({ error: "ARTICLE_INTRouvable" }, 404);
+          return article ? json(article) : json({ error: "ARTICLE_INTROUVABLE" }, 404);
         }
         const saved = await this.ctx.storage.list({ prefix: ARTICLE_PREFIX });
         const articles = [...saved.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
         return json(articles);
       }
+      // Publier, modifier, supprimer : mot de passe des articles (secret
+      // Cloudflare ARTICLES_PASSWORD, jamais dans le dépôt) ; sans secret, rien ne passe.
+      const writes = request.method === "POST" || (articleId && (request.method === "PUT" || request.method === "DELETE"));
+      if (writes && !(await articlesPasswordOk(this.env.ARTICLES_PASSWORD, request.headers.get("x-articles-password"))))
+        return json({ error: "MOT_DE_PASSE_REFUSE" }, 403);
+      if (request.method === "DELETE" && articleId) {
+        const key = `${ARTICLE_PREFIX}${articleId}`;
+        if (!(await this.ctx.storage.get(key))) return json({ error: "ARTICLE_INTROUVABLE" }, 404);
+        await this.ctx.storage.delete(key);
+        return json({ ok: true });
+      }
       if (request.method === "POST" || (request.method === "PUT" && articleId)) {
-        const length = Number(request.headers.get("content-length") || 0);
-        if (length > MAX_ARTICLE) return json({ error: "ARTICLE_TROP_VOL要UX" }, 413);
+        // Taille lue sur le corps lui-même : content-length peut manquer.
+        const raw = await request.text();
+        if (raw.length > MAX_ARTICLE) return json({ error: "ARTICLE_TROP_VOLUMINEUX" }, 413);
         let body;
-        try { body = await request.json(); } catch { return json({ error: "JSON_INVALIDE" }, 400); }
+        try { body = JSON.parse(raw); } catch { return json({ error: "JSON_INVALIDE" }, 400); }
         if (!body?.title || !body?.summary || !body?.body || !body?.image) return json({ error: "CHAMPS_MANQUANTS" }, 400);
         const id = articleId || crypto.randomUUID();
-        const article = { id, title: String(body.title).slice(0, 120), summary: String(body.summary).slice(0, 280), body: String(body.body), image: String(body.image), gallery: Array.isArray(body.gallery) ? body.gallery.map(String).slice(0, 20) : [], date: body.date || new Date().toISOString() };
-        await this.ctx.storage.put(`${ARTICLE_PREFIX}${id}`, article);
+        // Date illisible : celle du jour (sinon la liste des actus ne s'affiche plus).
+        const date = Number.isNaN(Date.parse(body.date)) ? new Date().toISOString() : String(body.date);
+        const article = { id, title: String(body.title).slice(0, 120), summary: String(body.summary).slice(0, 280), body: String(body.body), image: String(body.image), gallery: Array.isArray(body.gallery) ? body.gallery.map(String).slice(0, 20) : [], date };
+        try {
+          await this.ctx.storage.put(`${ARTICLE_PREFIX}${id}`, article);
+        } catch {
+          return json({ error: "ARTICLE_TROP_VOLUMINEUX" }, 413);
+        }
         return json(article, request.method === "POST" ? 201 : 200);
       }
       return json({ error: "METHODE_REFUSEE" }, 405);

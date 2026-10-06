@@ -3,6 +3,7 @@
 //   npm start                                (local : http://localhost:8000)
 //   npx wrangler login                       (une fois, dans le navigateur)
 //   npx wrangler secret put SITE_PASSWORD    (une fois)
+//   npx wrangler secret put ARTICLES_PASSWORD (une fois : publier/modifier les actus)
 //   npm run deploy
 {
   "name": "scepi-beta",

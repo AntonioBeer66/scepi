@@ -230,8 +230,18 @@ function soloID(fresh) {
 }
 
 async function enterGame({ online, launch = false, fresh = false, watch = null }) {
+  // Réservé avant l'import : un rafraîchissement du salon qui aboutit
+  // pendant le chargement lancerait sinon une seconde session.
+  if (playing) return;
+  playing = { stop() {} };
   clearTimeout(pollTimer);
-  const { startSession } = await import("./session.js");
+  let startSession;
+  try {
+    ({ startSession } = await import("./session.js"));
+  } catch {
+    playing = null; // réseau coupé : le salon reste utilisable
+    return poll();
+  }
   $("#lobby-section").hidden = true;
   playing = startSession({
     online,

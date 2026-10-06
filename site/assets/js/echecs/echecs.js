@@ -1218,7 +1218,7 @@
     timelineIndex = 0;
     animation = null;
     $("#chess-position-title").textContent =
-      `Défi · ${profiles[$("#chess-profile").value].name}`;
+      `Défi · ${profiles[$("#chess-profile").value]?.name ?? "Bot"}`;
     status("À vous de jouer", "Les blancs commencent");
     render();
   }
@@ -1898,6 +1898,9 @@
     if (message) $(".chess-game-end-message").textContent = message;
   };
   botMove = async function () {
+    // « Nouvelle partie » peut programmer deux coups du bot (couleur
+    // aléatoire) : le second jouerait à la place du joueur.
+    if (botThinking) return;
     botThinking = true;
     const originalTurn = game.turn.bind(game);
     let firstTurnCheck = true;
