@@ -8,6 +8,16 @@
       name="description"
       content="Les événements de SCEP Invaders à l’ESCP : tournois, laser tag, stand Nintendo au Career Fair, week-end d’intégration et soirées jeux."
     />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SCEP Invaders" />
+    <meta property="og:title" content="Nos événements — SCEP Invaders" />
+    <meta property="og:description" content="Les événements de SCEP Invaders à l’ESCP : tournois, laser tag, stand Nintendo au Career Fair, week-end d’intégration et soirées jeux." />
+    <meta property="og:url" content="https://www.scepinvaders.com/evenements/" />
+    <meta property="og:image" content="https://www.scepinvaders.com/assets/images/og-scepi.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>Nos événements — SCEP Invaders</title>
     <link rel="icon" href="../assets/images/favicon.ico" sizes="any" />
     <link
@@ -22,6 +32,9 @@
       sizes="64x64"
       href="../assets/images/favicon-64.png"
     />
+    <link rel="icon" type="image/png" sizes="48x48" href="../assets/images/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="../assets/images/favicon-96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="../assets/images/favicon-192.png" />
     <link rel="apple-touch-icon" href="../assets/images/apple-touch-icon.png" />
     <link rel="stylesheet" href="../assets/css/styles.css" />
     <script src="../assets/js/main.js" defer></script>
@@ -248,34 +261,6 @@
           transition: none;
         }
       }
-      /* Chiffres de l'année, sous le titre */
-      .ev-stats {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin: 34px 0 0;
-      }
-      .ev-stats div {
-        display: flex;
-        flex-direction: column-reverse;
-        gap: 6px;
-        padding: 20px 22px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: #120d1d;
-      }
-      .ev-stats dd {
-        margin: 0;
-        font-size: 2rem;
-        font-weight: 750;
-        letter-spacing: -0.03em;
-        color: var(--gold);
-      }
-      .ev-stats dt {
-        font-size: 12px;
-        line-height: 1.4;
-        color: var(--muted);
-      }
       /* Appel final vers Instagram */
       .ev-next {
         display: flex;
@@ -287,9 +272,7 @@
         padding: 40px 44px;
         border: 1px solid #f4c60033;
         border-radius: 18px;
-        background:
-          radial-gradient(ellipse at 100% 50%, #f4c6001c, transparent 60%),
-          #120d1d;
+        background: #120d1d;
       }
       .ev-next h2 {
         margin-bottom: 10px;
@@ -297,11 +280,6 @@
       .ev-next p {
         max-width: 520px;
         margin: 0;
-      }
-      @media (max-width: 900px) {
-        .ev-stats {
-          grid-template-columns: repeat(2, 1fr);
-        }
       }
       @media (max-width: 760px) {
         .ev-next {
@@ -344,17 +322,10 @@
     </header>
     <main id="contenu" class="container">
       <section class="page-intro">
-        <span class="eyebrow">NOS ÉVÉNEMENTS</span>
         <h1>
           Au-delà des jeux…<br /><span>des moments merveilleux.</span>
         </h1>
         <p>Retrouve tous les événements organisés par SCEPI.</p>
-        <dl class="ev-stats">
-          <div><dt>Joueurs au Poker Championship</dt><dd>104</dd></div>
-          <div><dt>De lots à gagner</dt><dd>1 000 €</dd></div>
-          <div><dt>Participants à la conférence jeu responsable</dt><dd>45</dd></div>
-          <div><dt>Anciens et nouveaux au week-end intergé</dt><dd>35</dd></div>
-        </dl>
       </section>
       <article class="event-banner reveal">
         <div>
@@ -372,7 +343,6 @@
       <section class="section">
         <div class="section-heading">
           <div>
-            <span class="eyebrow">À EXPLORER</span>
             <h2>Ce qui a déjà fait vivre l’asso.</h2>
           </div>
         </div>
@@ -651,7 +621,6 @@
       </section>
       <section class="ev-next reveal">
         <div>
-          <span class="eyebrow">PROCHAIN RENDEZ-VOUS</span>
           <h2>Ne manquez pas le prochain.</h2>
           <p>
             Tournois, soirées jeux, sorties : chaque événement est annoncé en

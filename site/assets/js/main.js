@@ -103,7 +103,7 @@ if (revealTargets.length && "IntersectionObserver" in window) {
 // Souris seulement ; sur écran tactile, rien ne change.
 if (matchMedia("(hover: hover)").matches) {
   const cards = document.querySelectorAll(
-    ".home-pillar, .home-play, .home-event, .pillar, .crew-card, .board-grid li, .asso-wei, .ev-stats div, .lx-game, .lx-steps li, .ct-door, .ct-grid article, .ct-net",
+    ".home-pillar, .home-play, .home-event, .pillar, .crew-card, .board-grid li, .asso-wei, .lx-game, .lx-steps li, .ct-net",
   );
   for (const card of cards) {
     card.classList.add("spot");
@@ -113,6 +113,89 @@ if (matchMedia("(hover: hover)").matches) {
       card.style.setProperty("--my", `${e.clientY - r.top}px`);
     });
   }
+}
+
+// Parties de coinche en cours (accueil, ludothèque), lues sur le serveur de
+// jeu ; rien ne s'affiche s'il ne répond pas (fichiers ouverts en local).
+const liveTables = document.querySelectorAll("[data-live-tables]");
+if (liveTables.length && /^https?:$/.test(location.protocol)) {
+  const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
+  fetch("/api/tables")
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((tables) => {
+      let games = 0;
+      let players = 0;
+      for (const t of tables) {
+        if (t.phase !== "ATTENTE" && t.phase !== "TERMINEE") games++;
+        for (const p of t.players) if (p.name && p.isConnected) players++;
+      }
+      const text = games
+        ? `${plural(games, "partie")} de coinche en cours · ${plural(players, "joueur")} en ligne`
+        : players
+          ? `${plural(players, "joueur")} autour des tables : rejoins-les`
+          : "Tables libres : lance la première partie";
+      liveTables.forEach((el) => {
+        el.textContent = text;
+        el.hidden = false;
+      });
+    })
+    .catch(() => {});
+}
+
+// Photos des événements en grand : un clic ouvre la visionneuse, flèches ou
+// glisser pour passer à la suivante du même album, Échap pour fermer.
+const galleryImages = document.querySelectorAll(
+  "[data-carousel] img, .extra-mosaic img",
+);
+if (galleryImages.length && window.HTMLDialogElement) {
+  const box = document.createElement("dialog");
+  box.className = "lightbox";
+  box.setAttribute("aria-label", "Photo en grand");
+  box.innerHTML =
+    "<figure><figcaption></figcaption></figure>" +
+    '<button type="button" class="lightbox-prev" aria-label="Photo précédente">‹</button>' +
+    '<button type="button" class="lightbox-next" aria-label="Photo suivante">›</button>' +
+    '<button type="button" class="lightbox-close" aria-label="Fermer">✕</button>';
+  document.body.append(box);
+  const caption = box.querySelector("figcaption");
+  const big = new Image(); // source posée à l'ouverture
+  caption.before(big);
+  let album = [];
+  let index = 0;
+  const show = (i) => {
+    index = (i + album.length) % album.length;
+    big.src = album[index].currentSrc || album[index].src;
+    big.alt = album[index].alt;
+    caption.textContent = `${album[index].alt} · ${index + 1}/${album.length}`;
+    box.classList.toggle("is-single", album.length < 2);
+  };
+  galleryImages.forEach((img) => {
+    img.classList.add("is-zoomable");
+    img.addEventListener("click", () => {
+      album = [...img.parentElement.querySelectorAll("img")];
+      show(album.indexOf(img));
+      box.showModal();
+    });
+  });
+  box.querySelector(".lightbox-prev").addEventListener("click", () => show(index - 1));
+  box.querySelector(".lightbox-next").addEventListener("click", () => show(index + 1));
+  box.querySelector(".lightbox-close").addEventListener("click", () => box.close());
+  // Clic sur le fond (hors photo et boutons) : fermer.
+  box.addEventListener("click", (e) => {
+    if (e.target === box) box.close();
+  });
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") show(index - 1);
+    else if (e.key === "ArrowRight") show(index + 1);
+  });
+  let startX = null;
+  box.addEventListener("touchstart", (e) => (startX = e.touches[0].clientX), { passive: true });
+  box.addEventListener("touchend", (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) show(index + (dx < 0 ? 1 : -1));
+    startX = null;
+  });
 }
 
 // Bouton « Copier » (adresse e-mail de la page Contact).

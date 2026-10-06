@@ -3869,19 +3869,21 @@ html.is-chess-game {
 
 /* Contact ------------------------------------------------------------ */
 
+/* Deux portes côte à côte, séparées d'un filet : pas de cartes empilées. */
 .ct-doors {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
-  gap: 18px;
+  border-block: 1px solid var(--line);
 }
 .ct-door {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 36px 36px 38px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: #120d1d;
+  padding: 40px 44px 44px 0;
+}
+.ct-door + .ct-door {
+  padding: 40px 0 44px 44px;
+  border-left: 1px solid var(--line);
 }
 .ct-door h2 {
   margin-bottom: 12px;
@@ -3891,12 +3893,6 @@ html.is-chess-game {
 }
 .ct-door .button {
   margin-top: auto;
-}
-.ct-door.is-pro {
-  border-color: #f4c60055;
-  background:
-    radial-gradient(ellipse at 100% 0%, #f4c60024, transparent 60%),
-    #120d1d;
 }
 .ct-mail {
   display: flex;
@@ -3936,19 +3932,19 @@ html.is-chess-game {
   border-color: var(--green);
   color: var(--green);
 }
+/* Trois arguments en colonnes, sous un filet doré, sans boîte autour. */
 .ct-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 36px;
 }
 .ct-grid article {
-  padding: 28px 26px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #120d1d;
+  padding-top: 22px;
+  border-top: 1px solid #f4c60055;
 }
 .ct-grid b {
   display: block;
+  font-family: var(--font-display);
   font-size: 2rem;
   font-weight: 750;
   letter-spacing: -0.03em;
@@ -4046,6 +4042,14 @@ html.is-chess-game {
   .lx-echecs .lx-art {
     order: -1;
   }
+  .ct-door,
+  .ct-door + .ct-door {
+    padding: 32px 0;
+    border-left: 0;
+  }
+  .ct-door + .ct-door {
+    border-top: 1px solid var(--line);
+  }
   .lx-art {
     min-height: 260px;
   }
@@ -4058,8 +4062,7 @@ html.is-chess-game {
     width: 88px;
     margin-left: -44px;
   }
-  .lx-next,
-  .ct-door {
+  .lx-next {
     padding: 28px 22px;
   }
 }
@@ -4155,5 +4158,138 @@ html.is-chess-game {
   }
   .home-heading.is-row .button {
     margin: 0;
+  }
+}
+
+/* Finitions du navigateur aux couleurs du site -------------------------- */
+::selection {
+  background: #f4c600;
+  color: #0c0914;
+}
+:root {
+  accent-color: var(--gold);
+  caret-color: var(--gold);
+  scrollbar-color: #3a2a5c var(--bg);
+}
+/* Chiffres alignés dans les scores et compteurs. */
+.cg-score b,
+.cg-score em,
+.ct-grid b,
+.asso-stats b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Parties en cours (accueil, ludothèque), rempli par main.js */
+.live-tables {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 22px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.live-tables[hidden] {
+  display: none;
+}
+.live-tables::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px #39ff1422;
+}
+
+/* Visionneuse des photos d'événements (main.js) */
+.is-zoomable {
+  cursor: zoom-in;
+}
+.lightbox {
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #07050cf2;
+  color: var(--text);
+}
+.lightbox::backdrop {
+  background: #07050c;
+}
+.lightbox[open] {
+  display: grid;
+  place-items: center;
+}
+.lightbox figure {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin: 0;
+  padding: 56px 72px;
+}
+.lightbox img {
+  max-width: min(1400px, calc(100vw - 144px));
+  max-height: calc(100vh - 150px);
+  border-radius: 10px;
+  object-fit: contain;
+  box-shadow: 0 20px 50px #000c;
+}
+.lightbox figcaption {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+.lightbox button {
+  position: fixed;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #ffffff33;
+  border-radius: 50%;
+  background: #181127;
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+.lightbox button:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.lightbox-prev {
+  left: 16px;
+  top: 50%;
+  translate: 0 -50%;
+}
+.lightbox-next {
+  right: 16px;
+  top: 50%;
+  translate: 0 -50%;
+}
+.lightbox-close {
+  top: 16px;
+  right: 16px;
+  font-size: 18px !important;
+}
+.lightbox.is-single .lightbox-prev,
+.lightbox.is-single .lightbox-next {
+  display: none;
+}
+@media (max-width: 760px) {
+  .lightbox figure {
+    padding: 64px 12px 80px;
+  }
+  .lightbox img {
+    max-width: calc(100vw - 24px);
+  }
+  .lightbox-prev,
+  .lightbox-next {
+    top: auto;
+    bottom: 16px;
+    translate: none;
   }
 }
