@@ -86,6 +86,9 @@ for (const s of [16, 32, 48, 64, 96, 192]) await shot(bare, s, s, path.join(IMG,
 await shot(bare, 512, 512, path.join(IMG, "icon-512.png"));
 await shot(icon({}), 180, 180, path.join(IMG, "apple-touch-icon.png"));
 await shot(og, 1200, 630, path.join(IMG, "og-scepi.jpg"), "jpeg");
+// Vignette carrée des résultats Google (il recadre au centre : le texte de
+// l'aperçu large serait coupé), désignée par primaryImageOfPage.
+await shot(icon({ logo: 0.78 }), 1200, 1200, path.join(IMG, "og-scepi-carre.jpg"), "jpeg");
 
 // favicon.ico : 16, 32 et 48 px en PNG dans un conteneur ICO.
 const pngs = [16, 32, 48].map((s) => fs.readFileSync(path.join(IMG, `favicon-${s}.png`)));
