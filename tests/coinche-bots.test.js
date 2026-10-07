@@ -4,9 +4,9 @@
 // une partie ne se termine pas, ou si une donne est mal arbitrée. Chaque donne
 // est recomptée ici indépendamment du moteur : gagnant et points des plis,
 // belote/rebelote (preneur ou partenaire, Roi et Dame d'atout en main initiale),
-// Générale (8 atouts en main initiale : capot beloté gagné d'office, jamais
-// coinché par un bot) et score. Une partie sur quatre commence par une
-// Générale imposée, qu'une donne au hasard ne produit presque jamais.
+// huit atouts (en main initiale : capot beloté ou Générale belotée gagnés
+// d'office, jamais coinchés par un bot) et score. Une partie sur quatre
+// commence par huit atouts imposés, qu'une donne au hasard ne produit presque jamais.
 // Le Monte-Carlo du jeu de la carte coûte cher : réflexes seuls pour la
 // plupart des parties, Monte-Carlo réduit à 2 mondes pour les dernières.
 //   node tests/coinche-bots.test.js
@@ -30,7 +30,6 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
   engine.tuning.mcSamples = game < GAMES ? 0 : 2;
   let pts = [0, 0];
   let plis = [0, 0];
-  let plisSiege = [0, 0, 0, 0]; // Générale : les plis du preneur lui-même
   let prev = [0, 0];
   let imposee = false; // donne à huit atouts imposée en cours
   const where = () => `partie ${game}, donne ${stats.donnes}`;
@@ -57,7 +56,6 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       const best = pli.reduce((a, b) => (force(b.carte) > force(a.carte) ? b : a));
       assert.strictEqual(winner, best.siege, `${where()} : mauvais gagnant de pli`);
       plis[team(winner)]++;
-      plisSiege[winner]++;
       pts[team(winner)] += pli.reduce((s, e) => s + ((e.carte.suit === atout ? POINTS.atout : POINTS.plain)[e.carte.rank] || 0), 0)
         + (plis[0] + plis[1] === 8 ? 10 : 0);
     },
@@ -73,39 +71,39 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       assert.deepStrictEqual([...G.plisGagnes], plis, `${where()} : nombre de plis`);
       assert.strictEqual(G.belote.holder, holder, `${where()} : détenteur de la belote`);
       assert.strictEqual(G.belote.beloteDeclared && G.belote.rebeloteDeclared, belote, `${where()} : belote/rebelote`);
-      assert.strictEqual(!!c.huitAtouts, huitAtouts && c.montant === 270, `${where()} : marqueur huit atouts (270 seulement)`);
+      const beloteRequise = c.type === 'CAPOT_BELOTE' || c.type === 'GENERALE_BELOTE';
+      assert.strictEqual(!!c.huitAtouts, huitAtouts && beloteRequise, `${where()} : marqueur huit atouts (capot beloté ou Générale belotée seulement)`);
 
       const base = c.montant === 80 ? 82 : c.montant;
-      const reussi = c.type === 'GENERALE' ? plisSiege[c.preneur] === 8
-        : c.montant === 250 ? plis[pre] === 8
-        : c.montant === 270 ? plis[pre] === 8 && belote
+      const reussi = c.type === 'CAPOT' || c.type === 'GENERALE' ? plis[pre] === 8
+        : beloteRequise ? plis[pre] === 8 && belote
           : pts[pre] >= (belote ? Math.max(81, base - 20) : base);
+      const valeur = { GENERALE: 250, GENERALE_BELOTE: 270 }[c.type] ?? c.montant;
       const gain = [0, 0];
-      gain[reussi ? pre : 1 - pre] = (reussi ? (c.type === 'GENERALE' ? 250 : c.montant) : 160) * G.multiplicateur;
+      gain[reussi ? pre : 1 - pre] = (reussi ? valeur : 160) * G.multiplicateur;
       // La belote n'ajoute rien au score : elle compte seulement pour
       // réussir le contrat (seuil ci-dessus).
       assert.strictEqual(G.history[0].reussi, reussi, `${where()} : réussite du contrat`);
       assert.deepStrictEqual([G.scores[0] - prev[0], G.scores[1] - prev[1]], gain, `${where()} : score`);
-      // Seule une Générale adverse passe au-dessus du 270 à huit atouts.
+      // Seule une Générale adverse passe au-dessus des huit atouts.
       if (imposee && !huitAtouts) {
-        assert.strictEqual(c.type, 'GENERALE', `${where()} : huit atouts surenchéris autrement qu'en Générale`);
+        assert(c.type.startsWith('GENERALE'), `${where()} : huit atouts surenchéris autrement qu'en Générale`);
         stats.surencheries++;
       }
       imposee = false;
       if (huitAtouts) {
-        assert(c.montant === 270 && reussi && G.multiplicateur === 1, `${where()} : Générale annoncée 270, gagnée, jamais coinchée`);
+        assert(beloteRequise && reussi && G.multiplicateur === 1, `${where()} : huit atouts annoncés à 270, gagnés, jamais coinchés`);
         stats.generales++;
       }
 
       stats.donnes++;
       if (belote) stats.belotes++;
-      if (c.type === 'GENERALE') { stats.annoncees++; if (reussi) stats.gagnees++; }
+      if (c.type.startsWith('GENERALE')) { stats.annoncees++; if (reussi) stats.gagnees++; }
       if (c.montant >= 250) stats.capots++;
       if (G.multiplicateur > 1) stats.coinches++;
       prev = [...G.scores];
       pts = [0, 0];
       plis = [0, 0];
-      plisSiege = [0, 0, 0, 0];
     },
   };
 

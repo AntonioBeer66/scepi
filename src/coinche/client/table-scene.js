@@ -15,6 +15,7 @@
 import * as Phaser from "phaser";
 import {
   GENERALE,
+  GENERALE_BELOTE,
   RANKS,
   SUITS,
   SUIT_SYMBOL,
@@ -98,7 +99,9 @@ function bidLabel(montant, atout) {
         ? "Capot beloté"
         : montant === GENERALE
           ? "Générale"
-          : montant;
+          : montant === GENERALE_BELOTE
+            ? "Générale belotée"
+            : montant;
   return `${m} ${SUIT_SYMBOL[atout]}`;
 }
 

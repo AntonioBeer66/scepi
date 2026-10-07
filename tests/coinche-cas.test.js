@@ -105,7 +105,6 @@ function score({ montant, points, belote = false, mult = 1, plis = 4, derPreneur
   const last = derPreneurs || rebeloteDernier ? 12 + (rebeloteDernier ? 4 : 0) : 12;
   g.pointsPlis = derPreneurs || rebeloteDernier ? [points - last, 162 - points] : [points, 162 - points - last];
   g.plisGagnes = derPreneurs || rebeloteDernier ? [plis - 1, 8 - plis] : [plis, 7 - plis];
-  g.plisSiege = [g.plisGagnes[0], g.plisGagnes[1], 0, 0];
   g.belote = { holder: belote ? 0 : null, kingPlayed: belote, queenPlayed: belote, beloteDeclared: belote, rebeloteDeclared: belote && !rebeloteDernier };
   g.phase = "JEU";
   g.plisJoues = 7;

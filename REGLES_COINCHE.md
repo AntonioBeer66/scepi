@@ -12,11 +12,11 @@ Les conventions ci-dessous rendent les points incomplets du manuel exécutables.
 | Distribution | Premier donneur aléatoire ; mélange serveur à chaque donne ; distribution automatique 3–3–2. Le mélange systématique remplace volontairement la procédure du manuel. |
 | Rotation | Sens antihoraire fixe, sans coupe interactive. |
 | Contrat « 80 » | Score de base 80, seuil de réussite 82 sans belote. Interprétation du montant à inscrire. |
-| Enchères | 80 à 160 par pas de 10, puis capot 250 et capot beloté 270 ; surenchère strictement supérieure. |
+| Enchères | 80 à 160 par pas de 10, puis capot 250, capot beloté 270, Générale 250 et Générale belotée 270, dans cet ordre ; surenchère strictement supérieure. |
 | Atout demandé | Monter si possible, même sur son partenaire ; sinon fournir un atout inférieur. Le manuel ne tranche pas explicitement ce cas. |
 | Partenaire maître et couleur demandée absente | Toute carte autorisée, y compris un atout inférieur à celui du partenaire. |
 | Capot beloté | Contrat distinct à 270 ; huit plis ET belote valide, sinon chute sans repli à 250. |
-| Générale | Enchère la plus haute (au-dessus de 270) : le preneur doit remporter les huit plis à lui seul (aucun pli pour son partenaire). Il entame le premier pli. Vaut 250 (comme un capot), multiplié par la coinche. |
+| Générale | Un capot (250) où le preneur entame le premier pli ; passe au-dessus du capot beloté. Générale belotée : un capot beloté (270, huit plis ET belote valide, chute sans repli) où le preneur entame ; l'enchère la plus haute. |
 | Belote | Celle de l'équipe preneuse : preneur ou partenaire (même s'il a été remonté). Déclaration automatique : dès que le Roi puis la Dame d'atout de son détenteur sont joués, Belote puis Rebelote sont annoncées sans action du joueur (humain ou bot). |
 | Délais techniques | 30 s par enchère, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
 
@@ -79,11 +79,11 @@ Ne pas implémenter la coupe, le tirage physique du donneur, les droits au méla
 
 - Autoriser ces actions uniquement pour le joueur actif en phase `ENCHERES`.
 - `PASSER` incrémente les passes consécutives : quatre sans contrat donnent une nouvelle donne sans score ; trois après un contrat verrouillent celui-ci et démarrent le jeu.
-- `ENCHERIR` exige une couleur d'atout et un montant dans `[80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270]`, strictement supérieur au contrat courant.
+- `ENCHERIR` exige une couleur d'atout et un montant dans `[80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270, GENERALE, GENERALE_BELOTE]` (rangs 500 et 520 dans le code), strictement supérieur au contrat courant.
 - Refuser les enchères égales même avec une autre couleur, sans-atout et tout-atout.
 - Autoriser une surenchère sur son partenaire et une enchère à un tour ultérieur après avoir passé.
 - La dernière enchère définit le preneur et son équipe ; elle remet les passes à zéro.
-- Types : `NUMERIQUE` pour 80 à 160, `CAPOT` pour 250, `CAPOT_BELOTE` pour 270.
+- Types : `NUMERIQUE` pour 80 à 160, `CAPOT` pour 250, `CAPOT_BELOTE` pour 270, `GENERALE` et `GENERALE_BELOTE`.
 - Ne pas contrôler la composition de la main pour permettre une enchère, même à 270 : un contrat peut être irréalisable et chuter.
 - Après une action qui ne clôt pas les enchères, avancer au joueur suivant et démarrer ses 30 secondes. À expiration, effectuer `PASSER` automatiquement.
 
@@ -169,8 +169,10 @@ Si contrat.type == CAPOT :
 Si contrat.type == CAPOT_BELOTE :
   reussi = plisGagnes[preneurs] == 8 ET belote valide des preneurs
 Si contrat.type == GENERALE :
-  reussi = plisGagnés par le preneur lui-même == 8
-valeur = 250 si GENERALE, sinon montant
+  reussi = plisGagnes[preneurs] == 8
+Si contrat.type == GENERALE_BELOTE :
+  reussi = plisGagnes[preneurs] == 8 ET belote valide des preneurs
+valeur = 250 si GENERALE, 270 si GENERALE_BELOTE, sinon montant
 
 Si reussi : gain[preneurs] = valeur * multiplicateur ; gain[defense] = 0
 Sinon : gain[preneurs] = 0 ; gain[defense] = 160 * multiplicateur
