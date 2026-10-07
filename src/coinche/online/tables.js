@@ -2,10 +2,12 @@
 // Durable Object (worker/tables.js) s'en sert, les tests aussi.
 // Remplace le serveur boardgame.io : mêmes coups (game.js), même vue par
 // joueur (playerView), mêmes règles d'entretien (4 tables permanentes,
-// salons temporaires, parties abandonnées effacées).
+// salons temporaires, parties abandonnées effacées) ; plus des tables
+// privées, cachées du lobby sauf pour qui donne leur code (choisi par l'hôte).
 // Une partie : { id, table, createdAt, updatedAt, activeAt, stateID, G, players } ;
 // activeAt : dernier coup d'un humain pour lui-même (lancer, agir).
-// players[s] = { name, credentials } (name null : place libre).
+// players[s] = { name, credentials } (name null : place libre) ; code :
+// celui d'une table privée (absent : table ouverte).
 import { Coinche, MAX_NAME } from "../game.js";
 
 // Émoticônes rapides (bouton en bas à droite de la table) : seules celles-ci
@@ -36,6 +38,10 @@ export const AFK_MS = 5 * 60 * 1000; // partie lancée où aucun humain ne joue 
 const INVALID_MOVE = "INVALID_MOVE"; // valeur rendue par les coups refusés
 const MOVES = new Set(Object.keys(Coinche.moves));
 const MAX_ARGS = 3;
+export const CODE_MIN = 4;
+export const CODE_MAX = 20;
+// « jeudi soir » et « JEUDI SOIR » : même code.
+export const normCode = (c) => String(c ?? "").trim().toUpperCase().slice(0, CODE_MAX);
 
 // Historique des parties terminées, téléchargeable en CSV (Excel), remis à
 // zéro chaque semaine (lundi 0 h UTC) pour rester petit.
@@ -60,7 +66,7 @@ export function historyRow(m, t) {
     // « 2026-09-30 21:45 », heure de Paris : lu comme date et heure par
     // tous les tableurs, quelle que soit leur langue (pas « 30/09/2026 »).
     new Date(t).toLocaleString("sv-SE", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" }),
-    m.table ? `Table ${m.table}` : "Salon",
+    m.table ? `Table ${m.table}` : m.code ? "Salon privé" : "Salon",
     team(0, 2),
     team(1, 3),
     s1,
@@ -89,12 +95,13 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
   const matches = new Map();
   const seen = new Map(); // id → dernière fois qu'un humain assis était connecté
 
-  function create(table = null) {
+  function create(table = null, code = null) {
     if (matches.size >= MAX_MATCHES) return null;
     const t = now();
     const m = {
       id: newID(),
       table,
+      code,
       createdAt: t,
       updatedAt: t,
       stateID: 0,
@@ -159,12 +166,24 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
     // Salon temporaire (bouton « Nouveau salon ») ; null au-delà du plafond.
     create: () => create(null),
 
+    // Table privée (un salon temporaire) : { match } ou { error }. Code
+    // unique parmi les tables ouvertes : il désigne une seule table.
+    createPrivate(raw) {
+      const code = normCode(raw);
+      if (code.length < CODE_MIN) return { error: "CODE_INVALIDE" };
+      if ([...matches.values()].some((m) => m.code === code)) return { error: "CODE_PRIS" };
+      const match = create(null, code);
+      return match ? { match } : { error: "PLEIN" };
+    },
+
     // Liste des salons pour le lobby ; connected(id, siège) : un client de
-    // ce siège est-il connecté ?
-    list(connected) {
-      return [...matches.values()].map((m) => ({
+    // ce siège est-il connecté ? Tables privées : seulement celle du code donné.
+    list(connected, code = null) {
+      const wanted = normCode(code);
+      return [...matches.values()].filter((m) => !m.code || m.code === wanted).map((m) => ({
         matchID: m.id,
         table: m.table,
+        code: m.code ?? null,
         phase: m.G.phase,
         players: m.players.map((p, s) => ({
           id: s,

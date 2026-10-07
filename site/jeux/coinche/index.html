@@ -257,6 +257,13 @@
             ou abandonné.</span
           >
         </div>
+        <form class="new-lobby-row private-form" id="private-form">
+          <label for="private-code">Table privée</label>
+          <input id="private-code" name="code" type="text" minlength="4" maxlength="20" placeholder="Code, ex. JEUDI" autocomplete="off" autocapitalize="characters" required>
+          <button type="submit" class="button outline">Rejoindre</button>
+          <button type="button" class="button outline" id="private-create-btn">Créer</button>
+          <span class="caption">Cachée du lobby : seuls ceux qui ont le code la voient.</span>
+        </form>
       </section>
       <section
         class="game-view"

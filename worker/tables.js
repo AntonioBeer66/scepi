@@ -6,8 +6,8 @@
 // dans son stockage (une clé par partie) et rechargées au réveil.
 //
 // API (sous /api, derrière le mot de passe du site) :
-//   GET  /api/tables                   salons (lance l'entretien)
-//   POST /api/tables                   nouveau salon temporaire
+//   GET  /api/tables?code=             salons + la table privée de ce code (lance l'entretien)
+//   POST /api/tables                   nouveau salon temporaire ; { code } : table privée
 //   POST /api/tables/:id/join          { playerID, playerName } → { playerCredentials }
 //   POST /api/tables/:id/leave         { playerID, credentials }
 //   GET  /api/tables/:id/ws            WebSocket de la partie
@@ -130,7 +130,10 @@ export class Tables extends DurableObject {
           return article ? json(article) : json({ error: "ARTICLE_INTROUVABLE" }, 404);
         }
         const saved = await this.ctx.storage.list({ prefix: ARTICLE_PREFIX });
-        const articles = [...saved.values()].sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Liste : de quoi faire les cartes ; texte et photos via /api/articles/:id.
+        const articles = [...saved.values()]
+          .map(({ id, title, summary, image, date }) => ({ id, title, summary, image, date }))
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
         return json(articles);
       }
       // Publier, modifier, supprimer : mot de passe des articles (secret
@@ -182,10 +185,16 @@ export class Tables extends DurableObject {
     if (!id) {
       if (request.method === "GET") {
         await this.maintain();
-        return json(this.tables.list((m, s) => this.connected(m, s)));
+        return json(this.tables.list((m, s) => this.connected(m, s), url.searchParams.get("code")));
       }
       if (request.method === "POST") {
-        const m = this.tables.create();
+        const code = (await request.json().catch(() => null))?.code;
+        let m;
+        if (code != null) {
+          const r = this.tables.createPrivate(code);
+          if (r.error && r.error !== "PLEIN") return json({ error: r.error }, r.error === "CODE_PRIS" ? 409 : 400);
+          m = r.match;
+        } else m = this.tables.create();
         if (!m) return json({ error: "Trop de tables ouvertes" }, 429);
         await this.save(m.id);
         return json({ matchID: m.id });

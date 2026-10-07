@@ -120,7 +120,7 @@ if (matchMedia("(hover: hover)").matches) {
 const liveTables = document.querySelectorAll("[data-live-tables]");
 if (liveTables.length && /^https?:$/.test(location.protocol)) {
   const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
-  fetch("/api/tables")
+  fetch("/api/tables?compteur") // mis en cache quelques secondes (worker/index.js)
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then((tables) => {
       let games = 0;

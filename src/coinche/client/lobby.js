@@ -2,10 +2,12 @@
 // tenus par le serveur du site (/api, worker/tables.js). On s'assoit avec un
 // pseudo, puis n'importe quel joueur assis lance la partie : les places
 // vides sont jouées par l'ordinateur. Sans serveur, reste le jeu solo
-// contre trois bots.
+// contre trois bots. Tables privées : cachées du lobby, on les voit en
+// donnant leur code (choisi par celui qui la crée).
 // La place occupée (identifiants) est gardée dans ce navigateur : recharger
 // la page ramène à la table.
 import { MAX_NAME } from "../game.js";
+import { CODE_MIN, normCode } from "../online/tables.js";
 
 const API = "/api";
 const SESSION_KEY = "scepi-coinche-session";
@@ -30,6 +32,7 @@ const lobbyClient = {
   leaveMatch: (matchID, playerID, credentials) =>
     api(`/tables/${encodeURIComponent(matchID)}/leave`, { playerID, credentials }),
   createMatch: () => api("/tables", {}),
+  createPrivate: (code) => api("/tables", { code }),
 };
 
 function esc(str) {
@@ -63,6 +66,7 @@ let tables = null; // null : serveur pas encore joint ; false : injoignable
 let playing = null; // session de jeu en cours (voir session.js)
 let pollTimer = null;
 let busy = false;
+let code = session?.code || null; // table privée affichée (code tapé ou créé)
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -123,6 +127,11 @@ function render() {
   const html = list
     .map((t) => {
       const n = t.table ? t.table : 4 + ++ephemeral;
+      const tag = t.table
+        ? ""
+        : t.code
+          ? ` <span class="lobby-temp-tag">PRIVÉE · CODE ${esc(t.code)}</span>`
+          : ' <span class="lobby-temp-tag">TEMPORAIRE</span>';
       const filled = t.players.filter((p) => p.name).length;
       const mine = session?.matchID === t.matchID;
       // Partie en cours chez d'autres : on peut la regarder.
@@ -139,7 +148,7 @@ function render() {
             .join("")
         : t.players.map((p, i) => seatMarkup(t, p, i)).join("");
       return `<article class="lobby ${t.table ? "" : "is-ephemeral"}${live ? " is-live" : ""}">
-      <span class="eyebrow">SALON ${String(n).padStart(2, "0")}${t.table ? "" : ' <span class="lobby-temp-tag">TEMPORAIRE</span>'}${live ? ' <span class="lobby-live-tag">EN JEU</span>' : ""}</span>
+      <span class="eyebrow">SALON ${String(n).padStart(2, "0")}${tag}${live ? ' <span class="lobby-live-tag">EN JEU</span>' : ""}</span>
       <h3>${esc(tableLabel(t, ephemeral))}</h3>
       <ul class="seat-list">${seats}</ul>
       <p class="caption">${live ? "Partie en cours" : `${filled}/4 places occupées`} · 2 équipes</p>
@@ -166,11 +175,14 @@ function render() {
   }
   const newBtn = $("#new-lobby-btn");
   if (newBtn) newBtn.disabled = !tables || !!session;
+  for (const b of document.querySelectorAll("#private-form button")) b.disabled = !tables || !!session;
 }
 
 async function refresh() {
   try {
-    const res = await fetch(`${API}/tables`);
+    // Assis à une table privée : son code, sinon elle disparaîtrait de la liste.
+    const c = session ? session.code : code;
+    const res = await fetch(`${API}/tables${c ? `?code=${encodeURIComponent(c)}` : ""}`);
     if (!res.ok) throw new Error(res.status);
     tables = await res.json();
   } catch {
@@ -188,12 +200,18 @@ async function refresh() {
   if (!playing) render();
 }
 
+// Onglet caché sans place prise : plus d'appels au serveur, la liste se
+// remet à jour au retour. Assis à une table, on continue (la partie peut
+// démarrer pendant qu'il est ailleurs).
 function poll() {
   clearTimeout(pollTimer);
   refresh().finally(() => {
-    if (!playing) pollTimer = setTimeout(poll, POLL_MS);
+    if (!playing && (session || !document.hidden)) pollTimer = setTimeout(poll, POLL_MS);
   });
 }
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && !playing) poll();
+});
 
 async function act(fn) {
   if (busy) return;
@@ -205,7 +223,7 @@ async function act(fn) {
     window.alert(
       msg.includes("429")
         ? "Trop de tables sont ouvertes : rejoignez-en une existante."
-        : "Action impossible (place prise entre-temps ou serveur injoignable).",
+        : e?.alert || "Action impossible (place prise entre-temps ou serveur injoignable).",
     );
   } finally {
     busy = false;
@@ -295,7 +313,7 @@ function init() {
         Number(seat),
         name,
       );
-      session = { matchID, playerID: seat, credentials: playerCredentials, name };
+      session = { matchID, playerID: seat, credentials: playerCredentials, name, code };
       saveSession(session);
     });
   });
@@ -329,6 +347,33 @@ function init() {
     if (session) return;
     act(() => lobbyClient.createMatch());
   });
+
+  // Table privée : « Créer » l'ouvre avec ce code, « Rejoindre » (ou
+  // Entrée) l'affiche dans la liste, si elle existe.
+  const privateForm = $("#private-form");
+  const openPrivate = (create) => {
+    const c = normCode(privateForm.elements.code.value);
+    if (session) return;
+    if (c.length < CODE_MIN) return window.alert(`Le code fait au moins ${CODE_MIN} caractères.`);
+    act(async () => {
+      if (create)
+        await lobbyClient.createPrivate(c).catch((e) => {
+          if (e.message === "409") e.alert = "Ce code est déjà pris : choisissez-en un autre.";
+          throw e;
+        });
+      code = c;
+      await refresh();
+      if (tables && !tables.some((t) => t.code === c)) {
+        code = null;
+        throw Object.assign(new Error(), { alert: "Aucune table privée avec ce code." });
+      }
+    });
+  };
+  privateForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    openPrivate(false);
+  });
+  $("#private-create-btn")?.addEventListener("click", () => openPrivate(true));
 
   const soloBtn = $("#solo-btn");
   soloBtn?.addEventListener("click", () => {

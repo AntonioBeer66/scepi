@@ -184,8 +184,20 @@ now += 2;
 tables.maintain(() => true);
 assert.ok(!tables.get(t4), "personne ne joue : arrêtée");
 
+// Table privée : code de 4 caractères au moins, unique, sans casse ;
+// absente de la liste sauf pour qui donne son code.
+assert.strictEqual(tables.createPrivate(" abc ").error, "CODE_INVALIDE");
+const priv = tables.createPrivate(" Jeudi ").match;
+assert.strictEqual(priv.code, "JEUDI");
+assert.strictEqual(tables.createPrivate("jeudi").error, "CODE_PRIS");
+assert.ok(!list().some((t) => t.matchID === priv.id), "cachée sans code");
+assert.ok(!tables.list(() => false, "VENDREDI").some((t) => t.matchID === priv.id));
+assert.strictEqual(tables.list(() => false, "jeudi").find((t) => t.matchID === priv.id)?.code, "JEUDI");
+assert.ok(tables.join(priv.id, 0, "Alice").credentials, "on s'y assoit comme ailleurs");
+
 // Plafond de tables.
 while (tables.create());
+assert.strictEqual(tables.createPrivate("SAMEDI").error, "PLEIN");
 assert.strictEqual(tables.all().length, MAX_MATCHES);
 
 // Historique : une ligne par partie terminée, CSV pour Excel (« ; », BOM),
