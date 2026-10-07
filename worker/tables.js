@@ -43,6 +43,20 @@ async function articlesPasswordOk(expected, given) {
   return crypto.subtle.timingSafeEqual(await hash(encodeURIComponent(expected)), await hash(given));
 }
 
+// Qui ouvre une table : empreinte de son adresse IP (jamais l'adresse
+// elle-même), pour le plafond par personne (MAX_PER_OWNER).
+async function ownerOf(request) {
+  const ip = request.headers.get("cf-connecting-ip") || "local";
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`scepi:${ip}`));
+  return [...new Uint8Array(hash).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Mot de passe des actus : après MAX_FAILS erreurs, l'adresse attend
+// FAIL_WINDOW_MS. Gardé en mémoire seulement (remis à zéro au réveil du
+// salon) : assez pour rendre l'essai en masse inutile.
+const MAX_FAILS = 5;
+const FAIL_WINDOW_MS = 15 * 60 * 1000;
+
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -53,6 +67,7 @@ export class Tables extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.tables = createTables();
+    this.fails = new Map(); // adresse → { n, since } : mots de passe des actus refusés
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.list({ prefix: "m:" });
       this.tables.load([...saved.values()]);
@@ -139,8 +154,18 @@ export class Tables extends DurableObject {
       // Publier, modifier, supprimer : mot de passe des articles (secret
       // Cloudflare ARTICLES_PASSWORD, jamais dans le dépôt) ; sans secret, rien ne passe.
       const writes = request.method === "POST" || (articleId && (request.method === "PUT" || request.method === "DELETE"));
-      if (writes && !(await articlesPasswordOk(this.env.ARTICLES_PASSWORD, request.headers.get("x-articles-password"))))
-        return json({ error: "MOT_DE_PASSE_REFUSE" }, 403);
+      if (writes) {
+        const ip = request.headers.get("cf-connecting-ip") || "local";
+        const now = Date.now();
+        let f = this.fails.get(ip);
+        if (f && now - f.since > FAIL_WINDOW_MS) f = null;
+        if (f?.n >= MAX_FAILS) return json({ error: "TROP_D_ESSAIS" }, 429);
+        if (!(await articlesPasswordOk(this.env.ARTICLES_PASSWORD, request.headers.get("x-articles-password")))) {
+          this.fails.set(ip, { n: (f?.n || 0) + 1, since: f?.since ?? now });
+          return json({ error: "MOT_DE_PASSE_REFUSE" }, 403);
+        }
+        this.fails.delete(ip);
+      }
       if (request.method === "DELETE" && articleId) {
         const key = `${ARTICLE_PREFIX}${articleId}`;
         if (!(await this.ctx.storage.get(key))) return json({ error: "ARTICLE_INTROUVABLE" }, 404);
@@ -191,10 +216,10 @@ export class Tables extends DurableObject {
         const code = (await request.json().catch(() => null))?.code;
         let m;
         if (code != null) {
-          const r = this.tables.createPrivate(code);
+          const r = this.tables.createPrivate(code, await ownerOf(request));
           if (r.error && r.error !== "PLEIN") return json({ error: r.error }, r.error === "CODE_PRIS" ? 409 : 400);
           m = r.match;
-        } else m = this.tables.create();
+        } else m = this.tables.create(await ownerOf(request));
         if (!m) return json({ error: "Trop de tables ouvertes" }, 429);
         await this.save(m.id);
         return json({ matchID: m.id });

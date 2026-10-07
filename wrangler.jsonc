@@ -24,4 +24,17 @@
   },
   // Stockage SQLite : celui de l'offre gratuite des Durable Objects.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Tables"] }],
+  // Version de test (npm run deploy:staging) : scepi-staging.<compte>.workers.dev,
+  // avec ses propres tables et actus ; son mot de passe des actus se règle à part
+  // (npx wrangler secret put ARTICLES_PASSWORD --env staging).
+  "env": {
+    "staging": {
+      "name": "scepi-staging",
+      "routes": [],
+      "workers_dev": true,
+      "durable_objects": {
+        "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
+      },
+    },
+  },
 }
