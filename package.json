@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node -e \"const fs=require('fs');fs.rmSync('site/src',{recursive:true,force:true});fs.cpSync('src/echecs','site/src/echecs',{recursive:true})\"",
     "dev": "vite build --watch",
     "start": "npm run build && wrangler dev --port 8000",
     "deploy": "npm run build && wrangler deploy",

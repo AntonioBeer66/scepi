@@ -1,8 +1,0 @@
-# The asset root is the repository root so the Worker can serve /src/echecs.
-# Upload only the public site and the canonical chess resources.
-*
-!site/
-!site/**
-!src/
-!src/echecs/
-!src/echecs/**

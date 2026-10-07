@@ -13,10 +13,11 @@
     { "pattern": "www.scepinvaders.com", "custom_domain": true },
   ],
   "assets": {
-    "directory": ".",
+    // site/ plus une copie de src/echecs (site/src/echecs, faite par npm run build).
+    "directory": "site",
     "binding": "ASSETS",
-    // Le Worker passe avant les fichiers : API, www et adresses sans /site.
-    "run_worker_first": true,
+    // Seule l'API passe par le Worker ; les fichiers sont servis sans lui.
+    "run_worker_first": ["/api/*"],
   },
   "durable_objects": {
     "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
