@@ -103,7 +103,7 @@ if (revealTargets.length && "IntersectionObserver" in window) {
 // Souris seulement ; sur écran tactile, rien ne change.
 if (matchMedia("(hover: hover)").matches) {
   const cards = document.querySelectorAll(
-    ".home-pillar, .home-play, .home-event, .pillar, .crew-card, .board-grid li, .asso-wei, .lx-game, .lx-steps li, .ct-net",
+    ".home-pillar, .home-play, .home-event, .pillar, .crew-card, .board-grid li, .asso-wei, .lx-game, .lx-steps li",
   );
   for (const card of cards) {
     card.classList.add("spot");
@@ -171,10 +171,20 @@ if (galleryImages.length && window.HTMLDialogElement) {
   };
   galleryImages.forEach((img) => {
     img.classList.add("is-zoomable");
+    // Ouvrable au clavier aussi ; un carrousel n'a qu'un arrêt de tabulation
+    // (ses photos sont empilées), qui ouvre la photo affichée.
+    const carousel = img.closest("[data-carousel]");
+    img.tabIndex = !carousel || img === carousel.querySelector("img") ? 0 : -1;
+    img.setAttribute("role", "button");
     img.addEventListener("click", () => {
       album = [...img.parentElement.querySelectorAll("img")];
       show(album.indexOf(img));
       box.showModal();
+    });
+    img.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      ((carousel && carousel.querySelector("img.is-active")) || img).click();
     });
   });
   box.querySelector(".lightbox-prev").addEventListener("click", () => show(index - 1));

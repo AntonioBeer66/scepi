@@ -70,26 +70,27 @@
       }
       .event-carousel-dots {
         position: absolute;
+        z-index: 3; /* au-dessus de la photo active (z-index 2) */
         bottom: 12px;
         left: 0;
         right: 0;
         display: flex;
         justify-content: center;
-        gap: 6px;
       }
       .event-carousel-dots button {
-        width: 8px;
-        height: 8px;
-        min-height: 8px;
-        padding: 0;
+        /* point de 8px, zone tactile de 24px */
+        width: 24px;
+        height: 24px;
+        min-height: 24px;
+        padding: 8px;
         border: 0;
         border-radius: 50%;
-        background: #f7f4fc;
+        background: #f7f4fc content-box;
         opacity: 0.55;
         cursor: pointer;
       }
       .event-carousel-dots button.is-active {
-        background: #f4c600;
+        background-color: #f4c600;
         opacity: 1;
       }
       .event-carousel-arrow {
@@ -317,7 +318,7 @@
             >Nos événements</a
           ><a href="../contact/index.html">Contact</a>
         </nav>
-        <span class="header-tag">ESCP · CLUB DE JEUX</span>
+
       </div>
     </header>
     <main id="contenu" class="container">
@@ -329,7 +330,6 @@
       </section>
       <article class="event-banner reveal">
         <div>
-          <span class="eyebrow">DERNIER TEMPS FORT</span>
           <h2>L’ESCP Poker<br />Championship.</h2>
           <p>
             Un tournoi de Texas Hold’em en 3 phases (qualifications,
@@ -531,7 +531,6 @@
       <section class="section year reveal" aria-labelledby="year-title">
         <div class="section-heading">
           <div>
-            <span class="eyebrow">2025 → 2026</span>
             <h2 id="year-title">Une année avec SCEPI.</h2>
           </div>
         </div>

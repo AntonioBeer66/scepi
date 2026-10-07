@@ -68,7 +68,7 @@
           ><a href="../evenements/index.html">Nos événements</a
           ><a href="../contact/index.html">Contact</a>
         </nav>
-        <span class="header-tag">ESCP · CLUB DE JEUX</span>
+
       </div>
     </header>
     <main id="contenu" class="asso">
@@ -77,24 +77,14 @@
           <h1>La passion du jeu.<br /><span>L’esprit d’équipe.</span></h1>
           <p>
             SCEP Invaders fait vivre le jeu vidéo, les jeux de société et les
-            nouvelles technologies à l’ESCP.
+            nouvelles technologies à l’ESCP depuis 2015, élue Essential Society
+            trois années de suite.
           </p>
-          <div class="asso-actions">
-            <a class="button primary" href="#bureau">Découvrir le bureau</a
-            ><a class="button asso-ghost" href="#rejoindre"
-              >Nous rejoindre <span aria-hidden="true">↓</span></a
-            >
-          </div>
-          <dl class="asso-stats">
-            <div><dt>Fondée en</dt><dd>2015</dd></div>
-            <div><dt>Membres</dt><dd>50+</dd></div>
-            <div><dt>Essential Society</dt><dd>3 ans</dd></div>
-            <div><dt>Au bureau</dt><dd>6</dd></div>
-          </dl>
+          <a class="button primary" href="#rejoindre"
+            >Nous rejoindre <span aria-hidden="true">↓</span></a
+          >
         </div>
         <div class="asso-emblem">
-          <span class="asso-orbit o1" aria-hidden="true"></span
-          ><span class="asso-orbit o2" aria-hidden="true"></span>
           <img
             src="../assets/images/logo-color.png"
             alt="Emblème SCEP Invaders"
@@ -167,8 +157,7 @@
         id="bureau"
         aria-labelledby="crew-title"
       >
-        <span class="eyebrow">BUREAU 2026</span>
-        <h2 id="crew-title">Six joueurs aux commandes.</h2>
+        <h2 id="crew-title">Bureau 2026 : six joueurs aux commandes.</h2>
         <ul class="board-grid">
           <li class="is-lead">
             <span class="board-avatar" aria-hidden="true">AT</span>
@@ -231,7 +220,7 @@
           </li>
         </ol>
         <a class="button primary" href="../contact/index.html"
-          >Nous écrire <span aria-hidden="true">↗</span></a
+          >Nous écrire <span aria-hidden="true">→</span></a
         >
       </section>
     </main>
@@ -244,11 +233,8 @@
       .asso h2 {
         margin-bottom: 0;
       }
-      .asso .eyebrow {
-        margin-bottom: 14px;
-      }
 
-      /* Ouverture : titre, chiffres, emblème en orbite */
+      /* Ouverture : titre et emblème */
       .asso-hero {
         display: grid;
         grid-template-columns: 1.1fr 0.9fr;
@@ -264,51 +250,10 @@
         max-width: 52ch;
         margin-bottom: 32px;
       }
-      .asso-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-      .asso-ghost {
-        gap: 10px;
-        border-color: var(--line);
-        color: var(--text);
-        background: transparent;
-      }
-      .asso-ghost:hover {
-        border-color: var(--gold);
-        color: var(--gold);
-      }
-      .asso-stats {
-        display: grid;
-        grid-template-columns: repeat(4, auto);
-        justify-content: start;
-        gap: 34px;
-        margin: 40px 0 0;
-        padding-top: 24px;
-        border-top: 1px solid var(--line);
-      }
-      .asso-stats div {
-        display: flex;
-        flex-direction: column-reverse;
-        gap: 4px;
-      }
-      .asso-stats dd {
-        margin: 0;
-        font-size: 1.8rem;
-        font-weight: 750;
-        letter-spacing: -0.03em;
-      }
-      .asso-stats dt {
-        font-size: 13px;
-        color: var(--muted);
-      }
       .asso-emblem {
-        position: relative;
         display: grid;
         place-items: center;
         aspect-ratio: 1;
-        overflow: clip; /* les anneaux tournent sans déborder */
         background: radial-gradient(
           circle at 50% 52%,
           #f4c60030,
@@ -317,50 +262,10 @@
         );
       }
       .asso-emblem img {
-        position: relative;
         width: 72%;
         height: auto;
         filter: drop-shadow(0 18px 40px #0008);
         animation: asso-float 6s ease-in-out infinite;
-      }
-      .asso-orbit {
-        position: absolute;
-        inset: 6%;
-        border: 1px solid #f4c60040;
-        border-radius: 50%;
-        animation: asso-spin 40s linear infinite;
-      }
-      .asso-orbit::after {
-        content: "";
-        position: absolute;
-        top: 12%;
-        left: 12%;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: var(--gold);
-        box-shadow: 0 0 0 4px #f4c60030;
-      }
-      .asso-orbit.o2 {
-        inset: 16%;
-        border-color: #8b6fc050;
-        animation-duration: 28s;
-        animation-direction: reverse;
-      }
-      .asso-orbit.o2::after {
-        top: auto;
-        left: auto;
-        right: 8%;
-        bottom: 14%;
-        width: 7px;
-        height: 7px;
-        background: var(--violet-soft);
-        box-shadow: 0 0 0 3px #8b6fc030;
-      }
-      @keyframes asso-spin {
-        to {
-          rotate: 360deg;
-        }
       }
       @keyframes asso-float {
         50% {
@@ -621,18 +526,6 @@
           font-size: 16px;
           margin-bottom: 24px;
         }
-        .asso-stats {
-          grid-template-columns: repeat(4, auto);
-          justify-content: space-between;
-          gap: 8px;
-          margin-top: 30px;
-        }
-        .asso-stats dd {
-          font-size: 1.35rem;
-        }
-        .asso-stats dt {
-          font-size: 12px;
-        }
         .pillar-grid {
           gap: 12px;
         }
@@ -672,8 +565,7 @@
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .asso-emblem img,
-        .asso-orbit {
+        .asso-emblem img {
           animation: none;
         }
       }
