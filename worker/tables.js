@@ -19,6 +19,9 @@
 // changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
 // { type: "emote", emote } → { type: "emote", seat, emote } à toute la table.
 // Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
+// Délais : une seule alarme pour tout le salon, réglée sur la prochaine
+// échéance (voir GRACE_MS) ; elle joue l'action par défaut des tables dont
+// l'hôte n'a pas joué à temps.
 import { DurableObject } from "cloudflare:workers";
 import {
   createTables,
@@ -73,6 +76,7 @@ export class Tables extends DurableObject {
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.list({ prefix: "m:" });
       this.tables.load([...saved.values()]);
+      this.alarmAt = await ctx.storage.getAlarm();
     });
   }
 
@@ -124,6 +128,27 @@ export class Tables extends DurableObject {
       for (const ws of this.ctx.getWebSockets(id)) ws.close(4404, "Table fermée");
     }
     for (const m of created) await this.save(m.id);
+    await this.schedule();
+  }
+
+  // Alarme sur la prochaine échéance ; réglée seulement si elle change
+  // (chaque réglage compte comme une écriture).
+  async schedule() {
+    const at = this.tables.nextDeadline();
+    if (at === this.alarmAt) return;
+    this.alarmAt = at;
+    if (at == null) await this.ctx.storage.deleteAlarm();
+    else await this.ctx.storage.setAlarm(at);
+  }
+
+  async alarm() {
+    this.alarmAt = null; // l'alarme qui sonne n'est plus programmée
+    for (const id of this.tables.expire()) {
+      await this.save(id);
+      if (FICHE.finished(this.tables.get(id).G)) await this.record(id);
+      this.broadcast(id);
+    }
+    await this.maintain(); // reprogramme l'alarme
   }
 
   // Ligne d'historique d'une partie qui vient de se terminer ; la semaine
