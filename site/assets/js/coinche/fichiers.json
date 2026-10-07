@@ -1,0 +1,23 @@
+{
+  "src/coinche/client/lobby.js": {
+    "file": "coinche.js",
+    "name": "lobby",
+    "src": "src/coinche/client/lobby.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/coinche/client/session.js"
+    ]
+  },
+  "src/coinche/client/session.js": {
+    "file": "session-l_DfLz5s.js",
+    "name": "session",
+    "src": "src/coinche/client/session.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/coinche/client/lobby.js"
+    ],
+    "assets": [
+      "assets/host-worker-b6_I5z4u.js"
+    ]
+  }
+}

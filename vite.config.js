@@ -12,6 +12,7 @@ export default defineConfig({
     emptyOutDir: true,
     target: "es2020", // syntaxe récente (??=, champs de classe) transpilée : téléphones anciens
     chunkSizeWarningLimit: 2000,
+    manifest: "fichiers.json", // liste des morceaux, mise en cache hors ligne (site/sw.js)
     rollupOptions: {
       input: "src/coinche/client/lobby.js",
       output: {

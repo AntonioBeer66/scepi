@@ -225,3 +225,7 @@ for (const btn of document.querySelectorAll("[data-copy]")) {
     }, 2000);
   });
 }
+
+// Hors ligne : la coinche contre l'ordinateur et les pages déjà vues (sw.js).
+// En ouvrant les fichiers de site/ directement, l'inscription échoue sans gêne.
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
