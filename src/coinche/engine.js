@@ -330,7 +330,10 @@ function botTurnAction(seat) {
 //     un contrat chuté donne 160 à l'adversaire, 10 points de plus ne
 //     valent jamais ce risque.
 //   Capot quand les As annoncés (« clefs ») couvrent les fausses cartes
-//     de l'ouvreur.
+//     de l'ouvreur, ou quand la simulation le voit réussir : toujours
+//     validé par elle (7 fois sur 10 au moins, sur 24 mondes au moins).
+//   Générale seulement si elle réussit plus souvent que le capot de même
+//     valeur, ou pour passer au-dessus d'un capot adverse.
 //   Compétition : soutenir le partenaire en « forçant » de 10, deux fois au
 //     plus par ligne ; au-dessus de l'adversaire, surenchérir seulement si
 //     la donne simulée le vaut mieux que le laisser jouer (voir étape 3).
@@ -536,6 +539,16 @@ function raiseBy(seat, suit) {
 // simulation. En duel : +4,7 pts/donne.
 const BID_DECISION_MS = 400;
 const COMPETE_MARGIN = 60; // voir l'étape 3
+// Capot : seulement si la simulation le réussit assez souvent. Le barème
+// seul (clefs, ouverture sans fausse carte) en réussissait moins d'un sur
+// trois : les relances de compétition se lisaient comme des As.
+// CAPOT_MIN valide un capot du barème, CAPOT_SIM en propose un hors barème
+// (duel en réflexes contre le barème seul : +1,3 pt/donne). Sur moins de
+// CAPOT_WORLDS mondes (appareil lent, temps écoulé), pas de capot : la
+// simulation est trop bruitée pour le valider.
+const CAPOT_MIN = 0.7;
+const CAPOT_SIM = 0.7;
+const CAPOT_WORLDS = 24;
 let bidDeadline = Infinity;
 let bidWorlds = null;
 function botDecideBid(seat) {
@@ -550,10 +563,12 @@ function botDecideBid(seat) {
 }
 
 // Générale (belotée avec la belote en main) : faire les huit plis à soi
-// seul, en entamant ; passe au-dessus de tous les capots. On la tente quand la simulation la
-// réussit presque toujours, ou pour passer au-dessus d'un capot adverse,
-// dès 60 % de réussite. Seulement avec Valet et 9 d'atout et au moins
-// cinq atouts : le reste ne vaut pas la simulation.
+// seul, en entamant ; passe au-dessus de tous les capots. On la tente quand
+// la simulation la réussit presque toujours, ou pour passer au-dessus d'un
+// capot adverse, dès 60 % de réussite. Elle ne vaut pas plus que le capot
+// (beloté) de l'équipe : si celui-ci réussit plus souvent, c'est lui qu'on
+// annonce. Seulement avec Valet et 9 d'atout et au moins cinq atouts : le
+// reste ne vaut pas la simulation.
 const GENERALE_SURE = 0.85;
 const GENERALE_OVER = 0.6;
 function generaleBid(seat, hand, cur, team) {
@@ -581,6 +596,20 @@ function generaleBid(seat, hand, cur, team) {
     if (pm !== null && (!best || pm > best.pm)) best = { pm, atout, montant };
   }
   if (!best || best.pm < (oppCapot ? GENERALE_OVER : GENERALE_SURE)) return null;
+  const capot = best.montant === GENERALE_BELOTE ? 270 : 250;
+  if (!cur || capot > cur.montant) {
+    const pc = makeProbability(seat, {
+      id: -1,
+      type: bidType(capot),
+      montant: capot,
+      atout: best.atout,
+      preneur: seat,
+      equipePreneur: team,
+      coinche: false,
+      surcoinche: false,
+    }, CAPOT_WORLDS);
+    if (pc !== null && pc > best.pm) return { type: "ENCHERIR", montant: capot, atout: best.atout };
+  }
   return { type: "ENCHERIR", montant: best.montant, atout: best.atout };
 }
 
@@ -620,7 +649,7 @@ function decideBid(seat) {
   const partnerBid = lastBidOf(partner);
   const myBid = lastBidOf(seat);
   // Réussite simulée d'un contrat que je prendrais (voir makeProbability).
-  const pMake = (montant, atout) =>
+  const pMake = (montant, atout, minWorlds) =>
     makeProbability(seat, {
       id: -1,
       type: bidType(montant),
@@ -630,7 +659,14 @@ function decideBid(seat) {
       equipePreneur: team,
       coinche: false,
       surcoinche: false,
-    });
+    }, minWorlds);
+
+  // Capot validé par la simulation (voir CAPOT_MIN), jamais sans elle.
+  const capotOk = (o) => {
+    if (!o) return false;
+    const pm = pMake(o.montant, o.atout, CAPOT_WORLDS);
+    return pm !== null && pm >= CAPOT_MIN;
+  };
 
   // 1. Capot par les clefs : il faut une clef (un As) de plus que de
   // fausses cartes, les plis de l'un devant couvrir les défausses de
@@ -646,7 +682,7 @@ function decideBid(seat) {
       sideAces(hand, suit) > partnerFausses
     ) {
       const o = offer(capot, suit);
-      if (o) {
+      if (capotOk(o)) {
         memo.supported = true;
         return o;
       }
@@ -658,7 +694,27 @@ function decideBid(seat) {
       (partnerBid.montant - mine) / 10 > fausses(hand, suit)
     ) {
       const o = offer(capot, suit);
-      if (o) return o;
+      if (capotOk(o)) return o;
+    }
+  }
+
+  // 1 bis. Capot hors barème, quand la simulation le voit presque sûr :
+  // dans la couleur du partenaire ou ma meilleure, avec au moins trois
+  // atouts dont le Valet ou le 9 (le reste ne vaut pas la simulation).
+  if (!capotOnTable) {
+    const suits = new Set();
+    if (partnerBid) suits.add(partnerBid.atout);
+    if (ours) suits.add(cur.atout);
+    const mineBest = bestOpening(hand, false);
+    if (mineBest) suits.add(mineBest.atout);
+    for (const s of suits) {
+      if (
+        suitCards(hand, s).length < 3 ||
+        !(holds(hand, s, "J") || holds(hand, s, "9"))
+      )
+        continue;
+      const o = offer(hasBelote(hand, s) ? 270 : 250, s);
+      if (o && pMake(o.montant, s, CAPOT_WORLDS) >= CAPOT_SIM) return o;
     }
   }
 
@@ -739,7 +795,14 @@ function decideBid(seat) {
       const plain = offer(own.montant, own.atout);
       const o =
         plain || (cur && own.montant + 10 >= min ? force(own.atout) : null);
-      const pm = o && o.montant < 250 ? pMake(o.montant, o.atout) : null;
+      if (o && o.montant >= 250) {
+        if (capotOk(o)) return o;
+        // Capot refusé par la simulation : la main vaut tout de même 160.
+        const o160 = offer(160, o.atout);
+        const p160 = o160 ? pMake(160, o.atout) : null;
+        return o160 && (p160 === null || p160 >= 0.5) ? o160 : PASS;
+      }
+      const pm = o ? pMake(o.montant, o.atout) : null;
       if (o && (pm === null || pm >= 0.5)) return o;
       if (o && !plain) G.forced[team]--; // veto : ce forçage n'a pas servi
     } else if (!cur) {
@@ -1116,7 +1179,8 @@ function leadCard(ctx) {
         side.filter((c) => c.suit === called),
         atout,
       );
-    if (trumps.length >= 2 && G.plisJoues <= 4) {
+    // (Pas en capot : la petite carte seule donnerait un pli.)
+    if (!ctx.capot && trumps.length >= 2 && G.plisJoues <= 4) {
       const single = side.find(
         (c) =>
           suitCards(hand, c.suit).length === 1 && cardPoints(c, atout) < 10,
@@ -1132,7 +1196,7 @@ function leadCard(ctx) {
   const masters = side.filter(
     (c) =>
       safeMaster(ctx, c) &&
-      (G.plisJoues || c.rank !== "A" || holds(hand, c.suit, "10")),
+      (G.plisJoues || ctx.capot || c.rank !== "A" || holds(hand, c.suit, "10")),
   );
   if (masters.length) return highest(masters, atout);
   const called = calledSuit(ctx);
@@ -1883,7 +1947,8 @@ function mcChooseCard(seat, legal, reflex) {
 // Chances de réussite d'un contrat avant la première carte : la donne est
 // jouée en entier (réflexes) sur des mondes compatibles avec les enchères.
 const BID_BUDGET_MS = 150;
-function makeProbability(seat, contract) {
+// minWorlds : en dessous, la réponse est « je ne sais pas » (null).
+function makeProbability(seat, contract, minWorlds = 1) {
   if (tuning.now() >= bidDeadline) return null;
   const saved = G.contract;
   G.contract = contract;
@@ -1903,7 +1968,7 @@ function makeProbability(seat, contract) {
       if (contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege)) ok++;
       if (tuning.now() > stop) break;
     }
-    return n ? ok / n : null;
+    return n >= minWorlds ? ok / n : null;
   } finally {
     G.contract = saved;
   }

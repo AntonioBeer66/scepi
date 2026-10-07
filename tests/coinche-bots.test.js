@@ -23,7 +23,7 @@ const team = (seat) => seat % 2;
 // La coinche simulée joue aussi des mondes : 4 suffisent pour vérifier les règles.
 engine.tuning.bidSamples = 4;
 engine.tuning.bidWorlds = 4;
-const stats = { donnes: 0, belotes: 0, generales: 0, imposees: 0, capots: 0, coinches: 0, annoncees: 0, gagnees: 0, surencheries: 0 };
+const stats = { donnes: 0, belotes: 0, generales: 0, imposees: 0, capots: 0, coinches: 0, annoncees: 0, gagnees: 0, surencheries: 0, capotsAnnonces: 0, capotsReussis: 0 };
 const t0 = Date.now();
 
 for (let game = 0; game < GAMES + MC_GAMES; game++) {
@@ -104,6 +104,10 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       if (belote) stats.belotes++;
       if (c.type.startsWith('GENERALE')) { stats.annoncees++; if (reussi) stats.gagnees++; }
       if (c.montant >= 250) stats.capots++;
+      if ((c.type === 'CAPOT' || c.type === 'CAPOT_BELOTE') && !huitAtouts) {
+        stats.capotsAnnonces++;
+        if (reussi) stats.capotsReussis++;
+      }
       if (G.multiplicateur > 1) stats.coinches++;
       prev = [...G.scores];
       pts = [0, 0];
@@ -116,5 +120,8 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
   assert.strictEqual(G.phase, 'TERMINEE', `partie ${game} non terminée`);
   assert(Math.max(...G.scores) >= 1010, `partie ${game} : aucun camp à 1010`);
 }
+// Capot hors huit atouts : jamais sur une simulation de 4 mondes (moins de
+// CAPOT_WORLDS), où il réussissait moins d'une fois sur trois.
+assert.strictEqual(stats.capotsAnnonces, 0, 'capot annoncé sur une simulation trop courte');
 assert.strictEqual(stats.generales + stats.surencheries, stats.imposees, 'chaque main à huit atouts imposée : 270 gagné, ou surenchéri en Générale');
-console.log(`${GAMES} + ${MC_GAMES} (Monte-Carlo) parties de bots sans erreur en ${Date.now() - t0} ms : ${stats.donnes} donnes arbitrées (${stats.belotes} belotes, ${stats.generales} mains à huit atouts, ${stats.annoncees} Générales annoncées dont ${stats.gagnees} gagnées, ${stats.capots} capots, ${stats.coinches} coinches).`);
+console.log(`${GAMES} + ${MC_GAMES} (Monte-Carlo) parties de bots sans erreur en ${Date.now() - t0} ms : ${stats.donnes} donnes arbitrées (${stats.belotes} belotes, ${stats.generales} mains à huit atouts, ${stats.annoncees} Générales annoncées dont ${stats.gagnees} gagnées, ${stats.capots} capots dont ${stats.capotsReussis}/${stats.capotsAnnonces} hors huit atouts réussis, ${stats.coinches} coinches).`);
