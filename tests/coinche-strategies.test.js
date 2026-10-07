@@ -117,6 +117,10 @@ check('Défense : jamais d’atout en entame', play(1).endsWith('H'), false);
 setup({ ...JEU, hands: hands('', '10S 7D 8D 9D KC 7C QD 8C') });
 check('Défense : ne pas entamer un 10 sec', play(1) === '10S', false);
 setup({ ...JEU, hands: hands('', 'AS 7S 8D 7D 9C 8C 7C 8H') });
+check('Défense, première entame : pas d’As dont le 10 est dehors', play(1) === 'AS', false);
+setup({ ...JEU, hands: hands('', 'AS 10S 8D 7D 9C 8C 7C 8H') });
+check('Défense, première entame : l’As avec son 10', play(1), 'AS');
+setup({ ...JEU, plisJoues: 1, hands: hands('', 'AS 7S 8D 7D 9C 8C 7C') });
 check('Défense : encaisser l’As court', play(1), 'AS');
 setup({ ...JEU, hands: hands('10D 9D 7S 8S 8C 7C JH 7H'), pli: [[1, '7D'], [2, 'AD'], [3, '8D']] });
 check('Charger : le 10 sous l’As du partenaire', play(0), '10D');
@@ -136,6 +140,10 @@ setup({ ...JEU, hands: hands('7H JH KD 8C 9C 7C 10C QC'), pli: [[1, '7S'], [2, '
 check('Ne pas couper le pli sûr du partenaire', play(0).endsWith('H'), false);
 setup({ ...JEU, contract: contract(1, 80, 'H'), hands: hands('AS 9S AD 8D 7C 8C QD 7D'), pli: [[1, '7S'], [2, '10S'], [3, '8S']] });
 check('Jamais l’As par-dessus le 10 maître du partenaire', play(0), '9S');
+setup({ ...JEU, contract: contract(1, 80, 'H'), hands: hands('AS KS AD 8D 7C 8C QD 7D'), pli: [[1, '7S'], [2, '10S'], [3, '8S']] });
+check('L’As par-dessus le 10 du partenaire quand le Roi gardé devient maître', play(0), 'AS');
+setup({ ...JEU, hands: hands('AD 10D 7S 8S 8C 7C JH 7H'), pli: [[1, 'KD'], [2, '7D'], [3, '8D']] });
+check('Pli gagné avec deux maîtres : l’As plutôt que le 10', play(0), 'AD');
 
 // ---- Déductions : obligation de couper et de monter (le siège 2 mène, adversaire du 3)
 setup({ ...JEU, pli: [[2, 'AS']] });

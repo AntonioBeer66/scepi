@@ -24,6 +24,7 @@ import { rng } from "./coinche-sim.js";
 
 tuning.mcSamples = 2;
 tuning.bidSamples = 4;
+tuning.bidWorlds = 4;
 Math.random = rng(7);
 
 let now = 0;

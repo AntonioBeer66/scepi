@@ -186,6 +186,7 @@ npm run build     # recompiler le jeu après une modification de src/
 npm test          # moteur, stratégies des bots, parties de bots, partie boardgame.io, salons en ligne
 npm run test:e2e  # partie solo dans un vrai navigateur (Playwright ; Edge/Chrome du poste à défaut)
 node tests/coinche-online-e2e.js   # multijoueur de bout en bout (npm start dans un autre terminal)
+node tests/coinche-ab.js A.js B.js 40 0   # duel de deux moteurs sur tous les cœurs (donnes jumelles ; 0 = réflexes seuls, sinon nombre de mondes)
 npm run deploy    # compile et publie sur Cloudflare
 ```
 

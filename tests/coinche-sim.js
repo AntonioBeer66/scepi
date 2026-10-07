@@ -31,7 +31,10 @@ export function shuffle(deck, rand) {
 // on.timeout(G) si une fenêtre expire (un bot n'a pas agi), on.refus(G,
 // siège, action, motif) si le moteur refuse l'action d'un bot.
 // decide : décisions des bots par siège, (seat) => objet bots (duels A/B).
-export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, decide = null } = {}) {
+// reseed : hasard des bots repris à chaque donne (graine botSeed et numéro
+// de donne) ; dans un duel, les deux parties jumelles imaginent les mêmes
+// mondes à chaque donne : l'écart ne vient plus que des bots.
+export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, decide = null, reseed = false } = {}) {
   const { createGame, actOn, bots, tuning } = engine;
   let now = 0;
   let seq = 0;
@@ -40,13 +43,21 @@ export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, 
     setTimeout: (fn, ms = 0) => { timers.set(++seq, { id: seq, at: now + ms, fn }); return seq; },
     clearTimeout: (id) => timers.delete(id),
   };
-  const botRand = rng(botSeed);
+  let botRand = rng(botSeed);
+  const rand = () => botRand();
+  let donne = 0;
   const dealRand = rng(dealSeed);
   const saved = [Math.random, tuning.now];
-  Math.random = botRand; // les bots tirent leurs mondes avec Math.random
+  Math.random = rand; // les bots tirent leurs mondes avec Math.random
   tuning.now = () => 0; // réflexion jamais interrompue : reproductible
   try {
     const G = createGame([0, 1, 2, 3].map(() => ({ type: 'bot', name: 'Ordinateur' })), dealRand, deal);
+    const newDonne = () => {
+      if (!reseed || G.donneNumero === donne) return;
+      donne = G.donneNumero;
+      botRand = rng(botSeed * 1009 + donne);
+    };
+    newDonne();
     const pick = (seat) => (decide ? decide(seat) : bots);
     const decider = {
       turnAction: (g, s) => pick(s).turnAction(g, s),
@@ -55,13 +66,14 @@ export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, 
     };
     const host = createHost({
       timers: clock,
-      random: botRand,
+      random: rand,
       decide: decider,
       send(seat, action) {
         if (action.type === 'TIMEOUT' && on.timeout && G.phase !== 'SCORE' && G.phase !== 'SURCOINCHE') on.timeout(G);
         const before = { plis: G.plisJoues, phase: G.phase };
         const error = actOn(G, seat, action, dealRand, deal);
         if (error) { if (on.refus) on.refus(G, seat, action, error); return; }
+        newDonne();
         if (G.plisJoues > before.plis && on.trick) on.trick(G, G.lastTrick.winnerSeat);
         if (G.phase === 'SCORE' && before.phase !== 'SCORE' && on.score) on.score(G);
         host.update(G);

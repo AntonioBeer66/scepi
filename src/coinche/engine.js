@@ -355,14 +355,48 @@ function suitCards(hand, suit) {
 function holds(hand, suit, rank) {
   return hand.some((c) => c.suit === suit && c.rank === rank);
 }
+// Main en masque de 32 bits (carte = couleur × 8 + rang, ordre de SUITS et
+// RANKS) : les questions des enchères (« tient-il le Valet ? combien
+// d'atouts ? ») deviennent des tests de bits. Elles sont posées des
+// milliers de fois par décision quand les mondes imaginés sont relus avec
+// les enchères (bidFits). Les fonctions d'enchère prennent une main ou son masque.
+const CARD_INDEX = {};
+const SHIFT = {};
+const RANK_BIT = {};
+SUITS.forEach((s, i) => {
+  SHIFT[s] = i * 8;
+  RANKS.forEach((r, j) => {
+    CARD_INDEX[r + s] = i * 8 + j;
+    RANK_BIT[r] = 1 << j;
+  });
+});
+const POP8 = Array.from({ length: 256 }, (_, x) => {
+  let n = 0;
+  for (; x; x &= x - 1) n++;
+  return n;
+});
+function maskOf(cards) {
+  let m = 0;
+  for (const c of cards) m |= 1 << CARD_INDEX[c.id];
+  return m;
+}
+const asMask = (h) => (typeof h === "number" ? h : maskOf(h));
+const suitBits = (m, s) => (m >>> SHIFT[s]) & 0xff;
+const has = (m, s, r) => (suitBits(m, s) & RANK_BIT[r]) !== 0;
+const countOf = (m, s) => POP8[suitBits(m, s)];
+
 function hasBelote(hand, suit) {
-  return holds(hand, suit, "K") && holds(hand, suit, "Q");
+  const m = asMask(hand);
+  return has(m, suit, "K") && has(m, suit, "Q");
 }
 function sideSuits(atout) {
   return SUITS.filter((s) => s !== atout);
 }
 function sideAces(hand, atout) {
-  return sideSuits(atout).filter((s) => holds(hand, s, "A")).length;
+  const m = asMask(hand);
+  let n = 0;
+  for (const s of SUITS) if (s !== atout && has(m, s, "A")) n++;
+  return n;
 }
 function round10(n) {
   return Math.floor(n / 10) * 10;
@@ -371,14 +405,16 @@ function round10(n) {
 // Fausses cartes : les cartes hors atout qui ne feront pas de pli
 // d'elles-mêmes, tout ce qui n'est pas en tête de séquence As-10-Roi.
 function fausses(hand, atout) {
+  const m = asMask(hand);
   let f = 0;
-  for (const s of sideSuits(atout)) {
+  for (const s of SUITS) {
+    if (s === atout) continue;
     let maitres = 0;
     for (const r of ["A", "10", "K"]) {
-      if (!holds(hand, s, r)) break;
+      if (!has(m, s, r)) break;
       maitres++;
     }
-    f += suitCards(hand, s).length - maitres;
+    f += countOf(m, s) - maitres;
   }
   return f;
 }
@@ -387,20 +423,21 @@ function fausses(hand, atout) {
 // « light » : dernier à parler après trois passes, ou profil bluffeur ;
 // personne n'a de quoi ouvrir, on peut forcer un 80.
 function openingBid(hand, suit, light) {
-  const n = suitCards(hand, suit).length;
+  const m = asMask(hand);
+  const n = countOf(m, suit);
   // Main entière dans une seule couleur (8 cartes sur 8, donc Valet, 9 ET
   // belote garantis) : tombe déjà dans le cas V&&N&&f===0 ci-dessous, qui
   // rend 270 — la Générale n'est pas un palier à part, juste ce même
   // capot beloté acquis par construction (voir G.contract.huitAtouts, posé
   // au verrouillage du contrat une fois la vraie main initiale connue).
-  const V = holds(hand, suit, "J");
-  const N = holds(hand, suit, "9");
-  const A = holds(hand, suit, "A");
-  const X = holds(hand, suit, "10");
-  const bel = hasBelote(hand, suit);
-  const aces = sideAces(hand, suit);
+  const V = has(m, suit, "J");
+  const N = has(m, suit, "9");
+  const A = has(m, suit, "A");
+  const X = has(m, suit, "10");
+  const bel = hasBelote(m, suit);
+  const aces = sideAces(m, suit);
   if (V && N && n >= 3) {
-    const f = fausses(hand, suit);
+    const f = fausses(m, suit);
     if (f === 0) return n >= 5 ? (bel ? 270 : 250) : 160;
     return [0, 130, 120, 110][f] || 90;
   }
@@ -418,10 +455,11 @@ function openingBid(hand, suit, light) {
 }
 
 function bestOpening(hand, light) {
+  const m = asMask(hand);
   let best = null;
   for (const atout of SUITS) {
-    const montant = openingBid(hand, atout, light);
-    const len = suitCards(hand, atout).length;
+    const montant = openingBid(m, atout, light);
+    const len = countOf(m, atout);
     if (
       montant &&
       (!best ||
@@ -435,10 +473,11 @@ function bestOpening(hand, light) {
 
 // Points de soutien que j'apporte à l'atout de mon partenaire.
 function supportPoints(hand, suit, partnerBid) {
-  const n = suitCards(hand, suit).length;
-  const V = holds(hand, suit, "J");
-  const N = holds(hand, suit, "9");
-  const aces = sideAces(hand, suit);
+  const m = asMask(hand);
+  const n = countOf(m, suit);
+  const V = has(m, suit, "J");
+  const N = has(m, suit, "9");
+  const aces = sideAces(m, suit);
   let pts = (V ? 20 : 0) + (N && n >= 2 ? 10 : 0);
   if (partnerBid <= 90) {
     if (n >= (partnerBid === 80 ? 2 : 1)) pts += 10 * aces;
@@ -449,7 +488,7 @@ function supportPoints(hand, suit, partnerBid) {
   } else {
     pts += 10 * aces;
   }
-  if (hasBelote(hand, suit)) pts += 20;
+  if (hasBelote(m, suit)) pts += 20;
   return pts;
 }
 
@@ -484,15 +523,22 @@ function raiseBy(seat, suit) {
 // Une enchère peut enchaîner plusieurs simulations (adversaire, chaque
 // couleur, chaque palier) : au-delà de ce temps total, celles qui restent
 // répondent « je ne sais pas » et le barème décide.
+// Toutes ces simulations se jouent sur les mêmes mondes, tirés une fois
+// par décision (bidWorlds) : les options se comparent sur les mêmes donnes,
+// et 96 mondes partagés coûtent à peine plus que 24 retirés à chaque
+// simulation. En duel : +4,7 pts/donne.
 const BID_DECISION_MS = 400;
 const COMPETE_MARGIN = 60; // voir l'étape 3
 let bidDeadline = Infinity;
+let bidWorlds = null;
 function botDecideBid(seat) {
   bidDeadline = tuning.now() + BID_DECISION_MS;
+  bidWorlds = null;
   try {
     return decideBid(seat);
   } finally {
     bidDeadline = Infinity;
+    bidWorlds = null;
   }
 }
 
@@ -801,13 +847,15 @@ function botWantsToSurcoinche(seat) {
 //   - rejouer la couleur appelée, se créer une coupe avec un singleton
 // Défense :
 //   - jamais d'atout en entame
-//   - encaisser d'abord ses maîtres, avant qu'ils ne soient coupés
+//   - encaisser d'abord ses maîtres, avant qu'ils ne soient coupés (mais
+//     pas, à la première entame, un As dont le 10 est dehors)
 //   - répondre à l'appel du partenaire, jouer la couleur qu'il a annoncée
 //   - entamer un singleton pour couper ensuite
 // Pendant le pli :
 //   - partenaire maître pour de bon : charger (le 10 sous son As, un 10
 //     menacé) ; pli incertain : ne rien donner, ou l'assurer d'un maître
-//   - petit en second, gagner au plus juste en dernier, couper petit
+//   - petit en second, gagner au plus juste en dernier, couper petit ;
+//     pli gagné : la plus chère de cartes équivalentes (topOfSequence)
 //   - défausse : appel (petite carte sous un As), refus (Roi/Dame d'une
 //     couleur faible), garder la garde du 10, se raccourcir pour couper
 //   - capot : tout gagner ; contre un capot, prendre un pli
@@ -818,9 +866,13 @@ function seatsStillToAct(pli, seat) {
   return [0, 1, 2, 3].filter((s) => s !== seat && !played.has(s));
 }
 
+// Identifiants des cartes de chaque couleur, dans l'ordre de RANKS.
+const IDS = {};
+for (const s of SUITS) IDS[s] = RANKS.map((r) => r + s);
+
 // Cartes de cette couleur encore cachées : ni jouées, ni dans ma main.
 function outCards(hand, suit) {
-  return RANKS.map((r) => r + suit).filter(
+  return IDS[suit].filter(
     (id) => !G.seen[id] && !hand.some((c) => c.id === id),
   );
 }
@@ -830,38 +882,58 @@ function outCards(hand, suit) {
 function higherOut(hand, card, atout) {
   const table = card.suit === atout ? TRUMP_FORCE : PLAIN_FORCE;
   const f = table[card.rank];
-  for (const r of RANKS) {
+  const ids = IDS[card.suit];
+  for (let j = 0; j < 8; j++) {
     if (
-      table[r] > f &&
-      !G.seen[r + card.suit] &&
-      !hand.some((c) => c.suit === card.suit && c.rank === r)
+      table[RANKS[j]] > f &&
+      !G.seen[ids[j]] &&
+      !hand.some((c) => c.id === ids[j])
     )
       return true;
   }
   return false;
 }
 
-function byValue(atout) {
-  return (a, b) =>
-    cardPoints(a, atout) - cardPoints(b, atout) ||
-    forceOf(a, atout) - forceOf(b, atout);
+// Premier minimum (ou dernier maximum) selon key : ce que donnerait un
+// tri stable, sans trier (ces choix se répètent dans chaque simulation).
+function firstMin(cards, key) {
+  let best = cards[0];
+  let k = key(best);
+  for (let i = 1; i < cards.length; i++) {
+    const v = key(cards[i]);
+    if (v < k) {
+      best = cards[i];
+      k = v;
+    }
+  }
+  return best;
 }
+function lastMax(cards, key) {
+  let best = cards[0];
+  let k = key(best);
+  for (let i = 1; i < cards.length; i++) {
+    const v = key(cards[i]);
+    if (v >= k) {
+      best = cards[i];
+      k = v;
+    }
+  }
+  return best;
+}
+// Valeur puis force : points × 10 + force (force ≤ 8).
+const valueKey = (atout) => (c) => cardPoints(c, atout) * 10 + forceOf(c, atout);
+const forceKey = (atout) => (c) => forceOf(c, atout);
 function lowest(cards, atout) {
-  return cards.slice().sort(byValue(atout))[0];
+  return firstMin(cards, valueKey(atout));
 }
 function highest(cards, atout) {
-  return cards.slice().sort(byValue(atout)).pop();
+  return lastMax(cards, valueKey(atout));
 }
 function weakest(cards, atout) {
-  return cards
-    .slice()
-    .sort((a, b) => forceOf(a, atout) - forceOf(b, atout))[0];
+  return firstMin(cards, forceKey(atout));
 }
 function strongest(cards, atout) {
-  return cards
-    .slice()
-    .sort((a, b) => forceOf(a, atout) - forceOf(b, atout))
-    .pop();
+  return lastMax(cards, forceKey(atout));
 }
 
 // Obligations de couper et de monter (§6) : qui ne coupe pas le pli d'un
@@ -889,13 +961,14 @@ function noteTrumpObligations(seat, carte) {
 function mayTrump(s, force, hand) {
   const { atout } = G.contract;
   if (G.void[s][atout]) return false;
-  for (const r of RANKS) {
-    const f = TRUMP_FORCE[r];
+  const ids = IDS[atout];
+  for (let j = 0; j < 8; j++) {
+    const f = TRUMP_FORCE[RANKS[j]];
     if (
       f > force &&
       f <= G.trumpMax[s] &&
-      !G.seen[r + atout] &&
-      !hand.some((c) => c.suit === atout && c.rank === r)
+      !G.seen[ids[j]] &&
+      !hand.some((c) => c.id === ids[j])
     )
       return true;
   }
@@ -1047,7 +1120,14 @@ function leadCard(ctx) {
     return defaultLead(ctx);
   }
 
-  const masters = side.filter((c) => safeMaster(ctx, c));
+  // Première entame : pas d'As dont le 10 est encore dehors, il
+  // l'affranchirait pour l'attaque (+1,3 pt/donne en réflexes, +1,6 au
+  // Monte-Carlo, qui ne le jouait déjà pas).
+  const masters = side.filter(
+    (c) =>
+      safeMaster(ctx, c) &&
+      (G.plisJoues || c.rank !== "A" || holds(hand, c.suit, "10")),
+  );
   if (masters.length) return highest(masters, atout);
   const called = calledSuit(ctx);
   if (called)
@@ -1063,7 +1143,7 @@ function leadCard(ctx) {
   if (
     partnerSuit &&
     side.some((c) => c.suit === partnerSuit) &&
-    !Object.keys(G.seen).some((id) => id.endsWith(partnerSuit)) &&
+    !IDS[partnerSuit].some((id) => G.seen[id]) &&
     !oppCanRuff(ctx, partnerSuit)
   ) {
     const cards = side.filter((c) => c.suit === partnerSuit);
@@ -1113,6 +1193,27 @@ function defaultLead(ctx) {
   );
 }
 
+// Ordre des cartes équivalentes. Sur un pli qui nous revient, jouer la
+// plus chère des cartes qui se suivent (aucune carte dehors entre elles) :
+// ses points sont encaissés et celle qu'on garde est tout aussi maîtresse
+// (l'As plutôt que le 10 quand on tient les deux, l'As par-dessus le 10 du
+// partenaire quand on garde le Roi). Le Monte-Carlo jouait déjà ainsi ;
+// en duel, +1,2 pt/donne en réflexes et +3,0 avec le Monte-Carlo.
+const BY_FORCE = {
+  trump: RANKS.slice().sort((a, b) => TRUMP_FORCE[a] - TRUMP_FORCE[b]),
+  plain: RANKS.slice().sort((a, b) => PLAIN_FORCE[a] - PLAIN_FORCE[b]),
+};
+function topOfSequence(hand, card, atout) {
+  const order = BY_FORCE[card.suit === atout ? "trump" : "plain"];
+  let best = card;
+  for (const r of order.slice(order.indexOf(card.rank) + 1)) {
+    const mine = hand.find((c) => c.suit === card.suit && c.rank === r);
+    if (mine) best = mine;
+    else if (!G.seen[r + card.suit]) break;
+  }
+  return best;
+}
+
 function followCard(ctx) {
   const { atout, legal, seat } = ctx;
   const pli = G.pliCourant;
@@ -1139,14 +1240,14 @@ function followCard(ctx) {
   if (partnerWins) {
     if (holdsUp(winCard)) return charge(ctx, lead, winCard);
     const secure = winners.filter(holdsUp); // pli menacé : l'assurer d'un maître
-    if (secure.length) return weakest(secure, atout);
+    if (secure.length) return topOfSequence(ctx.hand, weakest(secure, atout), atout);
     return others.length
       ? discard(ctx, lead, others)
       : weakest(winners, atout);
   }
   if (!winners.length) return discard(ctx, lead, legal);
   if (!oppAfter.length) {
-    return weakest(winners, atout);
+    return topOfSequence(ctx.hand, weakest(winners, atout), atout);
   }
   // Couper petit : garder ses gros atouts, même au risque d'une surcoupe.
   if (!grab && lead !== atout && winners.every((c) => c.suit === atout))
@@ -1165,7 +1266,7 @@ function followCard(ctx) {
       cheap.suit !== atout
     )
       return discard(ctx, lead, low);
-    return cheap;
+    return topOfSequence(ctx.hand, cheap, atout);
   }
   if (grab) return strongest(winners, atout);
   if (others.length && (after.includes(ctx.partner) || pts < 10))
@@ -1183,7 +1284,9 @@ function charge(ctx, lead, winCard) {
       const under = legal.filter(
         (c) => winValue(c, atout, lead) < winValue(winCard, atout, lead),
       );
-      return under.length ? highest(under, atout) : weakest(legal, atout);
+      return under.length
+        ? topOfSequence(hand, highest(under, atout), atout)
+        : weakest(legal, atout);
     }
     const spare = legal.filter((c) => higherOut(hand, c, atout)); // jamais un atout maître
     return spare.length ? highest(spare, atout) : weakest(legal, atout);
@@ -1237,7 +1340,7 @@ function discard(ctx, lead, cards) {
       v += 40; // garde du 10
     return v;
   };
-  return side.slice().sort((a, b) => cost(a) - cost(b))[0];
+  return firstMin(side, cost);
 }
 
 function heuristicCard(seat) {
@@ -1261,12 +1364,19 @@ function heuristicCard(seat) {
 // d'une fois sur deux en début de donne : signal trop bruité, −1,1 pt) ;
 // ne quitter le réflexe qu'au-delà d'un écart moyen de 5 pts (−1,5 pt).
 // En simulation (bots contre bots, mêmes donnes), 16 mondes gagnaient 64 %
-// des parties contre les réflexes seuls, et 48 mondes 59 % contre 16 ; le
-// temps de réflexion reste plafonné pour les appareils lents.
+// des parties contre les réflexes seuls, 48 mondes 59 % contre 16, et 96
+// mondes +2,6 pts/donne contre 48 (le moteur ayant été rendu 2,6 fois plus
+// rapide, 96 mondes coûtent moins que 48 auparavant) ; le temps de
+// réflexion reste plafonné pour les appareils lents.
 // Nombre de mondes imaginés et horloge du temps de réflexion (réglables
 // par les tests et les duels A/B : une horloge figée rend les bots
 // reproductibles).
-export const tuning = { mcSamples: 48, bidSamples: 24, now: () => Date.now() };
+export const tuning = {
+  mcSamples: 96,
+  bidWorlds: 96,
+  bidSamples: 48, // coinche et surcoinche (+1,4 pt/donne contre 24)
+  now: () => Date.now(),
+};
 const MC_BUDGET_MS = 250;
 
 // Ce siège peut-il tenir cette carte ? Manques et obligations de couper.
@@ -1377,7 +1487,7 @@ const SIGNAL_MISFIT = 0.3; // appel sans l'As
 
 // Plausibilité de la main actuelle d'un siège au vu de ce qu'il a dit.
 function seatWeight(s, hand, readings) {
-  const h = hand.concat(G.playedBy[s]);
+  const h = maskOf(hand) | maskOf(G.playedBy[s]);
   const misfit = MISFIT[G.seats[s].type === "bot" ? "bot" : "human"];
   let w = 1;
   for (const r of readings) if (r.e.seat === s) w *= bidFits(r, h) || misfit;
@@ -1502,6 +1612,15 @@ function simPlay(sim, seat, carte) {
   return winner;
 }
 
+// Copie de G.seen pour une simulation, les 32 cartes présentes d'emblée :
+// l'objet garde sa forme quand les cartes tombent (ajouter les clés une à
+// une coûtait un dixième du temps de simulation).
+function seenCopy(seen) {
+  const o = {};
+  for (const s of SUITS) for (const id of IDS[s]) o[id] = seen[id] === true;
+  return o;
+}
+
 // Joue `card` (ou, avant la première carte, laisse entamer le joueur à
 // gauche du donneur) puis la fin de la donne dans ce monde, réflexes des
 // quatre joueurs ; renvoie l'état final et la validité de la belote.
@@ -1513,7 +1632,7 @@ function playOut(seat, world, card) {
       s === seat ? real.hands[s].slice() : world[s].slice(),
     ),
     pliCourant: real.pliCourant.slice(),
-    seen: { ...real.seen },
+    seen: seenCopy(real.seen),
     void: real.void.map((v) => ({ ...v })),
     appel: real.appel.map((v) => ({ ...v })),
     refus: real.refus.map((v) => ({ ...v })),
@@ -1563,14 +1682,67 @@ function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team, plisSi
 // coûtaient dix fois plus de temps.
 const EXACT_TRICKS = 3;
 let exactTeam = null; // équipe qui évalue, le temps d'un mcValue
+
+// La recherche exacte travaille sur des entiers : carte = couleur × 8 + rang
+// (ordre de SUITS et RANKS), main = masque de 32 bits. Mêmes règles que
+// computeLegal et trickWinnerSeat, dix fois plus vite que sur des objets.
+// Cartes d'une couleur plus fortes qu'une force donnée, hors atout.
+const PLAIN_ABOVE = [0, 1, 2, 3].map((si) =>
+  [0, 1, 2, 3, 4, 5, 6, 7, 8].map((f) => {
+    let m = 0;
+    for (let j = 0; j < 8; j++) if (PLAIN_FORCE[RANKS[j]] > f) m |= 1 << (si * 8 + j);
+    return m;
+  }),
+);
+const SUIT_BITS = [0xff, 0xff00, 0xff0000, 0xff000000 | 0];
+// Par atout : points et force de chaque carte, et masques des atouts plus
+// forts qu'une force donnée (obligation de monter).
+const EXACT_TABLES = SUITS.map((atout, ai) => {
+  const pts = [];
+  const force = [];
+  for (let i = 0; i < 32; i++) {
+    const card = { suit: SUITS[i >> 3], rank: RANKS[i & 7] };
+    pts.push(cardPoints(card, atout));
+    force.push(forceOf(card, atout));
+  }
+  const above = [];
+  for (let f = 0; f <= 8; f++) {
+    let m = 0;
+    for (let j = 0; j < 8; j++) if (TRUMP_FORCE[RANKS[j]] > f) m |= 1 << (ai * 8 + j);
+    above.push(m);
+  }
+  // 7-8 et 8-9 d'une couleur, 7-8 d'atout : sans points ni carte entre
+  // elles, deux cartes d'une même main sont interchangeables ; seule la
+  // plus haute est essayée.
+  let twin = 0;
+  for (let s = 0; s < 4; s++) twin |= (s === ai ? 0b1 : 0b11) << (s * 8);
+  return { pts, force, above, twin };
+});
+
 function exactEnd(sim, first, bel, team) {
-  const { atout } = sim.contract;
-  const h = sim.hands.map((x) => x.slice());
+  const ai = SUITS.indexOf(sim.contract.atout);
+  const { pts: P, force: F, above, twin } = EXACT_TABLES[ai];
+  const trumpBits = SUIT_BITS[ai];
+  const h = sim.hands.map(maskOf);
   const pts = sim.pointsPlis.slice();
   const tricks = sim.plisGagnes.slice();
   const seatTricks = (sim.plisSiege || [0, 0, 0, 0]).slice();
-  const pli = sim.pliCourant.slice();
+  // Cartes posées, en pile : le pli en cours va de ts à sp − 1, win est
+  // la position de la carte maîtresse.
+  const ps = [];
+  const pc = [];
+  let sp = 0;
+  let ts = 0;
+  let win = 0;
   let done = sim.plisJoues;
+  const wv = (c) =>
+    c >> 3 === ai ? 100 + F[c] : c >> 3 === pc[ts] >> 3 ? F[c] : -1;
+  for (const e of sim.pliCourant) {
+    ps[sp] = e.siege;
+    pc[sp] = CARD_INDEX[e.carte.id];
+    if (sp === ts || wv(pc[sp]) > wv(pc[win])) win = sp;
+    sp++;
+  }
   function rec(seat, alpha, beta) {
     if (done === 8)
       return donneValue(
@@ -1583,31 +1755,68 @@ function exactEnd(sim, first, bel, team) {
         seatTricks,
       );
     const hand = h[seat];
-    const max = teamOf(seat) === team;
-    let v = max ? -Infinity : Infinity;
-    for (const card of computeLegal(hand, pli, atout, seat)) {
-      const i = hand.indexOf(card);
-      hand.splice(i, 1);
-      pli.push({ siege: seat, carte: card });
-      let r;
-      if (pli.length < 4) r = rec(suivant(seat), alpha, beta);
-      else {
-        const full = pli.splice(0, 4);
-        const win = trickWinnerSeat(full, atout);
-        const p = trickPoints(full, atout) + (done === 7 ? 10 : 0);
-        pts[teamOf(win)] += p;
-        tricks[teamOf(win)]++;
-        seatTricks[win]++;
-        done++;
-        r = rec(win, alpha, beta);
-        done--;
-        seatTricks[win]--;
-        tricks[teamOf(win)]--;
-        pts[teamOf(win)] -= p;
-        pli.push(...full);
+    let legal = hand;
+    if (sp > ts) {
+      const lead = pc[ts] >> 3;
+      const wc = pc[win];
+      const follow = hand & SUIT_BITS[lead];
+      if (follow) {
+        legal = follow;
+        if (lead === ai) legal = follow & above[F[wc]] || follow;
+      } else if ((ps[win] & 1) !== (seat & 1) && hand & trumpBits) {
+        legal = hand & trumpBits;
+        if (wc >> 3 === ai) legal = legal & above[F[wc]] || legal;
       }
-      pli.pop();
-      hand.splice(i, 0, card);
+    }
+    const max = (seat & 1) === team;
+    let v = max ? -Infinity : Infinity;
+    // Ordre d'essai (la valeur n'en dépend pas, seulement les coupures) :
+    // sur un pli adverse, les cartes qui le prennent d'abord ; puis les
+    // plus petites.
+    const moves = legal & ~(twin & (legal >>> 1));
+    let m1 = 0;
+    if (sp > ts && (ps[win] & 1) !== (seat & 1)) {
+      const wc = pc[win];
+      m1 =
+        moves &
+        (wc >> 3 === ai
+          ? above[F[wc]]
+          : trumpBits | PLAIN_ABOVE[wc >> 3][F[wc]]);
+    }
+    for (let m2 = moves & ~m1; m1 | m2; ) {
+      const b = m1 ? m1 & -m1 : m2 & -m2;
+      if (m1) m1 ^= b;
+      else m2 ^= b;
+      const card = 31 - Math.clz32(b);
+      const prevWin = win;
+      h[seat] ^= b;
+      ps[sp] = seat;
+      pc[sp] = card;
+      if (sp === ts || wv(card) > wv(pc[win])) win = sp;
+      sp++;
+      let r;
+      if (sp - ts < 4) r = rec((seat + 1) & 3, alpha, beta);
+      else {
+        const w = ps[win];
+        const p =
+          P[pc[ts]] + P[pc[ts + 1]] + P[pc[ts + 2]] + P[pc[ts + 3]] +
+          (done === 7 ? 10 : 0);
+        const prevTs = ts;
+        pts[w & 1] += p;
+        tricks[w & 1]++;
+        seatTricks[w]++;
+        done++;
+        ts = sp;
+        r = rec(w, alpha, beta);
+        ts = prevTs;
+        done--;
+        seatTricks[w]--;
+        tricks[w & 1]--;
+        pts[w & 1] -= p;
+      }
+      sp--;
+      win = prevWin;
+      h[seat] ^= b;
       if (max) {
         v = Math.max(v, r);
         alpha = Math.max(alpha, v);
@@ -1676,7 +1885,13 @@ function makeProbability(seat, contract) {
     const stop = Math.min(tuning.now() + BID_BUDGET_MS, bidDeadline);
     let ok = 0;
     let n = 0;
-    for (const w of mcWorlds(seat, tuning.bidSamples)) {
+    // Pendant une enchère, les mondes de la décision (voir bidWorlds) ;
+    // pour une coinche ou une surcoinche, des mondes à part.
+    const worlds =
+      bidDeadline === Infinity
+        ? mcWorlds(seat, tuning.bidSamples)
+        : bidWorlds || (bidWorlds = mcWorlds(seat, tuning.bidWorlds));
+    for (const w of worlds) {
       const { sim, bel } = playOut(seat, w, null);
       n++;
       if (contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege)) ok++;

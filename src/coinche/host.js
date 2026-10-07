@@ -28,7 +28,8 @@ const clone = (G) => JSON.parse(JSON.stringify(G));
 // de son partenaire bot, que l'hôte connaît), ni leur mémoire d'enchère ;
 // une belote pas encore annoncée reste secrète. Il devine le reste.
 export function seatView(G, seat) {
-  const g = clone(G);
+  // L'historique des donnes ne sert à aucune décision : pas la peine de le copier.
+  const g = clone({ ...G, history: [] });
   g.hands = g.hands.map((h, s) => (s === seat ? h : h.map(() => null)));
   g.mainsInitiales = g.mainsInitiales.map((h, s) => (s === seat ? h : []));
   g.bidMemo = g.bidMemo.map((m, s) => (s === seat ? m : null));

@@ -22,6 +22,7 @@ const team = (seat) => seat % 2;
 
 // La coinche simulée joue aussi des mondes : 4 suffisent pour vérifier les règles.
 engine.tuning.bidSamples = 4;
+engine.tuning.bidWorlds = 4;
 const stats = { donnes: 0, belotes: 0, generales: 0, imposees: 0, capots: 0, coinches: 0, annoncees: 0, gagnees: 0, surencheries: 0 };
 const t0 = Date.now();
 
