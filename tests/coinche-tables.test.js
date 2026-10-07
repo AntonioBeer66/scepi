@@ -19,6 +19,7 @@ import {
   IDLE_MS,
   MAX_MATCHES,
   MAX_PER_OWNER,
+  GRACE_MS,
   PERMANENT_TABLES,
 } from "../src/online/tables.js";
 import { coinche } from "../src/coinche/fiche.js";
@@ -196,6 +197,29 @@ assert.ok(!list().some((t) => t.matchID === priv.id), "cachée sans code");
 assert.ok(!tables.list(() => false, "VENDREDI").some((t) => t.matchID === priv.id));
 assert.strictEqual(tables.list(() => false, "jeudi").find((t) => t.matchID === priv.id)?.code, "JEUDI");
 assert.ok(tables.join(priv.id, 0, "Alice").credentials, "on s'y assoit comme ailleurs");
+
+// Délais : hôte muet (téléphone en veille), le serveur joue l'action par
+// défaut GRACE_MS après l'échéance de la fenêtre, et seulement alors.
+{
+  const id = tables.create().id;
+  tables.join(id, 0, "Dave");
+  const solo = [{ type: "human", name: "Dave" }, { type: "bot" }, { type: "bot" }, { type: "bot" }];
+  assert.ok(tables.move(id, 0, "lancer", [solo]));
+  const { tour } = tables.get(id).G;
+  const at = tables.get(id).deadline.at;
+  assert.strictEqual(at, now + 30000 + GRACE_MS, "30 s d'enchère, plus la marge");
+  assert.ok(tables.nextDeadline() <= at);
+  now = at - 1;
+  assert.ok(!tables.expire().includes(id), "pas avant l'échéance");
+  now = at;
+  assert.deepStrictEqual(tables.expire().filter((x) => x === id), [id]);
+  assert.strictEqual(tables.get(id).G.tour, tour + 1, "passe d'office, tour suivant");
+  assert.ok(tables.get(id).deadline.at > at, "nouvelle échéance");
+  // L'hôte joue à temps : l'échéance suit la nouvelle fenêtre, l'ancienne ne sonne plus.
+  const g = tables.get(id).G;
+  assert.ok(tables.move(id, 0, "pourSiege", [g.joueurActif, { type: "TIMEOUT", tour: g.tour }]));
+  assert.strictEqual(tables.get(id).deadline.key, tables.get(id).G.tour);
+}
 
 // Plafond par personne : salons et tables privées confondus.
 for (let i = 0; i < MAX_PER_OWNER; i++) assert.ok(tables.create("ip-a"));

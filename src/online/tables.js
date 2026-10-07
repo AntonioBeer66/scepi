@@ -9,6 +9,8 @@
 // cachées du lobby sauf pour qui donne leur code (choisi par l'hôte).
 // Une partie : { id, table, code, owner, createdAt, updatedAt, activeAt, stateID, G, players } ;
 // activeAt : dernier coup d'un humain pour lui-même (fiche.humanMoves).
+// deadline : { key, at } de la fenêtre de temps en cours (fiche.deadline),
+// at comptant GRACE_MS de plus que le délai du jeu.
 // players[s] = { name, credentials } (name null : place libre) ; code :
 // celui d'une table privée (absent : table ouverte).
 export const MAX_NAME = 18; // pseudo
@@ -41,6 +43,11 @@ export const IDLE_MS = 30 * 60 * 1000; // partie ou salon abandonné
 export const EMPTY_MS = 10 * 60 * 1000; // salon temporaire jamais rejoint
 export const ABANDON_MS = 2 * 60 * 1000; // partie lancée sans humain connecté
 export const AFK_MS = 5 * 60 * 1000; // partie lancée où aucun humain ne joue (bots seuls)
+// Délais : l'hôte (un navigateur) joue l'action par défaut à l'heure ; le
+// serveur ne la joue qu'après GRACE_MS de plus, s'il ne l'a pas fait
+// (téléphone en veille, onglet figé). Ainsi l'alarme du serveur, qui coûte
+// une requête, ne sonne presque jamais.
+export const GRACE_MS = 3000;
 const INVALID_MOVE = "INVALID_MOVE"; // valeur rendue par les coups refusés
 const MAX_ARGS = 3;
 export const CODE_MIN = 4;
@@ -83,6 +90,16 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
   const phaseOf = (G) => (fiche.finished(G) ? "TERMINEE" : fiche.started(G) ? "EN_COURS" : "ATTENTE");
   const matches = new Map();
   const seen = new Map(); // id → dernière fois qu'un humain assis était connecté
+
+  // Nouvel état : échéance de sa fenêtre de temps, recalculée seulement
+  // quand la fenêtre change (un coup dans la même fenêtre ne la repousse pas).
+  function changed(m) {
+    m.stateID++;
+    m.updatedAt = now();
+    const d = fiche.deadline?.(m.G);
+    if (!d) m.deadline = null;
+    else if (d.key !== m.deadline?.key) m.deadline = { key: d.key, at: m.updatedAt + d.ms + GRACE_MS };
+  }
 
   function create(table = null, code = null, owner = null) {
     if (matches.size >= MAX_MATCHES) return null;
@@ -199,9 +216,8 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
       const G = fiche.takeSeat?.(m.G, seat, pseudo);
       if (G) {
         m.G = G;
-        m.stateID++;
-      }
-      m.updatedAt = now();
+        changed(m);
+      } else m.updatedAt = now();
       return { credentials: m.players[seat].credentials };
     },
 
@@ -237,10 +253,34 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
       );
       if (out === INVALID_MOVE) return false;
       m.G = out === undefined ? draft : out;
-      m.stateID++;
-      m.updatedAt = now();
+      changed(m);
       if (fiche.humanMoves.has(name)) m.activeAt = m.updatedAt;
       return true;
+    },
+
+    // Prochaine échéance de toutes les tables (null : aucune), pour l'alarme
+    // du serveur.
+    nextDeadline() {
+      let at = null;
+      for (const m of matches.values()) if (m.deadline && (at == null || m.deadline.at < at)) at = m.deadline.at;
+      return at;
+    },
+
+    // Fenêtres échues sans que l'hôte ait joué : action par défaut de la
+    // fiche, sur une copie. Rend les parties modifiées.
+    expire() {
+      const t = now();
+      const ids = [];
+      for (const m of matches.values()) {
+        if (!m.deadline || m.deadline.at > t) continue;
+        const draft = structuredClone(m.G);
+        if (fiche.timeout(draft, m.deadline.key, random)) {
+          m.G = draft;
+          changed(m);
+          ids.push(m.id);
+        } else m.deadline = null; // fenêtre déjà fermée : plus rien à attendre
+      }
+      return ids;
     },
 
     // Ce qu'un siège (null : spectateur) a le droit de voir. Spectateur :

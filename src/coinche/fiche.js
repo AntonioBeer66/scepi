@@ -1,7 +1,9 @@
 // Fiche de la coinche pour le serveur de tables (src/online/tables.js) :
 // ce qui, dans une partie en ligne, dépend du jeu. Le reste (places,
 // codes privés, entretien, vues filtrées, validation des coups) est commun.
+import { DURATION_MS, actOn } from "./engine.js";
 import { Coinche } from "./game.js";
+import { trickPause } from "./host.js";
 
 export const coinche = {
   game: Coinche, // format boardgame.io : setup, moves, playerView
@@ -11,6 +13,16 @@ export const coinche = {
   // Coups d'un humain pour lui-même : eux seuls comptent comme activité
   // (les bots et les coups joués d'office par l'hôte, non).
   humanMoves: new Set(["agir", "lancer"]),
+
+  // Fenêtre de temps en cours : { key, ms } (ms comptées depuis son
+  // ouverture), ou null. L'hôte envoie TIMEOUT à son terme ; s'il ne le fait
+  // pas (téléphone en veille), le serveur appelle timeout un peu plus tard.
+  deadline: (G) =>
+    G.seats && DURATION_MS[G.phase] ? { key: G.tour, ms: trickPause(G) + DURATION_MS[G.phase] } : null,
+  // Action par défaut à l'expiration de la fenêtre key : passe, carte
+  // autorisée au hasard, fin de la surcoinche ou donne suivante. Modifie G ;
+  // rend false si la fenêtre était déjà fermée.
+  timeout: (G, key, random) => !actOn(G, G.joueurActif ?? 0, { type: "TIMEOUT", tour: key }, random),
 
   // Un humain s'assoit pendant la partie : il prend la main du bot qui
   // tenait la place. Rend le nouvel état, ou null si rien ne change.
