@@ -6,8 +6,7 @@
 // donnant leur code (choisi par celui qui la crée).
 // La place occupée (identifiants) est gardée dans ce navigateur : recharger
 // la page ramène à la table.
-import { MAX_NAME } from "../game.js";
-import { CODE_MIN, normCode } from "../online/tables.js";
+import { CODE_MIN, MAX_NAME, normCode } from "../../online/tables.js";
 
 const API = "/api";
 const SESSION_KEY = "scepi-coinche-session";

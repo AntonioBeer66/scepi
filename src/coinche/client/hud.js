@@ -16,7 +16,7 @@ import {
   computeLegal,
   teamOf,
 } from "../engine.js";
-import { EMOTES } from "../online/tables.js";
+import { EMOTES } from "../../online/tables.js";
 
 const RED_SUITS = new Set(["H", "D"]);
 const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
