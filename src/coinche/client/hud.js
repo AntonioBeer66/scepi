@@ -9,6 +9,7 @@ import {
   ALLOWED_BIDS,
   BELOTE_BONUS,
   GENERALE,
+  GENERALE_BELOTE,
   SUITS,
   SUIT_NAME,
   SUIT_SYMBOL,
@@ -51,6 +52,7 @@ function bidReadout(value) {
   if (value === 250) return "Capot";
   if (value === 270) return "Capot beloté";
   if (value === GENERALE) return "Générale";
+  if (value === GENERALE_BELOTE) return "Générale belotée";
   return String(value);
 }
 
@@ -189,7 +191,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const c = G.contract;
     if (!c)
       return `<span class="cg-contract is-empty">Enchères</span>`;
-    const label = c.generale ? "Générale" : bidReadout(c.montant);
+    const label = bidReadout(c.montant);
     const mult = G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "";
     const state = c.surcoinche ? " · surcoinché" : c.coinche ? " · coinché" : "";
     return `<span class="cg-contract">${suitSpan(c.atout)} ${label}${mult}</span>
@@ -242,7 +244,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
                 .map(
                   (h) => `<li class="${h.reussi ? "ok" : "ko"}">
             <span>#${h.donne}</span>
-            <span>${h.generale ? "Générale" : bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
+            <span>${bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
             <span>${esc(seatName(h.preneur))}</span>
             <span>${h.reussi ? "réussi" : "chuté"} · ${h.pointsFaits} pts</span>
           </li>`,
@@ -353,7 +355,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
               : "non comptée (moins de 81)";
       return `<div class="cg-banner cg-recap ${won ? "is-win" : "is-loss"}">
         <b>${r.reussi ? "Contrat réussi" : "Contrat chuté"}</b>
-        <span>${r.generale ? "Générale" : bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${esc(seatName(r.preneur))} ${r.preneur === me ? "preniez" : "prenait"}</span>
+        <span>${bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${esc(seatName(r.preneur))} ${r.preneur === me ? "preniez" : "prenait"}</span>
         ${
           r.points
             ? `<table class="cg-recap-table">

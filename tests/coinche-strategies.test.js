@@ -93,17 +93,17 @@ check('Coinche gratuite : le preneur sort de toute façon s’il réussit', api.
 setup({ hands: hands('JS 9S AH 10H AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [900, 300], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
 check('Pas de coinche quand une simple chute nous fait gagner', api.botWantsToCoinche(0), false);
 
-// ---- Générale : les 8 cartes de l'atout en main initiale
+// ---- Huit atouts : les 8 cartes de l'atout en main initiale
 const huitPiques = 'JS 9S AS 10S KS QS 8S 7S';
 setup({ hands: hands(huitPiques) });
-check('Générale : ouvrir directement en capot beloté', bid(api.botDecideBid(0)), '270S');
+check('Huit atouts : ouvrir directement en Générale belotée', bid(api.botDecideBid(0)), '520S');
 setup({ hands: hands('AH AD AC 10H 10D 10C KH KD', huitPiques), mainsInitiales: hands('', huitPiques), contract: contract(1, 270, 'S'),
   donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0, coincheAppetite: 2.5 })) });
-check('Générale : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
+check('Huit atouts : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
 setup({ hands: hands(huitPiques), mainsInitiales: hands(huitPiques), contract: contract(0, 270, 'S', { coinche: true }) });
-check('Générale coinchée : surcoincher d’office', api.botWantsToSurcoinche(0), true);
-check('8 atouts annoncés à 270 : Générale', api.contractHuitAtouts(contract(0, 270, 'S')), true);
-check('8 atouts annoncés à 80 : un simple 80, pas une Générale', api.contractHuitAtouts(contract(0, 80, 'S')), false);
+check('Huit atouts coinchés : surcoincher d’office', api.botWantsToSurcoinche(0), true);
+check('8 atouts annoncés à 270 : marqués', api.contractHuitAtouts(contract(0, 270, 'S')), true);
+check('8 atouts annoncés à 80 : un simple 80, non marqué', api.contractHuitAtouts(contract(0, 80, 'S')), false);
 
 // ---- Jeu de la carte : atout Cœur, 100 par le siège 0
 const JEU = { contract: contract(0, 100, 'H'), donneAnnonces: [{ seat: 0, montant: 100, atout: 'H' }] };

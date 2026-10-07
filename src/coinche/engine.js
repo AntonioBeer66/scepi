@@ -31,12 +31,13 @@ const TRUMP_POINTS = { J: 20, 9: 14, A: 11, 10: 10, K: 4, Q: 3, 8: 0, 7: 0 };
 const PLAIN_POINTS = { A: 11, 10: 10, K: 4, Q: 3, J: 2, 9: 0, 8: 0, 7: 0 };
 export const TRUMP_FORCE = { J: 8, 9: 7, A: 6, 10: 5, K: 4, Q: 3, 8: 2, 7: 1 };
 export const PLAIN_FORCE = { A: 8, 10: 7, K: 6, Q: 5, J: 4, 9: 3, 8: 2, 7: 1 };
-// Générale : l'enchère la plus haute (rang 500 pour l'ordre des enchères),
-// le preneur doit faire les huit plis à lui seul ; elle vaut autant qu'un
-// capot (voir contractValue) et le preneur entame.
+// Générale et Générale belotée : un capot et un capot beloté où le preneur
+// entame. Au-dessus de tous les capots (rangs 500 et 520 pour l'ordre des
+// enchères), elles valent 250 et 270 (voir contractValue).
 export const GENERALE = 500;
+export const GENERALE_BELOTE = 520;
 export const ALLOWED_BIDS = [
-  80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270, GENERALE,
+  80, 90, 100, 110, 120, 130, 140, 150, 160, 250, 270, GENERALE, GENERALE_BELOTE,
 ];
 // Belote de l'équipe preneuse (preneur ou partenaire) : +20 au décompte de
 // la donne (pas au score de la partie) si elle fait au moins 81 points de plis.
@@ -62,13 +63,18 @@ export function bidType(montant) {
   if (montant === 250) return "CAPOT";
   if (montant === 270) return "CAPOT_BELOTE";
   if (montant === GENERALE) return "GENERALE";
+  if (montant === GENERALE_BELOTE) return "GENERALE_BELOTE";
   return "NUMERIQUE";
 }
 
 // Points que vaut un contrat réussi (avant multiplicateur).
 export function contractValue(contract) {
-  return contract.type === "GENERALE" ? 250 : contract.montant;
+  if (contract.type === "GENERALE") return 250;
+  if (contract.type === "GENERALE_BELOTE") return 270;
+  return contract.montant;
 }
+
+const isGenerale = (contract) => contract.type.startsWith("GENERALE");
 
 function suivant(s) {
   return (s + 1) % 4;
@@ -243,7 +249,6 @@ function startNewDonne() {
   G.pliCourant = [];
   G.plisJoues = 0;
   G.plisGagnes = [0, 0];
-  G.plisSiege = [0, 0, 0, 0];
   G.pointsPlis = [0, 0];
   G.belote = {
     holder: null,
@@ -427,7 +432,7 @@ function openingBid(hand, suit, light) {
   const n = countOf(m, suit);
   // Main entière dans une seule couleur (8 cartes sur 8, donc Valet, 9 ET
   // belote garantis) : tombe déjà dans le cas V&&N&&f===0 ci-dessous, qui
-  // rend 270 — la Générale n'est pas un palier à part, juste ce même
+  // rend 270 — huit atouts ne sont pas un palier à part, juste ce même
   // capot beloté acquis par construction (voir G.contract.huitAtouts, posé
   // au verrouillage du contrat une fois la vraie main initiale connue).
   const V = has(m, suit, "J");
@@ -542,16 +547,14 @@ function botDecideBid(seat) {
   }
 }
 
-// Générale : faire les huit plis à soi seul. Elle vaut un capot (250) ;
-// le preneur entame. On la tente quand la simulation la réussit presque
-// toujours, sauf si la belote permet le capot beloté (270, plus payant) ;
-// ou pour passer au-dessus d'un capot adverse, dès 60 % de réussite.
-// Seulement avec Valet et 9 d'atout et au moins cinq atouts : le reste
-// ne vaut pas la simulation.
+// Générale (belotée avec la belote en main) : le capot où l'on entame, qui
+// passe au-dessus de tous les capots. On la tente quand la simulation la
+// réussit presque toujours, ou pour passer au-dessus d'un capot adverse,
+// dès 60 % de réussite. Seulement avec Valet et 9 d'atout et au moins
+// cinq atouts : le reste ne vaut pas la simulation.
 const GENERALE_SURE = 0.85;
 const GENERALE_OVER = 0.6;
 function generaleBid(seat, hand, cur, team) {
-  if (cur?.type === "GENERALE") return null;
   const oppCapot = !!cur && teamOf(cur.preneur) !== team && cur.montant >= 250;
   let best = null;
   for (const atout of SUITS) {
@@ -561,21 +564,22 @@ function generaleBid(seat, hand, cur, team) {
       !holds(hand, atout, "9")
     )
       continue;
-    if (hasBelote(hand, atout) && !oppCapot && (!cur || cur.montant < 270)) continue;
+    const montant = hasBelote(hand, atout) ? GENERALE_BELOTE : GENERALE;
+    if (cur && montant <= cur.montant) continue;
     const pm = makeProbability(seat, {
       id: -1,
-      type: "GENERALE",
-      montant: GENERALE,
+      type: bidType(montant),
+      montant,
       atout,
       preneur: seat,
       equipePreneur: team,
       coinche: false,
       surcoinche: false,
     });
-    if (pm !== null && (!best || pm > best.pm)) best = { pm, atout };
+    if (pm !== null && (!best || pm > best.pm)) best = { pm, atout, montant };
   }
   if (!best || best.pm < (oppCapot ? GENERALE_OVER : GENERALE_SURE)) return null;
-  return { type: "ENCHERIR", montant: GENERALE, atout: best.atout };
+  return { type: "ENCHERIR", montant: best.montant, atout: best.atout };
 }
 
 function decideBid(seat) {
@@ -749,7 +753,7 @@ function decideBid(seat) {
   return PASS;
 }
 
-// Générale : la main initiale du preneur tient les 8 cartes de l'atout —
+// Huit atouts : la main initiale du preneur tient les 8 cartes de l'atout —
 // pas un contrat à part, le même capot beloté (270) acquis par
 // construction. Se relit sur G.mainsInitiales (fixée dès la distribution,
 // jamais modifiée en cours de donne), donc valable aussi bien pendant les
@@ -758,7 +762,7 @@ function decideBid(seat) {
 function contractHuitAtouts(contract) {
   if (
     !contract ||
-    contract.type !== "CAPOT_BELOTE" ||
+    (contract.type !== "CAPOT_BELOTE" && contract.type !== "GENERALE_BELOTE") ||
     !G.mainsInitiales ||
     !G.mainsInitiales[contract.preneur]
   )
@@ -789,7 +793,7 @@ function botWantsToCoinche(seat) {
     (holds(hand, atout, "9") && suitCards(hand, atout).length >= 2);
   // Contre un capot, seul un pli d'atout est sûr : l'annonceur n'a pas de
   // perdante à côté, ses As et ceux de son partenaire couvrent tout, et nos
-  // As seraient coupés. (Contre une Générale, la défense n'a aucun atout.)
+  // As seraient coupés. (Contre huit atouts, la défense n'en a aucun.)
   // Générale comprise : la lecture des enchères (bidFits) ne sait pas
   // encore ce qu'elle promet, les mondes simulés lui prêteraient des mains
   // trop faibles ; on s'en tient au pli d'atout sûr.
@@ -824,7 +828,7 @@ function botWantsToSurcoinche(seat) {
   // Le preneur qui tient les 8 atouts (sa propre main, rien d'autre) gagne à coup sûr.
   if (seat === contract.preneur && suitCards(hand, atout).length === 8)
     return true;
-  if (contract.type !== "NUMERIQUE" && contract.type !== "GENERALE") return false;
+  if (contract.type !== "NUMERIQUE" && !isGenerale(contract)) return false;
   // Réussite simulée quasi certaine (+0,8 pt/donne en duel).
   const pm = makeProbability(seat, contract);
   if (pm !== null && pm >= 0.9) return true;
@@ -991,11 +995,6 @@ function playContext(seat) {
     attack: team === G.contract.equipePreneur,
     amPreneur: seat === G.contract.preneur,
     capot: G.contract.type !== "NUMERIQUE",
-    // Partenaire d'une Générale : le moindre pli pris la fait chuter.
-    genPartner:
-      G.contract.type === "GENERALE" &&
-      team === G.contract.equipePreneur &&
-      seat !== G.contract.preneur,
     oppTrumps: opponents.some((o) => mayTrump(o, 0, hand)),
     tricksLeft: 8 - G.plisJoues,
   };
@@ -1231,11 +1230,6 @@ function followCard(ctx) {
   const winners = legal.filter(beats);
   const others = legal.filter((c) => !beats(c));
   const grab = ctx.capot;
-
-  // Générale du partenaire : ne jamais passer devant, ni lui ni la défense
-  // (c'est à lui de prendre) ; ne gagner que contraint.
-  if (ctx.genPartner)
-    return others.length ? discard(ctx, lead, others) : weakest(winners, atout);
 
   if (partnerWins) {
     if (holdsUp(winCard)) return charge(ctx, lead, winCard);
@@ -1607,7 +1601,6 @@ function simPlay(sim, seat, carte) {
     trickPoints(sim.pliCourant, sim.contract.atout) +
     (sim.plisJoues === 8 ? 10 : 0);
   sim.plisGagnes[teamOf(winner)]++;
-  sim.plisSiege[winner]++;
   sim.pliCourant = [];
   return winner;
 }
@@ -1639,14 +1632,13 @@ function playOut(seat, world, card) {
     trumpMax: real.trumpMax.slice(),
     pointsPlis: real.pointsPlis.slice(),
     plisGagnes: real.plisGagnes.slice(),
-    plisSiege: (real.plisSiege || [0, 0, 0, 0]).slice(),
   };
   const bel = worldBelote(seat, world);
   G = sim;
   try {
     let next = card
       ? simPlay(sim, seat, card)
-      : sim.contract.type === "GENERALE"
+      : isGenerale(sim.contract)
         ? sim.contract.preneur
         : suivant(real.donneur);
     while (sim.plisJoues < 8) {
@@ -1664,8 +1656,8 @@ function playOut(seat, world, card) {
 
 // Score de la donne vu d'une équipe, plus un soupçon de points de plis
 // pour départager.
-function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team, plisSiege) {
-  const reussi = contratReussi(c, pointsPlis, plisGagnes, bel, plisSiege);
+function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team) {
+  const reussi = contratReussi(c, pointsPlis, plisGagnes, bel);
   const gain = (reussi ? contractValue(c) : 160) * multiplicateur;
   return (
     ((reussi ? c.equipePreneur : 1 - c.equipePreneur) === team
@@ -1726,7 +1718,6 @@ function exactEnd(sim, first, bel, team) {
   const h = sim.hands.map(maskOf);
   const pts = sim.pointsPlis.slice();
   const tricks = sim.plisGagnes.slice();
-  const seatTricks = (sim.plisSiege || [0, 0, 0, 0]).slice();
   // Cartes posées, en pile : le pli en cours va de ts à sp − 1, win est
   // la position de la carte maîtresse.
   const ps = [];
@@ -1752,7 +1743,6 @@ function exactEnd(sim, first, bel, team) {
         bel,
         sim.multiplicateur,
         team,
-        seatTricks,
       );
     const hand = h[seat];
     let legal = hand;
@@ -1804,13 +1794,11 @@ function exactEnd(sim, first, bel, team) {
         const prevTs = ts;
         pts[w & 1] += p;
         tricks[w & 1]++;
-        seatTricks[w]++;
         done++;
         ts = sp;
         r = rec(w, alpha, beta);
         ts = prevTs;
         done--;
-        seatTricks[w]--;
         tricks[w & 1]--;
         pts[w & 1] -= p;
       }
@@ -1849,7 +1837,6 @@ function mcValue(seat, card, world) {
     bel,
     sim.multiplicateur,
     teamOf(seat),
-    sim.plisSiege,
   );
 }
 
@@ -1894,7 +1881,7 @@ function makeProbability(seat, contract) {
     for (const w of worlds) {
       const { sim, bel } = playOut(seat, w, null);
       n++;
-      if (contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege)) ok++;
+      if (contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel)) ok++;
       if (tuning.now() > stop) break;
     }
     return n ? ok / n : null;
@@ -1939,16 +1926,13 @@ function declareBeloteIfNeeded(seat, carte) {
   }
 }
 
-// Réussite d'un contrat (section 9 de REGLES_COINCHE.md). Générale
-// comprise : c'est un capot beloté, vérifié par le jeu réel.
-function contratReussi(contract, pointsPlis, plisGagnes, beloteValide, plisSiege) {
+// Réussite d'un contrat (section 9 de REGLES_COINCHE.md). Générale :
+// un capot, Générale belotée : un capot beloté.
+function contratReussi(contract, pointsPlis, plisGagnes, beloteValide) {
   const preneurs = contract.equipePreneur;
-  if (contract.type === "GENERALE")
-    return plisSiege
-      ? plisSiege[contract.preneur] === 8
-      : plisGagnes[preneurs] === 8;
-  if (contract.type === "CAPOT") return plisGagnes[preneurs] === 8;
-  if (contract.type === "CAPOT_BELOTE")
+  if (contract.type === "CAPOT" || contract.type === "GENERALE")
+    return plisGagnes[preneurs] === 8;
+  if (contract.type === "CAPOT_BELOTE" || contract.type === "GENERALE_BELOTE")
     return plisGagnes[preneurs] === 8 && beloteValide;
   let seuil = contract.montant === 80 ? 82 : contract.montant;
   if (beloteValide) seuil = Math.max(81, seuil - 20);
@@ -1964,7 +1948,6 @@ function computeScore() {
     G.pointsPlis,
     G.plisGagnes,
     beloteValide,
-    G.plisSiege,
   );
 
   let gainPreneurs = 0;
@@ -1973,10 +1956,11 @@ function computeScore() {
   else gainDefense = 160 * G.multiplicateur;
   // Belote des preneurs : +20 au décompte de la donne (pour faire le contrat,
   // voir contratReussi) s'il a fait au moins 81 points de plis ; rien au
-  // score de la partie. Déjà comprise dans le capot beloté.
+  // score de la partie. Déjà comprise dans le capot beloté (et la Générale belotée).
   const beloteBonus =
     beloteValide &&
     G.contract.type !== "CAPOT_BELOTE" &&
+    G.contract.type !== "GENERALE_BELOTE" &&
     G.pointsPlis[preneurs] >= BELOTE_MIN
       ? BELOTE_BONUS
       : 0;
@@ -2173,7 +2157,6 @@ function act(seat, action) {
     if (G.plisJoues === 8) points += 10;
     G.pointsPlis[team] += points;
     G.plisGagnes[team]++;
-    G.plisSiege[winnerSeat]++;
     // Le pli est résolu tout de suite : l'écran le montre encore un
     // instant (depuis lastTrick) avant de le ramasser, sans bloquer l'état.
     G.lastTrick = { cards: G.pliCourant, winnerSeat, points };
@@ -2199,14 +2182,14 @@ function lockContractAndStartPlay() {
     [preneur, partnerOf(preneur)].find((s) =>
       hasBelote(G.mainsInitiales[s], atout),
     ) ?? null;
-  // Générale : la main initiale du preneur tenait les 8 cartes de
+  // Huit atouts : la main initiale du preneur tenait les 8 cartes de
   // l'atout. Ce n'est pas un contrat à part — il se joue et se score
   // exactement comme le capot beloté qu'il est déjà (270) — seulement un
   // marqueur pour l'afficher et pour que la défense (qui n'a alors, par
   // construction, aucune carte de cette couleur) ne perde jamais à
   // coincher une main qu'elle ne peut mathématiquement pas prendre.
   G.contract.huitAtouts = contractHuitAtouts(G.contract);
-  G.contract.generale = G.contract.type === "GENERALE";
+  G.contract.generale = isGenerale(G.contract);
   G.phase = "JEU";
   // Générale : le preneur prend la main.
   G.joueurActif = G.contract.generale ? G.contract.preneur : suivant(G.donneur);

@@ -81,36 +81,43 @@
       <p>
         Une équipe annonce un contrat (« on va faire au moins 100 points ») puis
         essaie de le remplir. Si elle réussit, elle marque les points annoncés ;
-        sinon, c’est l’équipe adverse qui les marque. Premier à 1 010 points
-        gagne.
+        si elle chute, l’équipe adverse marque 160 points. Coinche et surcoinche
+        multiplient ces gains. La première équipe à 1 010 points gagne.
       </p>
-      <h3>La force des cartes</h3>
+      <h3>La force et la valeur des cartes</h3>
       <p>
-        Dans la couleur d’atout : Valet, 9, As, 10, Roi, Dame, 8, 7 (du plus
-        fort au plus faible).<br />Dans les autres couleurs : As, 10, Roi, Dame,
-        Valet, 9, 8, 7.
+        À l’atout : Valet (20 points), 9 (14), As (11), 10 (10), Roi (4),
+        Dame (3), 8 et 7 (0), du plus fort au plus faible.<br />Dans les autres
+        couleurs : As (11), 10 (10), Roi (4), Dame (3), Valet (2), 9, 8 et 7 (0).
       </p>
       <h3>Les enchères</h3>
       <p>
         Chacun son tour, on annonce un nombre de points (de 80 à 160, par pas de
-        10) et une couleur d’atout, ou on passe. Au-dessus : le capot (250,
-        l’équipe fait les huit plis), le capot beloté (270, huit plis et la
-        belote) et la Générale (le preneur fait les huit plis à lui seul ; il
-        prend la main, et elle vaut un capot). Chaque annonce doit dépasser la
-        précédente. Trois passes après une annonce ferment les enchères : la
-        dernière équipe à avoir parlé doit atteindre son contrat.
+        10) et une couleur d’atout, ou on passe. Au-dessus, dans cet ordre : le
+        capot (250, l’équipe fait les huit plis), le capot beloté (270, huit
+        plis et la belote), la Générale (250) et la Générale belotée (270) :
+        les mêmes capots, mais le preneur prend la main au premier pli.
+        Chaque annonce doit dépasser la précédente ; on peut surenchérir sur
+        son partenaire. Trois passes après une annonce ferment les enchères :
+        la dernière équipe à avoir parlé doit atteindre son contrat. Quatre
+        passes sans annonce : on redistribue.
       </p>
       <h3>Coincher et surcoincher</h3>
       <p>
-        Un adversaire pense que le contrat est trop ambitieux ? Il peut «
-        coincher » : les points en jeu doublent. L’équipe qui a annoncé peut
-        répondre en « surcoinchant » : les points quadruplent.
+        Pendant les enchères, un adversaire du preneur peut « coincher », même
+        hors de son tour : les points en jeu doublent et les enchères se
+        ferment. L’équipe qui a annoncé a alors 10 secondes pour
+        « surcoincher » : les points quadruplent.
       </p>
       <h3>Jouer les cartes</h3>
       <p>
-        Il faut fournir la couleur demandée si on le peut. À l’atout, il faut
-        monter (jouer plus fort) si possible. Sans la couleur demandée et sans
-        atout dans son jeu, on peut jouer n’importe quelle carte.
+        Le joueur qui suit le donneur entame (à la Générale, le preneur). Il faut fournir
+        la couleur demandée si on le peut. À l’atout, il faut monter (jouer
+        plus fort) si possible, même sur son partenaire. Sans la couleur
+        demandée, il faut couper avec un atout, et surcouper si un atout est
+        déjà posé (sinon, mettre un atout plus faible), sauf si son partenaire
+        est maître du pli : on joue alors ce qu’on veut. Sans couleur ni atout,
+        n’importe quelle carte.
       </p>
       <h3>La belote</h3>
       <p>
@@ -125,8 +132,16 @@
       <p>
         162 points sont à partager à chaque donne (152 dans les cartes + 10 pour
         le dernier pli). Pour réussir un contrat de 80, il faut au moins 82
-        points de plis. Un contrat « capot » (250) demande de remporter les huit
-        plis.
+        points de plis. Le capot et la Générale demandent les huit plis ; le
+        capot beloté et la Générale belotée, les huit plis et la belote, sans
+        repli à 250 en cas d’échec.
+      </p>
+      <h3>Le temps</h3>
+      <p>
+        30 secondes pour annoncer ou jouer une carte : passé ce délai,
+        l’ordinateur passe ou joue une carte autorisée au hasard à votre place.
+        Une place quittée en cours de partie est reprise par l’ordinateur, et
+        l’on peut revenir s’y asseoir.
       </p>
     </div>
     <header class="header">
@@ -245,9 +260,7 @@
         <p class="caption">
           Choisissez un pseudo et une place, puis lancez la partie : les places
           restées libres sont jouées par l’ordinateur, qui annonce et joue
-          automatiquement. Règles complètes du profil
-          <code>scepi-online-v1</code> dans le fichier
-          <code>REGLES_COINCHE.md</code> du dépôt.
+          automatiquement. Toutes les règles : bouton « Règles ».
         </p>
         <div class="new-lobby-row">
           <button type="button" class="button outline" id="new-lobby-btn">
