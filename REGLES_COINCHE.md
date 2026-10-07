@@ -16,11 +16,11 @@ Les conventions ci-dessous rendent les points incomplets du manuel exécutables.
 | Atout demandé | Monter si possible, même sur son partenaire ; sinon fournir un atout inférieur. Le manuel ne tranche pas explicitement ce cas. |
 | Partenaire maître et couleur demandée absente | Toute carte autorisée, y compris un atout inférieur à celui du partenaire. |
 | Capot beloté | Contrat distinct à 270 ; huit plis ET belote valide, sinon chute sans repli à 250. |
-| Générale | Un capot (250) où le preneur entame le premier pli ; passe au-dessus du capot beloté. Générale belotée : un capot beloté (270, huit plis ET belote valide, chute sans repli) où le preneur entame ; l'enchère la plus haute. |
+| Générale | Le preneur doit remporter les huit plis à lui seul (aucun pli pour son partenaire) et entame le premier pli ; vaut 250 et passe au-dessus du capot beloté. Générale belotée : la même, avec en plus la belote valide (chute sans repli) ; vaut 270, l'enchère la plus haute. |
 | Belote | Celle de l'équipe preneuse : preneur ou partenaire (même s'il a été remonté). Déclaration automatique : dès que le Roi puis la Dame d'atout de son détenteur sont joués, Belote puis Rebelote sont annoncées sans action du joueur (humain ou bot). |
-| Délais techniques | 30 s par enchère, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
+| Délais techniques | 20 s par enchère et par carte, 10 s pour surcoincher, 5 s d'affichage du résultat d'une donne. |
 
-Le délai de **30 secondes par carte**, avec carte légale aléatoire à expiration, vient du README du projet. Les règles fondamentales de cartes et de score proviennent des articles 5 à 11 et de l'annexe 1 du manuel. Le mélange et la désignation du donneur sont simplifiés pour le jeu en ligne.
+Le délai de **20 secondes par enchère et par carte**, avec passe ou carte légale aléatoire à expiration, est celui décidé par le bureau. Les règles fondamentales de cartes et de score proviennent des articles 5 à 11 et de l'annexe 1 du manuel. Le mélange et la désignation du donneur sont simplifiés pour le jeu en ligne.
 
 ## 2. Salons, joueurs et état serveur
 
@@ -69,7 +69,7 @@ La reconnexion est traitée indépendamment de la phase.
 3. Dès le début de la partie, avant la première distribution, mélanger les 32 cartes au hasard côté serveur. Utiliser un mélange uniforme, par exemple Fisher–Yates avec des tirages non biaisés issus d'un générateur cryptographiquement sûr. Ne jamais distribuer le paquet dans son ordre de création ni utiliser une graine fixe en production. Répéter ce mélange à chaque nouvelle donne selon la convention V1 ; un simple tri aléatoire des mains à l'écran ne remplace pas le mélange du paquet.
 4. À partir de `suivant(donneur)`, distribuer trois cartes à chacun, puis trois, puis deux. Vérifier huit cartes par main et aucune duplication.
 5. Réinitialiser les données de donne, les fenêtres, les passes et le multiplicateur à 1 ; conserver les scores de partie.
-6. Démarrer les enchères avec `joueurActif = suivant(donneur)` et 30 secondes pour agir.
+6. Démarrer les enchères avec `joueurActif = suivant(donneur)` et 20 secondes pour agir.
 
 Ne pas implémenter la coupe, le tirage physique du donneur, les droits au mélange, l'ordre de ramassage des plis ni les sanctions de fausse donne. Une mauvaise main ne permet pas d'annuler la donne : aucune misère.
 
@@ -85,7 +85,7 @@ Ne pas implémenter la coupe, le tirage physique du donneur, les droits au méla
 - La dernière enchère définit le preneur et son équipe ; elle remet les passes à zéro.
 - Types : `NUMERIQUE` pour 80 à 160, `CAPOT` pour 250, `CAPOT_BELOTE` pour 270, `GENERALE` et `GENERALE_BELOTE`.
 - Ne pas contrôler la composition de la main pour permettre une enchère, même à 270 : un contrat peut être irréalisable et chuter.
-- Après une action qui ne clôt pas les enchères, avancer au joueur suivant et démarrer ses 30 secondes. À expiration, effectuer `PASSER` automatiquement.
+- Après une action qui ne clôt pas les enchères, avancer au joueur suivant et démarrer ses 20 secondes. À expiration, effectuer `PASSER` automatiquement.
 
 ### COINCHER et SURCOINCHER
 
@@ -140,10 +140,10 @@ Fournir reste obligatoire sur son partenaire. Sans couleur demandée, couper sur
 
 1. Vérifier phase `JEU`, joueur actif, carte présente dans sa main et dans `cartesLegales`.
 2. Retirer cette carte et l'ajouter une seule fois au pli courant. Déclencher l'annonce automatique de belote/rebelote si cette carte y donne droit (section 8).
-3. À moins de quatre cartes, passer au siège suivant et démarrer ses 30 secondes.
+3. À moins de quatre cartes, passer au siège suivant et démarrer ses 20 secondes.
 4. À quatre cartes, le plus fort atout gagne ; sans atout, la plus forte carte de la couleur demandée gagne.
 5. Ajouter les points des quatre cartes à l'équipe gagnante et incrémenter son nombre de plis. Archiver le pli et vider le pli courant.
-6. Au huitième pli, ajouter **10 points** au gagnant de ce pli et passer à `SCORE` : la belote étant déjà tranchée automatiquement, aucune attente supplémentaire n'est nécessaire. Sinon, le gagnant entame avec 30 secondes.
+6. Au huitième pli, ajouter **10 points** au gagnant de ce pli et passer à `SCORE` : la belote étant déjà tranchée automatiquement, aucune attente supplémentaire n'est nécessaire. Sinon, le gagnant entame avec 20 secondes.
 
 À expiration d'un tour, le serveur choisit uniformément dans `cartesLegales` et applique la même procédure ; l'annonce de belote reste automatique même dans ce cas. Les animations n'ajoutent pas de temps ni de nouvel état de jeu.
 
@@ -169,9 +169,9 @@ Si contrat.type == CAPOT :
 Si contrat.type == CAPOT_BELOTE :
   reussi = plisGagnes[preneurs] == 8 ET belote valide des preneurs
 Si contrat.type == GENERALE :
-  reussi = plisGagnes[preneurs] == 8
+  reussi = plisGagnés par le preneur lui-même == 8
 Si contrat.type == GENERALE_BELOTE :
-  reussi = plisGagnes[preneurs] == 8 ET belote valide des preneurs
+  reussi = plisGagnés par le preneur lui-même == 8 ET belote valide des preneurs
 valeur = 250 si GENERALE, 270 si GENERALE_BELOTE, sinon montant
 
 Si reussi : gain[preneurs] = valeur * multiplicateur ; gain[defense] = 0

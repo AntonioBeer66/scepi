@@ -20,14 +20,16 @@ assert.strictEqual(bidType(GENERALE_BELOTE), "GENERALE_BELOTE");
 assert.strictEqual(contractValue({ type: "GENERALE", montant: GENERALE }), 250);
 assert.strictEqual(contractValue({ type: "GENERALE_BELOTE", montant: GENERALE_BELOTE }), 270);
 
-// Générale : un capot (huit plis pour l'équipe, partenaire compris).
+// Générale : le preneur fait les huit plis à lui seul.
 const gen = { type: "GENERALE", montant: GENERALE, preneur: 2, equipePreneur: 0 };
-assert.ok(contratReussi(gen, [162, 0], [8, 0], false));
-assert.ok(!contratReussi(gen, [150, 12], [7, 1], false));
-// Générale belotée : un capot beloté (huit plis et belote valide).
+assert.ok(contratReussi(gen, [162, 0], [8, 0], false, [0, 0, 8, 0]));
+assert.ok(!contratReussi(gen, [162, 0], [8, 0], false, [1, 0, 7, 0]), "un pli du partenaire la fait chuter");
+assert.ok(!contratReussi(gen, [150, 12], [7, 1], false, [0, 1, 7, 0]));
+// Générale belotée : huit plis à lui seul, et la belote.
 const genB = { type: "GENERALE_BELOTE", montant: GENERALE_BELOTE, preneur: 2, equipePreneur: 0 };
-assert.ok(contratReussi(genB, [162, 0], [8, 0], true));
-assert.ok(!contratReussi(genB, [162, 0], [8, 0], false), "sans belote, elle chute");
+assert.ok(contratReussi(genB, [162, 0], [8, 0], true, [0, 0, 8, 0]));
+assert.ok(!contratReussi(genB, [162, 0], [8, 0], false, [0, 0, 8, 0]), "sans belote, elle chute");
+assert.ok(!contratReussi(genB, [162, 0], [8, 0], true, [1, 0, 7, 0]), "un pli du partenaire la fait chuter");
 
 // En jeu : annoncée, elle se verrouille et le preneur entame.
 const humans = [0, 1, 2, 3].map((s) => ({ type: "human", name: `J${s}` }));
@@ -64,6 +66,7 @@ function scoreWith({ montant, pointsPreneurs, belote }) {
   g.belote = { holder: 0, kingPlayed: belote, queenPlayed: belote, beloteDeclared: belote, rebeloteDeclared: belote };
   g.pointsPlis = [pointsPreneurs, 162 - pointsPreneurs];
   g.plisGagnes = [4, 4];
+  g.plisSiege = [2, 2, 2, 2];
   g.phase = "JEU";
   g.plisJoues = 7;
   // Dernier pli joué par le moteur : le score se calcule à sa résolution.
@@ -92,11 +95,11 @@ assert.deepStrictEqual(res.gains, [0, 160]);
 res = scoreWith({ montant: 80, pointsPreneurs: 60, belote: true });
 assert.strictEqual(res.beloteBonus, 0);
 
-console.log("Règles : Générale et Générale belotée (rang, valeur, main, huit plis) et belote (+20 dès 81) vérifiées.");
+console.log("Règles : Générale et Générale belotée (rang, valeur, main, huit plis seul) et belote (+20 dès 81) vérifiées.");
 
-// Bots : une main qui fait les huit plis (Valet, 9, As, 10, 8, 7 d'atout,
-// As de pique et de trèfle, sans la belote) s'annonce en Générale, puis se
-// joue et se gagne.
+// Bots : une main qui fait les huit plis seule (Valet, 9, As, 10, 8, 7
+// d'atout, As de pique et de trèfle, sans la belote) s'annonce en Générale,
+// puis se joue et se gagne (la partenaire ne prend aucun pli).
 {
   const { play } = await import("./coinche-sim.js");
   const engine = await import("../src/coinche/engine.js");
@@ -123,6 +126,6 @@ console.log("Règles : Générale et Générale belotée (rang, valeur, main, hu
     },
   });
   assert.strictEqual(bid.type, "GENERALE", "le bot annonce la Générale");
-  assert.ok(result.reussi, "et la gagne");
+  assert.ok(result.reussi, "et la gagne, sans pli pour son partenaire");
   console.log(`Bots : Générale annoncée (${bid.atout}) et gagnée (${result.gains.join(" – ")}).`);
 }

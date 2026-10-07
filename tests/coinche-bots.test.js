@@ -1,6 +1,6 @@
 // Parties 100 % bots en accéléré (moteur et hôte headless : coinche-sim.js). Échoue
 // si un bot joue une carte illégale, fait une enchère invalide ou reste
-// bloqué (le moteur refuse alors l'action et le délai de 30 s expire), si
+// bloqué (le moteur refuse alors l'action et le délai de 20 s expire), si
 // une partie ne se termine pas, ou si une donne est mal arbitrée. Chaque donne
 // est recomptée ici indépendamment du moteur : gagnant et points des plis,
 // belote/rebelote (preneur ou partenaire, Roi et Dame d'atout en main initiale),
@@ -30,6 +30,7 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
   engine.tuning.mcSamples = game < GAMES ? 0 : 2;
   let pts = [0, 0];
   let plis = [0, 0];
+  let plisSiege = [0, 0, 0, 0]; // Générale : les plis du preneur lui-même
   let prev = [0, 0];
   let imposee = false; // donne à huit atouts imposée en cours
   const where = () => `partie ${game}, donne ${stats.donnes}`;
@@ -56,6 +57,7 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       const best = pli.reduce((a, b) => (force(b.carte) > force(a.carte) ? b : a));
       assert.strictEqual(winner, best.siege, `${where()} : mauvais gagnant de pli`);
       plis[team(winner)]++;
+      plisSiege[winner]++;
       pts[team(winner)] += pli.reduce((s, e) => s + ((e.carte.suit === atout ? POINTS.atout : POINTS.plain)[e.carte.rank] || 0), 0)
         + (plis[0] + plis[1] === 8 ? 10 : 0);
     },
@@ -75,7 +77,9 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       assert.strictEqual(!!c.huitAtouts, huitAtouts && beloteRequise, `${where()} : marqueur huit atouts (capot beloté ou Générale belotée seulement)`);
 
       const base = c.montant === 80 ? 82 : c.montant;
-      const reussi = c.type === 'CAPOT' || c.type === 'GENERALE' ? plis[pre] === 8
+      const reussi = c.type === 'GENERALE' ? plisSiege[c.preneur] === 8
+        : c.type === 'GENERALE_BELOTE' ? plisSiege[c.preneur] === 8 && belote
+        : c.type === 'CAPOT' ? plis[pre] === 8
         : beloteRequise ? plis[pre] === 8 && belote
           : pts[pre] >= (belote ? Math.max(81, base - 20) : base);
       const valeur = { GENERALE: 250, GENERALE_BELOTE: 270 }[c.type] ?? c.montant;
@@ -104,6 +108,7 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
       prev = [...G.scores];
       pts = [0, 0];
       plis = [0, 0];
+      plisSiege = [0, 0, 0, 0];
     },
   };
 

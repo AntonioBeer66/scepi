@@ -1,5 +1,5 @@
 // Hôte d'une table : fait jouer les bots et envoie TIMEOUT quand une
-// fenêtre de temps expire (tour de 30 s, surcoinche de 10 s, résultat
+// fenêtre de temps expire (tour de 20 s, surcoinche de 10 s, résultat
 // affiché 5 s). Tourne dans le navigateur du joueur hôte (voir game.js,
 // G.hote), ou dans le simulateur des tests avec une horloge virtuelle :
 // c'est le même code, donc les bots testés sont ceux qu'on joue.

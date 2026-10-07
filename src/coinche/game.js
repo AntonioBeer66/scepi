@@ -112,7 +112,7 @@ export const Coinche = {
     },
 
     // Un humain a quitté la table (sa place est libérée dans le salon) :
-    // l'hôte la confie à l'ordinateur plutôt que d'attendre 30 s par tour.
+    // l'hôte la confie à l'ordinateur plutôt que d'attendre 20 s par tour.
     devenirBot: {
       client: false,
       move: ({ G, playerID }, seat) => {

@@ -176,7 +176,7 @@ Le jeu est écrit dans `src/coinche/` et compilé par Vite dans `site/assets/js/
 - Solo contre trois bots : la partie tourne entièrement dans l'onglet, sans serveur ; elle est gardée dans le navigateur (reprise après rechargement) et effacée en quittant.
 - Spectateurs : une partie en cours peut être regardée depuis le salon ; le spectateur suit la main d'un joueur tiré au hasard et en change en touchant un autre avatar (jamais plus d'une main visible).
 - Les parties en ligne sont enregistrées par le Durable Object : elles survivent à sa mise en veille ; une partie inactive 30 min est effacée, une partie lancée où aucun humain ne joue lui-même depuis 5 min (bots seuls, coups joués d'office) aussi.
-- Déconnexion : la place est gardée, le client se reconnecte seul, les délais continuent (l'hôte joue d'office à 30 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
+- Déconnexion : la place est gardée, le client se reconnecte seul, les délais continuent (le serveur joue d'office à 20 s). Quitter la table libère la place : l'hôte la confie à l'ordinateur.
 
 Commandes (Node.js 22 ou plus) :
 
@@ -203,7 +203,7 @@ Publier, modifier ou supprimer une actu demande le mot de passe des articles : s
 - Quatre à cinq salons ouverts de quatre places, accessibles librement en choisissant un pseudonyme, conformément au README.
 - Quatre joueurs, deux équipes et pseudonymes, sans comptes obligatoires au départ.
 - Annonces, tours de jeu et tableau des scores conformes aux règles validées.
-- Chaque joueur dispose de 30 secondes pour jouer une carte ; à expiration, le serveur choisit au hasard une carte autorisée. Le serveur contrôle le délai et empêche qu'une action tardive joue une seconde carte.
+- Chaque joueur dispose de 20 secondes pour annoncer ou jouer une carte ; à expiration, le serveur choisit au hasard une carte autorisée. Le serveur contrôle le délai et empêche qu'une action tardive joue une seconde carte.
 - Reconnexion avec identité de session ; un pseudonyme seul ne permet pas de reprendre une place.
 - Gestion explicite d'un joueur absent ou déconnecté.
 
