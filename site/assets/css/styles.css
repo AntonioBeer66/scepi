@@ -3443,16 +3443,16 @@ body.is-playing .header {
   }
   .home-join {
     grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
-    padding: 32px 22px;
+    margin-top: 64px;
+    padding: 40px 0 0;
     gap: 20px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
   }
   .home-join-mascot {
-    width: 150px;
-  }
-  .home-join .home-actions {
-    justify-content: center;
+    display: none; /* le logo est déjà dans l'en-tête */
   }
 }
 
@@ -3979,6 +3979,22 @@ html.is-chess-game {
   .lx-next {
     padding: 28px 22px;
   }
+  .lx-steps {
+    gap: 0;
+  }
+  .lx-steps li {
+    padding: 20px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+  }
+  .ct-formats {
+    padding: 24px 0 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+  }
 }
 
 /* Accueil : bloc « Jouer » vers la ludothèque */
@@ -4039,19 +4055,62 @@ html.is-chess-game {
   transform: translateX(-20%) rotate(12deg);
 }
 
-/* Accueil sur téléphone : plus compact */
+/* Accueil sur téléphone : plus compact, sans cadres ; des filets séparent
+   les blocs au lieu de cartes empilées. */
 @media (max-width: 760px) {
   .home-art {
-    width: min(340px, 100%);
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    border: 0;
+    border-radius: 0;
+    background: radial-gradient(circle at 50% 50%, #f4c60026, transparent 62%);
+  }
+  .home-art-mascot {
+    width: 40%;
   }
   .home-pillars {
-    gap: 12px;
+    gap: 0;
   }
   .home-pillar {
     display: grid;
     grid-template-columns: 34px 1fr;
     column-gap: 16px;
-    padding: 20px;
+    padding: 20px 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+  }
+  /* Événements : vignette et texte sur une ligne */
+  .home-event {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    column-gap: 16px;
+    align-content: start;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+  .home-event > :not(.home-event-art) {
+    padding-inline: 0;
+  }
+  .home-event-art {
+    grid-row: span 3;
+    width: 96px;
+    height: 96px;
+    margin: 0;
+    border-radius: 10px;
+  }
+  .home-event:hover .home-event-art {
+    transform: none;
+  }
+  .home-event-date {
+    margin-bottom: 2px;
+  }
+  .home-event h3 {
+    margin-bottom: 4px;
   }
   .home-pillar svg {
     grid-row: span 2;

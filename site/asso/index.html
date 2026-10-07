@@ -526,14 +526,29 @@
           font-size: 16px;
           margin-bottom: 24px;
         }
-        .pillar-grid {
-          gap: 12px;
+        /* Sans cadres : des filets séparent les éléments */
+        .pillar-grid,
+        .board-grid,
+        .join-steps {
+          gap: 0;
+        }
+        .pillar,
+        .board-grid li,
+        .board-grid li.is-lead,
+        .join-steps li {
+          border: 0;
+          border-top: 1px solid var(--line);
+          border-radius: 0;
+          background: none;
         }
         .pillar {
           display: grid;
           grid-template-columns: 34px 1fr;
           column-gap: 16px;
-          padding: 20px;
+          padding: 20px 0;
+        }
+        .join-steps li {
+          padding: 20px 0;
         }
         .pillar .invader {
           grid-row: span 2;
@@ -544,7 +559,7 @@
           margin-bottom: 6px;
         }
         .board-grid li {
-          padding: 14px 18px;
+          padding: 12px 0;
         }
         .board-avatar {
           flex-basis: 40px;
