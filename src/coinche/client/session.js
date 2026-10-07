@@ -69,6 +69,9 @@ export function startSession({
           // Décision prise sur un état déjà dépassé (le jeu a avancé pendant
           // l'aller-retour) : le serveur la refuserait, inutile de l'envoyer.
           if (stopped || data.tour !== client.getState()?.G.tour) return;
+          // En ligne, le serveur tient les délais (worker/tables.js) : l'hôte
+          // ne fait plus que jouer les bots.
+          if (online && data.action.type === "TIMEOUT") return;
           client.moves.pourSiege(data.seat, data.action);
         };
       }

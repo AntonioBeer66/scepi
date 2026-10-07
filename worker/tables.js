@@ -19,9 +19,8 @@
 // changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
 // { type: "emote", emote } → { type: "emote", seat, emote } à toute la table.
 // Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
-// Délais : une seule alarme pour tout le salon, réglée sur la prochaine
-// échéance (voir GRACE_MS) ; elle joue l'action par défaut des tables dont
-// l'hôte n'a pas joué à temps.
+// Délais : le serveur les tient seul, avec une alarme pour tout le salon ;
+// elle joue l'action par défaut des tables dont la fenêtre est échue.
 import { DurableObject } from "cloudflare:workers";
 import {
   createTables,
@@ -131,14 +130,15 @@ export class Tables extends DurableObject {
     await this.schedule();
   }
 
-  // Alarme sur la prochaine échéance ; réglée seulement si elle change
-  // (chaque réglage compte comme une écriture).
+  // Alarme jamais plus tard que la prochaine échéance, mais avancée
+  // seulement : une échéance repoussée (coup joué à temps) ne la déplace pas,
+  // elle sonne pour rien et se recale (voir alarm). Chaque réglage compte
+  // comme une écriture : bien moins ainsi qu'un réglage par coup.
   async schedule() {
     const at = this.tables.nextDeadline();
-    if (at === this.alarmAt) return;
+    if (at == null || (this.alarmAt != null && this.alarmAt <= at)) return;
     this.alarmAt = at;
-    if (at == null) await this.ctx.storage.deleteAlarm();
-    else await this.ctx.storage.setAlarm(at);
+    await this.ctx.storage.setAlarm(at);
   }
 
   async alarm() {

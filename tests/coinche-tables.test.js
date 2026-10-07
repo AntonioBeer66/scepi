@@ -19,7 +19,6 @@ import {
   IDLE_MS,
   MAX_MATCHES,
   MAX_PER_OWNER,
-  GRACE_MS,
   PERMANENT_TABLES,
 } from "../src/online/tables.js";
 import { coinche } from "../src/coinche/fiche.js";
@@ -198,8 +197,8 @@ assert.ok(!tables.list(() => false, "VENDREDI").some((t) => t.matchID === priv.i
 assert.strictEqual(tables.list(() => false, "jeudi").find((t) => t.matchID === priv.id)?.code, "JEUDI");
 assert.ok(tables.join(priv.id, 0, "Alice").credentials, "on s'y assoit comme ailleurs");
 
-// Délais : hôte muet (téléphone en veille), le serveur joue l'action par
-// défaut GRACE_MS après l'échéance de la fenêtre, et seulement alors.
+// Délais : tenus par le serveur, même hôte muet (téléphone en veille) :
+// action par défaut à l'échéance de la fenêtre, et seulement alors.
 {
   const id = tables.create().id;
   tables.join(id, 0, "Dave");
@@ -207,7 +206,7 @@ assert.ok(tables.join(priv.id, 0, "Alice").credentials, "on s'y assoit comme ail
   assert.ok(tables.move(id, 0, "lancer", [solo]));
   const { tour } = tables.get(id).G;
   const at = tables.get(id).deadline.at;
-  assert.strictEqual(at, now + 30000 + GRACE_MS, "30 s d'enchère, plus la marge");
+  assert.strictEqual(at, now + 20000, "20 s d'enchère");
   assert.ok(tables.nextDeadline() <= at);
   now = at - 1;
   assert.ok(!tables.expire().includes(id), "pas avant l'échéance");

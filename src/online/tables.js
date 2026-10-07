@@ -9,8 +9,8 @@
 // cachées du lobby sauf pour qui donne leur code (choisi par l'hôte).
 // Une partie : { id, table, code, owner, createdAt, updatedAt, activeAt, stateID, G, players } ;
 // activeAt : dernier coup d'un humain pour lui-même (fiche.humanMoves).
-// deadline : { key, at } de la fenêtre de temps en cours (fiche.deadline),
-// at comptant GRACE_MS de plus que le délai du jeu.
+// deadline : { key, at } de la fenêtre de temps en cours (fiche.deadline) :
+// à l'heure at, le serveur joue l'action par défaut (expire).
 // players[s] = { name, credentials } (name null : place libre) ; code :
 // celui d'une table privée (absent : table ouverte).
 export const MAX_NAME = 18; // pseudo
@@ -43,11 +43,6 @@ export const IDLE_MS = 30 * 60 * 1000; // partie ou salon abandonné
 export const EMPTY_MS = 10 * 60 * 1000; // salon temporaire jamais rejoint
 export const ABANDON_MS = 2 * 60 * 1000; // partie lancée sans humain connecté
 export const AFK_MS = 5 * 60 * 1000; // partie lancée où aucun humain ne joue (bots seuls)
-// Délais : l'hôte (un navigateur) joue l'action par défaut à l'heure ; le
-// serveur ne la joue qu'après GRACE_MS de plus, s'il ne l'a pas fait
-// (téléphone en veille, onglet figé). Ainsi l'alarme du serveur, qui coûte
-// une requête, ne sonne presque jamais.
-export const GRACE_MS = 3000;
 const INVALID_MOVE = "INVALID_MOVE"; // valeur rendue par les coups refusés
 const MAX_ARGS = 3;
 export const CODE_MIN = 4;
@@ -98,7 +93,7 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
     m.updatedAt = now();
     const d = fiche.deadline?.(m.G);
     if (!d) m.deadline = null;
-    else if (d.key !== m.deadline?.key) m.deadline = { key: d.key, at: m.updatedAt + d.ms + GRACE_MS };
+    else if (d.key !== m.deadline?.key) m.deadline = { key: d.key, at: m.updatedAt + d.ms };
   }
 
   function create(table = null, code = null, owner = null) {
@@ -266,8 +261,9 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
       return at;
     },
 
-    // Fenêtres échues sans que l'hôte ait joué : action par défaut de la
-    // fiche, sur une copie. Rend les parties modifiées.
+    // Fenêtres échues : action par défaut de la fiche (le serveur tient les
+    // délais, même si tous les téléphones sont en veille), sur une copie.
+    // Rend les parties modifiées.
     expire() {
       const t = now();
       const ids = [];
