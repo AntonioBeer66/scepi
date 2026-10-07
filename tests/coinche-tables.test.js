@@ -18,6 +18,7 @@ import {
   weekOf,
   IDLE_MS,
   MAX_MATCHES,
+  MAX_PER_OWNER,
   PERMANENT_TABLES,
 } from "../src/coinche/online/tables.js";
 import { rng } from "./coinche-sim.js";
@@ -194,6 +195,12 @@ assert.ok(!list().some((t) => t.matchID === priv.id), "cachée sans code");
 assert.ok(!tables.list(() => false, "VENDREDI").some((t) => t.matchID === priv.id));
 assert.strictEqual(tables.list(() => false, "jeudi").find((t) => t.matchID === priv.id)?.code, "JEUDI");
 assert.ok(tables.join(priv.id, 0, "Alice").credentials, "on s'y assoit comme ailleurs");
+
+// Plafond par personne : salons et tables privées confondus.
+for (let i = 0; i < MAX_PER_OWNER; i++) assert.ok(tables.create("ip-a"));
+assert.strictEqual(tables.create("ip-a"), null, "plafond personnel atteint");
+assert.strictEqual(tables.createPrivate("DIMANCHE", "ip-a").error, "PLEIN");
+assert.ok(tables.create("ip-b"), "les autres peuvent encore ouvrir");
 
 // Plafond de tables.
 while (tables.create());

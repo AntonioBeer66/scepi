@@ -4,7 +4,7 @@
 // joueur (playerView), mêmes règles d'entretien (4 tables permanentes,
 // salons temporaires, parties abandonnées effacées) ; plus des tables
 // privées, cachées du lobby sauf pour qui donne leur code (choisi par l'hôte).
-// Une partie : { id, table, createdAt, updatedAt, activeAt, stateID, G, players } ;
+// Une partie : { id, table, code, owner, createdAt, updatedAt, activeAt, stateID, G, players } ;
 // activeAt : dernier coup d'un humain pour lui-même (lancer, agir).
 // players[s] = { name, credentials } (name null : place libre) ; code :
 // celui d'une table privée (absent : table ouverte).
@@ -31,6 +31,9 @@ export const EMOTES = new Map([
 
 export const PERMANENT_TABLES = 4;
 export const MAX_MATCHES = 40;
+// Salons et tables privées ouverts par une même personne (empreinte de son
+// adresse IP, voir worker/tables.js) : une seule ne remplit pas le plafond.
+export const MAX_PER_OWNER = 3;
 export const IDLE_MS = 30 * 60 * 1000; // partie ou salon abandonné
 export const EMPTY_MS = 10 * 60 * 1000; // salon temporaire jamais rejoint
 export const ABANDON_MS = 2 * 60 * 1000; // partie lancée sans humain connecté
@@ -95,13 +98,16 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
   const matches = new Map();
   const seen = new Map(); // id → dernière fois qu'un humain assis était connecté
 
-  function create(table = null, code = null) {
+  function create(table = null, code = null, owner = null) {
     if (matches.size >= MAX_MATCHES) return null;
+    if (owner && [...matches.values()].filter((m) => m.owner === owner).length >= MAX_PER_OWNER)
+      return null;
     const t = now();
     const m = {
       id: newID(),
       table,
       code,
+      owner,
       createdAt: t,
       updatedAt: t,
       stateID: 0,
@@ -163,16 +169,17 @@ export function createTables({ now = Date.now, random = Math.random } = {}) {
       return { removed, created };
     },
 
-    // Salon temporaire (bouton « Nouveau salon ») ; null au-delà du plafond.
-    create: () => create(null),
+    // Salon temporaire (bouton « Nouveau salon ») ; null au-delà du plafond
+    // (le sien, ou celui du site).
+    create: (owner = null) => create(null, null, owner),
 
     // Table privée (un salon temporaire) : { match } ou { error }. Code
     // unique parmi les tables ouvertes : il désigne une seule table.
-    createPrivate(raw) {
+    createPrivate(raw, owner = null) {
       const code = normCode(raw);
       if (code.length < CODE_MIN) return { error: "CODE_INVALIDE" };
       if ([...matches.values()].some((m) => m.code === code)) return { error: "CODE_PRIS" };
-      const match = create(null, code);
+      const match = create(null, code, owner);
       return match ? { match } : { error: "PLEIN" };
     },
 
