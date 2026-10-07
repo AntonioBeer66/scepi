@@ -605,13 +605,20 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     return o;
   }
 
+  // Carte retirée de la main : ses animations d'abord (distribution en
+  // cours), sinon la suite retournerait une carte détruite.
+  function dropCard(o) {
+    scene.tweens.killTweensOf(o.box);
+    o.box.destroy();
+    o.zone.destroy();
+  }
+
   function placeHand(animateDeal) {
     const { cards, legal } = handState();
     const ids = new Set(cards.map((c) => c.id));
     for (const [id, o] of hand)
       if (!ids.has(id)) {
-        o.box.destroy();
-        o.zone.destroy();
+        dropCard(o);
         hand.delete(id);
       }
     const n = cards.length;
@@ -833,10 +840,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     const newDonne = !prev || prev.donneNumero !== G.donneNumero;
     if (newDonne) {
       clearTrick();
-      hand.forEach((o) => {
-        o.box.destroy();
-        o.zone.destroy();
-      });
+      hand.forEach(dropCard);
       hand.clear();
       // Reprise en cours de pli (rechargement, reconnexion).
       if (!prev) G.pliCourant.forEach(flyIn);
@@ -887,10 +891,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   function setView(seat) {
     view = seat;
     onPeek(seat);
-    hand.forEach((o) => {
-      o.box.destroy();
-      o.zone.destroy();
-    });
+    hand.forEach(dropCard);
     hand.clear();
     cacheFor = null;
     relayout(); // sièges, main et pli replacés autour du nouveau joueur
