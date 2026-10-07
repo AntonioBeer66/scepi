@@ -62,10 +62,15 @@ self.addEventListener("fetch", (e) => {
         if (req.mode === "navigate") e.waitUntil(garnir().catch(() => {}));
         return res;
       },
+      // Les liens du site visent « jeux/index.html », gardé sous « jeux/ ».
+      // Page jamais vue : renvoi vers l'accueil, à sa vraie adresse (ses
+      // liens relatifs resteraient faux sous une autre).
       async () =>
         (await caches.match(req, { ignoreSearch: true })) ||
-        (req.mode === "navigate" && (await caches.match("/"))) ||
-        Response.error(),
+        (await caches.match(url.pathname.replace(/index\.html$/, ""))) ||
+        (req.mode === "navigate" && (await caches.match("/"))
+          ? Response.redirect("/", 302)
+          : Response.error()),
     ),
   );
 });
