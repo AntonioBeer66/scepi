@@ -1,4 +1,4 @@
-// Salons et parties en ligne (src/coinche/online/tables.js, le cœur du
+// Salons et parties en ligne (src/online/tables.js avec la fiche de la coinche, le cœur du
 // serveur worker/tables.js), sans réseau : horloge virtuelle.
 // Vérifie : entretien (4 tables permanentes, abandons, plafond), places
 // (pseudo, identifiants, départ), coups refusés sans identifiants valides,
@@ -20,7 +20,8 @@ import {
   MAX_MATCHES,
   MAX_PER_OWNER,
   PERMANENT_TABLES,
-} from "../src/coinche/online/tables.js";
+} from "../src/online/tables.js";
+import { coinche } from "../src/coinche/fiche.js";
 import { rng } from "./coinche-sim.js";
 
 tuning.mcSamples = 2;
@@ -29,7 +30,7 @@ tuning.bidWorlds = 4;
 Math.random = rng(7);
 
 let now = 0;
-const tables = createTables({ now: () => now, random: rng(11) });
+const tables = createTables(coinche, { now: () => now, random: rng(11) });
 const nulls = (h) => h.every((c) => c === null);
 
 // Entretien : une table en attente par numéro permanent, pas de doublon.
@@ -209,14 +210,15 @@ assert.strictEqual(tables.all().length, MAX_MATCHES);
 
 // Historique : une ligne par partie terminée, CSV pour Excel (« ; », BOM),
 // pseudos protégés ; semaine qui change le lundi.
-const row = historyRow(finished, Date.UTC(2026, 8, 29, 12));
+const row = historyRow(coinche, finished, Date.UTC(2026, 8, 29, 12));
 assert.strictEqual(row[0], "2026-09-29 14:00", "date et heure de Paris");
 assert.deepStrictEqual(row.slice(2, 7), ["Alice<script> & Bob", "Ordinateur & Ordinateur", ...end.scores, end.scores[0] > end.scores[1] ? "Équipe 1" : "Équipe 2"]);
-const csv = historyCSV([row, ["x", "y", "=HYPERLINK(1)", 'a"b;c', 1, 2, "z", 3]]);
+const csv = historyCSV(coinche.historyHead, [row, ["x", "y", "=HYPERLINK(1)", 'a"b;c', 1, 2, "z", 3]]);
 assert.ok(csv.startsWith("﻿\"Date et heure\";"));
 assert.ok(csv.includes(`"'=HYPERLINK(1)";"a""b;c";1;2`), csv);
 assert.strictEqual(csv.trim().split("\r\n").length, 3);
 const coinched = historyRow(
+  coinche,
   {
     table: 1,
     players: [{ name: "Alice" }, { name: "Carol" }, { name: null }, { name: null }],

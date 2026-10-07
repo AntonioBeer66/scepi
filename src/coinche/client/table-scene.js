@@ -26,7 +26,7 @@ import {
   teamOf,
 } from "../engine.js";
 import { trickPause } from "../host.js";
-import { EMOTES } from "../online/tables.js";
+import { EMOTES } from "../../online/tables.js";
 
 const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
 const CARD_RATIO = CARD_PX.h / CARD_PX.w;

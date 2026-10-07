@@ -1,6 +1,7 @@
 // Serveur de coinche en ligne : un Durable Object Cloudflare (une seule
 // instance, « salon ») garde toutes les tables, sert l'API du lobby et les
-// WebSocket des parties. La logique est dans src/coinche/online/tables.js.
+// WebSocket des parties. La logique est dans src/online/tables.js, commune à
+// tous les jeux ; ce qui est propre à la coinche, dans sa fiche (FICHE).
 // Les WebSocket sont « hibernables » : l'objet peut s'endormir entre deux
 // messages sans couper les joueurs ; les parties sont donc enregistrées
 // dans son stockage (une clé par partie) et rechargées au réveil.
@@ -25,7 +26,8 @@ import {
   historyCSV,
   historyRow,
   weekOf,
-} from "../src/coinche/online/tables.js";
+} from "../src/online/tables.js";
+import { coinche as FICHE } from "../src/coinche/fiche.js";
 
 const MAX_MESSAGE = 8 * 1024; // un coup tient en quelques centaines d'octets
 const KEY = (id) => `m:${id}`;
@@ -66,7 +68,7 @@ const json = (body, status = 200) =>
 export class Tables extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
-    this.tables = createTables();
+    this.tables = createTables(FICHE);
     this.fails = new Map(); // adresse → { n, since } : mots de passe des actus refusés
     ctx.blockConcurrencyWhile(async () => {
       const saved = await ctx.storage.list({ prefix: "m:" });
@@ -130,7 +132,7 @@ export class Tables extends DurableObject {
     const t = Date.now();
     const saved = await this.ctx.storage.get(HISTORY);
     const rows = saved?.week === weekOf(t) ? saved.rows : [];
-    rows.push(historyRow(this.tables.get(id), t));
+    rows.push(historyRow(FICHE, this.tables.get(id), t));
     await this.ctx.storage.put(HISTORY, { week: weekOf(t), rows });
   }
 
@@ -195,7 +197,7 @@ export class Tables extends DurableObject {
     if (url.pathname === "/api/historique.csv" && request.method === "GET") {
       const saved = await this.ctx.storage.get(HISTORY);
       const rows = saved?.week === weekOf(Date.now()) ? saved.rows : [];
-      return new Response(historyCSV(rows), {
+      return new Response(historyCSV(FICHE.historyHead, rows), {
         headers: {
           "content-type": "text/csv; charset=utf-8",
           "content-disposition": 'attachment; filename="historique-coinche.csv"',
@@ -311,10 +313,10 @@ export class Tables extends DurableObject {
     if (msg?.type === "move" && att.ready && att.seat != null) {
       // Identifiants revérifiés : la place a pu être libérée entre-temps.
       if (!this.tables.get(id).players[att.seat].credentials) return;
-      const was = this.tables.get(id).G.phase;
+      const was = FICHE.finished(this.tables.get(id).G);
       if (this.tables.move(id, att.seat, msg.name, msg.args)) {
         await this.save(id);
-        if (was !== "TERMINEE" && this.tables.get(id).G.phase === "TERMINEE") await this.record(id);
+        if (!was && FICHE.finished(this.tables.get(id).G)) await this.record(id);
         this.broadcast(id);
         // Le lobby ne l'appelle que s'il est ouvert : ici, une partie où
         // plus personne ne joue (bots seuls) se ferme aussi à temps.

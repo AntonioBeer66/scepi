@@ -8,13 +8,13 @@
 // délais écoulés depuis son navigateur (host.js) ; il voit donc aussi les
 // mains des bots. Si l'hôte se déconnecte, un autre humain reprend le rôle.
 import { createGame, actOn } from "./engine.js";
+import { MAX_NAME } from "../online/tables.js";
 
 // Valeurs de boardgame.io/core, recopiées : ce sous-chemin ne se charge pas
 // en module ES sous Node (serveur, tests).
 const INVALID_MOVE = "INVALID_MOVE";
 const ALL_ACTIVE = { all: null }; // ActivePlayers.ALL
 
-export const MAX_NAME = 18;
 const HUMAN_ACTIONS = new Set([
   "PASSER",
   "ENCHERIR",
