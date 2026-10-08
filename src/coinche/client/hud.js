@@ -405,7 +405,17 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       : null;
     parts.forEach((html, i) => {
       if (painted[i] === html) return;
+      // Même barre, contenu retouché (montant choisi) : pas de nouvelle
+      // apparition, elle ne sautille pas à chaque toucher.
+      // (Barre d'enchères seulement : le résultat de la donne, lui, garde son
+      // délai d'apparition.)
+      const same =
+        html.includes("cg-bidbar") &&
+        painted[i] &&
+        painted[i].slice(0, 40) === html.slice(0, 40);
       slots[i].innerHTML = html;
+      if (same && slots[i].firstElementChild)
+        slots[i].firstElementChild.style.animation = "none";
       painted[i] = html;
     });
     if (focusKey && !root.contains(document.activeElement))

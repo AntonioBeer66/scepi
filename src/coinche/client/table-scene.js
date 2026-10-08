@@ -820,7 +820,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         scale: 0.3,
         alpha: 0,
         duration: dur(COLLECT_MS),
-        ease: "Cubic.easeIn",
+        ease: "Cubic.easeInOut",
         onComplete: () => {
           boxes.forEach((b) => b.destroy());
           sweeping = sweeping.filter((o) => !boxes.includes(o) && o !== halo);
