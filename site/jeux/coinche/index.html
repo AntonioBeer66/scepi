@@ -179,46 +179,51 @@
     </header>
     <main id="contenu" class="container">
       <section class="page-intro coinche-intro">
-        <span class="eyebrow green">LA COINCHE</span>
-        <h1>
-          Les cartes changent.<br /><span class="green">L’esprit reste.</span>
-        </h1>
-        <p>
-          La coinche prend ses quartiers ici. Asseyez-vous à une table avec vos
-          amis, l’ordinateur complète les places libres, ou jouez seul contre
-          trois bots.
-        </p>
-        <span class="pill green-pill">En ligne ou en solo</span>
-      </section>
-      <section
-        class="table-preview"
-        id="live-table"
-        aria-label="Table de coinche"
-      >
-        <span class="seat north">Votre partenaire</span
-        ><span class="seat west">Adversaire</span
-        ><span class="seat east">Adversaire</span>
-        <div class="table-center">
-          <img
-            src="../../assets/images/logo-green.png"
-            alt=""
-            width="2000"
-            height="2000"
-          /><span>LA TABLE VOUS ATTEND</span>
+        <div>
+          <span class="eyebrow green">LA COINCHE</span>
+          <h1>
+            Les cartes changent.<br /><span class="green">L’esprit reste.</span>
+          </h1>
+          <p>
+            La coinche prend ses quartiers ici. Asseyez-vous à une table avec
+            vos amis, l’ordinateur complète les places libres, ou jouez seul
+            contre trois bots.
+          </p>
+          <ul class="cq-facts">
+            <li><b>Gratuit</b> sans compte</li>
+            <li><b>1 à 4</b> joueurs</li>
+            <li><b>20 s</b> par coup</li>
+          </ul>
         </div>
-        <span class="seat south">Votre place</span>
+        <div class="cq-art" aria-hidden="true">
+          <div class="lx-fan">
+            <img src="../../assets/images/coinche/cards/JH.png" alt="" /><img
+              src="../../assets/images/coinche/cards/9H.png"
+              alt=""
+            /><img src="../../assets/images/coinche/cards/AH.png" alt="" /><img
+              src="../../assets/images/coinche/cards/10H.png"
+              alt=""
+            /><img src="../../assets/images/coinche/cards/KH.png" alt="" />
+          </div>
+          <span class="lx-chip">Coinchée ?</span>
+        </div>
       </section>
-      <section class="section" id="lobby-section">
+      <section class="section cq-lobby" id="lobby-section">
         <div class="section-heading">
           <div>
             <h2>Choisissez votre table.</h2>
+            <ol class="cq-steps">
+              <li>Un pseudo, une place</li>
+              <li>Lancez la partie</li>
+              <li>L’ordinateur complète</li>
+            </ol>
           </div>
           <!-- Activé par le jeu une fois chargé (lobby.js). -->
           <button type="button" class="button primary" id="solo-btn" disabled>
             Jouer seul contre l’ordinateur
           </button>
         </div>
-        <p class="caption" id="lobby-status" role="status"></p>
+        <p class="caption cq-status" id="lobby-status" role="status"></p>
         <div class="lobby-grid" id="lobby-grid"></div>
         <noscript
           ><div class="lobby-grid">
@@ -260,26 +265,29 @@
             </article>
           </div></noscript
         >
-        <p class="caption">
-          Choisissez un pseudo et une place, puis lancez la partie : les places
-          restées libres sont jouées par l’ordinateur, qui annonce et joue
-          automatiquement. Toutes les règles : bouton « Règles ».
-        </p>
-        <div class="new-lobby-row">
-          <button type="button" class="button outline" id="new-lobby-btn">
-            + Nouveau lobby</button
-          ><span class="caption"
-            >Ouvre un salon temporaire, supprimé automatiquement s’il reste vide
-            ou abandonné.</span
-          >
+        <div class="cq-tools">
+          <div class="cq-tool">
+            <h3>Une table de plus</h3>
+            <p class="caption">
+              Un salon temporaire, supprimé tout seul s’il reste vide ou
+              abandonné.
+            </p>
+            <button type="button" class="button outline" id="new-lobby-btn">
+              + Nouveau lobby
+            </button>
+          </div>
+          <form class="cq-tool private-form" id="private-form">
+            <h3><label for="private-code">Table privée</label></h3>
+            <p class="caption">
+              Cachée du lobby : seuls ceux qui ont le code la voient.
+            </p>
+            <div class="cq-code">
+              <input id="private-code" name="code" type="text" minlength="4" maxlength="20" placeholder="Code, ex. JEUDI" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" required>
+              <button type="submit" class="button outline">Rejoindre</button>
+              <button type="button" class="button outline" id="private-create-btn">Créer</button>
+            </div>
+          </form>
         </div>
-        <form class="new-lobby-row private-form" id="private-form">
-          <label for="private-code">Table privée</label>
-          <input id="private-code" name="code" type="text" minlength="4" maxlength="20" placeholder="Code, ex. JEUDI" autocomplete="off" autocapitalize="characters" required>
-          <button type="submit" class="button outline">Rejoindre</button>
-          <button type="button" class="button outline" id="private-create-btn">Créer</button>
-          <span class="caption">Cachée du lobby : seuls ceux qui ont le code la voient.</span>
-        </form>
       </section>
       <section
         class="game-view"
