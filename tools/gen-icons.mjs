@@ -56,6 +56,41 @@ const og = page(
    .url { margin: 44px 0 0; font-size: 26px; font-weight: 600; color: #f7f4fc; opacity: 0.75; }`,
 );
 
+// Aperçu de la page coinche (le lien qu'on s'envoie pour jouer) : éventail
+// sur le tapis vert, accent vert réservé à la coinche.
+const CARD = (id) => `data:image/png;base64,${b64(`site/assets/images/coinche/cards/${id}.png`)}`;
+const GREEN_LOGO = `data:image/png;base64,${b64("site/assets/images/logo-green.png")}`;
+const ogCoinche = page(
+  `<div class="og">
+    <div class="felt"><div class="fan">${["JH", "9H", "AH", "10H", "KH"]
+      .map((c, i) => `<img src="${CARD(c)}" style="transform: rotate(${(i - 2) * 13}deg)">`)
+      .join("")}</div></div>
+    <div class="copy">
+      <p class="eye"><img src="${GREEN_LOGO}">SCEP INVADERS</p>
+      <h1>Coinche<br><span>en ligne</span></h1>
+      <p class="sub">Gratuit, sans compte · entre amis ou en solo</p>
+      <p class="url">scepinvaders.com/jeux/coinche</p>
+    </div>
+  </div>`,
+  `.og { width: 100%; height: 100%; display: flex; align-items: center; gap: 56px;
+     padding: 0 64px 0 0; box-sizing: border-box;
+     background: linear-gradient(135deg, #1a1033 0%, #0c0914 70%); }
+   .felt { position: relative; flex: none; width: 560px; height: 100%;
+     background: radial-gradient(ellipse at 50% 62%, #2b6a26, #0f1e0f 72%);
+     box-shadow: inset -40px 0 60px -30px #0c0914; }
+   .fan { position: absolute; left: 50%; bottom: 175px; }
+   .fan img { position: absolute; left: -82px; bottom: 0; width: 164px; border-radius: 12px;
+     box-shadow: 0 18px 36px #000a; transform-origin: 50% 165%; }
+   .copy { font-family: Oxanium, system-ui, sans-serif; color: #f7f4fc; }
+   .eye { display: flex; align-items: center; gap: 12px; margin: 0; font: 700 20px Consolas, monospace;
+     letter-spacing: 0.14em; color: #39ff14; }
+   .eye img { width: 44px; }
+   h1 { margin: 22px 0 0; font-size: 104px; font-weight: 800; line-height: 0.98; letter-spacing: -0.02em; }
+   h1 span { color: #39ff14; }
+   .sub { margin: 28px 0 0; font: 500 23px system-ui, "Segoe UI", sans-serif; color: #bdb5cd; }
+   .url { margin: 36px 0 0; font-size: 24px; font-weight: 600; opacity: 0.75; }`,
+);
+
 async function launch() {
   for (const channel of [undefined, "msedge", "chrome"]) {
     try {
@@ -86,6 +121,7 @@ for (const s of [16, 32, 48, 64, 96, 192]) await shot(bare, s, s, path.join(IMG,
 await shot(bare, 512, 512, path.join(IMG, "icon-512.png"));
 await shot(icon({}), 180, 180, path.join(IMG, "apple-touch-icon.png"));
 await shot(og, 1200, 630, path.join(IMG, "og-scepi.jpg"), "jpeg");
+await shot(ogCoinche, 1200, 630, path.join(IMG, "og-coinche.jpg"), "jpeg");
 // Vignette carrée des résultats Google (il recadre au centre : le texte de
 // l'aperçu large serait coupé), désignée par primaryImageOfPage.
 await shot(icon({ logo: 0.78 }), 1200, 1200, path.join(IMG, "og-scepi-carre.jpg"), "jpeg");

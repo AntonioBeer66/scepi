@@ -956,11 +956,26 @@
       `.chess-piece[data-square="${square}"]`,
     );
     if (!element) return;
-    drag = { origin: square, element, moved: false, wasSelected };
+    drag = {
+      origin: square,
+      element,
+      moved: false,
+      wasSelected,
+      x0: event.clientX,
+      y0: event.clientY,
+    };
     drag.element.classList.add("is-dragging");
     drag.element.setPointerCapture(event.pointerId);
   }
   board.addEventListener("pointermove", (event) => {
+    // Petite zone morte : un toucher qui tremble reste un clic, la pièce
+    // ne saute pas sous le doigt.
+    if (
+      drag &&
+      !drag.moved &&
+      Math.hypot(event.clientX - drag.x0, event.clientY - drag.y0) < 5
+    )
+      return;
     if (drag) {
       drag.moved = true;
       const rect = board.getBoundingClientRect();

@@ -92,6 +92,9 @@ qu'à la coinche ; le violet clair sert de troisième ton, avec parcimonie.
 - Le logo vert est réservé à la coinche (filigrane du tapis).
 - Photos : uniquement celles de l'asso. Pas de banque d'images, pas de
   visuels de jeux tiers sans autorisation.
+- Icônes et images d'aperçu des liens (`og-scepi.jpg` pour le site,
+  `og-coinche.jpg` pour la coinche) se régénèrent avec
+  `node tools/gen-icons.mjs` ; ne pas les retoucher à la main.
 - Toute image décorative a `alt=""` ; toute photo de contenu a un `alt`
   qui la décrit.
 
