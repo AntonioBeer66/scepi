@@ -198,13 +198,61 @@ if (galleryImages.length && window.HTMLDialogElement) {
     if (e.key === "ArrowLeft") show(index - 1);
     else if (e.key === "ArrowRight") show(index + 1);
   });
-  let startX = null;
-  box.addEventListener("touchstart", (e) => (startX = e.touches[0].clientX), { passive: true });
-  box.addEventListener("touchend", (e) => {
-    if (startX === null) return;
-    const dx = e.changedTouches[0].clientX - startX;
-    if (Math.abs(dx) > 50) show(index + (dx < 0 ? 1 : -1));
-    startX = null;
+  // Glisser : la photo suit le doigt, puis part du côté du geste (assez loin
+  // ou assez vif) ou revient au centre. Au bout de l'album, elle résiste.
+  let swipe = null;
+  const ease = "transform .28s cubic-bezier(.2,.8,.2,1), opacity .28s";
+  box.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length !== 1) return (swipe = null);
+      const { clientX } = e.touches[0];
+      swipe = { x0: clientX, x: clientX, t: performance.now(), v: 0 };
+      big.style.transition = "none";
+    },
+    { passive: true },
+  );
+  box.addEventListener(
+    "touchmove",
+    (e) => {
+      if (!swipe) return;
+      const x = e.touches[0].clientX;
+      const now = performance.now();
+      swipe.v = (x - swipe.x) / Math.max(now - swipe.t, 1);
+      Object.assign(swipe, { x, t: now });
+      let dx = x - swipe.x0;
+      if (album.length < 2) dx = (dx * 0.55 * 300) / (300 + 0.55 * Math.abs(dx));
+      big.style.transform = `translateX(${dx}px)`;
+    },
+    { passive: true },
+  );
+  box.addEventListener("touchend", () => {
+    if (!swipe) return;
+    const dx = swipe.x - swipe.x0;
+    const v = performance.now() - swipe.t < 80 ? swipe.v : 0;
+    swipe = null;
+    big.style.transition = ease;
+    const dir = Math.abs(dx) > innerWidth * 0.25 || (Math.abs(dx) > 10 && Math.abs(v) > 0.5) ?Math.sign(v || dx) : 0;
+    if (!dir || album.length < 2 || Math.sign(dx) !== dir) {
+      big.style.transform = "";
+      return;
+    }
+    // Sort du côté du geste, la suivante entre par l'autre.
+    big.style.transform = `translateX(${dir * innerWidth}px)`;
+    big.style.opacity = "0";
+    setTimeout(() => {
+      show(index - dir);
+      big.style.transition = "none";
+      big.style.transform = `translateX(${-dir * innerWidth * 0.3}px)`;
+      big.getBoundingClientRect(); // repart de là
+      big.style.transition = ease;
+      big.style.transform = "";
+      big.style.opacity = "";
+    }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200);
+  });
+  box.addEventListener("close", () => {
+    big.style.transition = "none";
+    big.style.transform = big.style.opacity = "";
   });
 }
 

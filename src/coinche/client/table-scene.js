@@ -153,6 +153,8 @@ function bakeTextures(scene) {
 
 export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Moins d'animations : les mouvements deviennent instantanés, mais les
+  // temps de lecture (pli posé, bulle) restent ceux de tout le monde.
   const dur = (ms) => (reduced ? 0 : ms);
   // 2× au plus : au-delà, plus de deux fois plus de pixels à peindre pour
   // un gain invisible à distance d'écran.
@@ -595,11 +597,22 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     zone.on("drag", (pointer) => {
       if (!o.drag) return;
       box.setPosition(pointer.worldX + o.drag.dx, pointer.worldY + o.drag.dy);
+      // Vitesse verticale lissée (px/ms) : un geste vif vers le tapis joue
+      // la carte même lâchée tôt, comme une carte qu'on lance.
+      const now = performance.now();
+      const { y = box.y, t = now - 16 } = o.drag;
+      o.drag.vy = 0.6 * ((box.y - y) / Math.max(now - t, 1)) + 0.4 * (o.drag.vy || 0);
+      Object.assign(o.drag, { y: box.y, t: now });
     });
     zone.on("dragend", () => {
       if (!o.drag) return;
+      // Doigt immobile avant de lâcher : plus d'élan.
+      const flick =
+        o.drag.vy < -0.8 &&
+        performance.now() - o.drag.t < 80 &&
+        box.y < L.handY - L.cardH * 0.2;
       o.drag = null;
-      if (box.y < L.handY - L.cardH * 0.75 && isPlayable(id)) {
+      if ((flick || box.y < L.handY - L.cardH * 0.75) && isPlayable(id)) {
         onPlay(id);
         // Coup refusé (réseau, délai) : la carte reprend sa place.
         scene.time.delayedCall(800, () => hand.has(id) && placeHand(false));
@@ -771,10 +784,10 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     const halo = scene.add.graphics().setDepth(14);
     sweeping.push(...boxes, halo);
     const hold = trickPause(G) - COLLECT_MS; // gagnant en évidence
-    blockedUntil = performance.now() + dur(hold + COLLECT_MS);
+    blockedUntil = performance.now() + hold + dur(COLLECT_MS);
     const winner = lastTrick.cards.find((e) => e.siege === lastTrick.winnerSeat);
     const top = boxes.find((b) => b.id === winner?.carte.id);
-    scene.time.delayedCall(dur(250), () => {
+    scene.time.delayedCall(250, () => {
       if (!top?.active) return;
       top.setDepth(15);
       halo
@@ -797,7 +810,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       });
       if (teamOf(lastTrick.winnerSeat) === teamOf(me)) burst(top.x, top.y, 16);
     });
-    scene.time.delayedCall(dur(hold), () => {
+    scene.time.delayedCall(hold, () => {
       halo.destroy();
       const to = L.seat[posOf(lastTrick.winnerSeat)];
       scene.tweens.add({
@@ -1019,7 +1032,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         tweens: [
           { scale: 1, duration: dur(260), ease: "Back.easeOut" },
           { angle: box.angle > 0 ? -6 : 6, duration: dur(70), yoyo: true, repeat: 3 },
-          { y: box.y - r, alpha: 0, delay: dur(1100), duration: dur(450), ease: "Quad.easeIn" },
+          { y: box.y - r, alpha: 0, delay: 1100, duration: dur(450), ease: "Quad.easeIn" },
         ],
         onComplete: () => box.destroy(),
       });
