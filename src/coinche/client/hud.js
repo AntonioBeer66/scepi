@@ -88,7 +88,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   const compass = (s) => COMPASS[(s - anchor + 4) % 4];
   const seatName = (s) =>
     s === me
-      ? "Vous"
+      ? "Toi"
       : G.seats[s].type === "bot" && G.seats[s].name === "Ordinateur"
         ? `Bot ${compass(s)}`
         : G.seats[s].name; // joueur, ou bot qui l'a remplacé : « Bob (bot) »
@@ -125,7 +125,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       out.push("Rebelote !");
     if (same && G.plisJoues > prev.plisJoues)
       out.push(
-        `${who(G.lastTrick.winnerSeat)} ${G.lastTrick.winnerSeat === me ? "remportez" : "remporte"} le pli (${G.lastTrick.points} points).`,
+        `${G.lastTrick.winnerSeat === me ? "Tu remportes" : `${who(G.lastTrick.winnerSeat)} remporte`} le pli (${G.lastTrick.points} points).`,
       );
     if (G.phase === "SCORE" && prev?.phase !== "SCORE" && G.dernierResultat) {
       const r = G.dernierResultat;
@@ -142,7 +142,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       G.joueurActif === me &&
       G.tour !== prev?.tour
     )
-      out.push("À vous de jouer.");
+      out.push("À toi de jouer.");
     if (out.length) announcer.textContent = out.join(" ");
   }
 
@@ -195,7 +195,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const mult = G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "";
     const state = c.surcoinche ? " · surcoinché" : c.coinche ? " · coinché" : "";
     return `<span class="cg-contract">${suitSpan(c.atout)} ${label}${mult}</span>
-      <span class="cg-sub">${esc(seatName(c.preneur))} ${c.preneur === me ? "prenez" : "prend"}${state}</span>`;
+      <span class="cg-sub">${c.preneur === me ? "Tu prends" : `${esc(seatName(c.preneur))} prend`}${state}</span>`;
   }
 
   function renderTopbar() {
@@ -218,9 +218,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       `<button type="button" class="cg-icon" data-action="${action}" data-focus-key="${action}" aria-label="${label}"${pressed === undefined ? "" : ` aria-expanded="${pressed}"`}>${ICONS[icon]}<span>${label}</span></button>`;
     return `<div class="cg-topbar">
       <div class="cg-top-left">${renderContract()}</div>
-      <div class="cg-top-mid">${spectator ? '<span class="cg-watch" title="Touchez un joueur pour voir ses cartes">Spectateur · touchez un joueur</span>' : ""}<span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
+      <div class="cg-top-mid">${spectator ? '<span class="cg-watch" title="Touche un joueur pour voir ses cartes">Spectateur · touche un joueur</span>' : ""}<span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
         (G.phase === "ENCHERES" || G.phase === "JEU") && G.joueurActif === me
-          ? '<span class="cg-yourturn">À vous</span>'
+          ? '<span class="cg-yourturn">À toi</span>'
           : ""
       }</div>
       <div class="cg-top-right">
@@ -320,8 +320,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       (s) =>
         `<button type="button" class="cg-chip cg-suitchip${RED_SUITS.has(s) ? " is-red" : ""}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
     ).join("");
-    return `<div class="cg-bidbar is-open" role="group" aria-label="Votre enchère">
-      <span class="cg-prompt">À vous d’annoncer</span>
+    return `<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
+      <span class="cg-prompt">À toi d’annoncer</span>
       ${options.length ? `<div class="cg-chips" role="group" aria-label="Montant">${amounts}</div>
       <div class="cg-chips" role="group" aria-label="Atout">${suits}</div>` : ""}
       <div class="cg-actions">
@@ -355,7 +355,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
               : "non comptée (moins de 81)";
       return `<div class="cg-banner cg-recap ${won ? "is-win" : "is-loss"}">
         <b>${r.reussi ? "Contrat réussi" : "Contrat chuté"}</b>
-        <span>${bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${esc(seatName(r.preneur))} ${r.preneur === me ? "preniez" : "prenait"}</span>
+        <span>${bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${r.preneur === me ? "tu prenais" : `${esc(seatName(r.preneur))} prenait`}</span>
         ${
           r.points
             ? `<table class="cg-recap-table">
@@ -460,7 +460,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const action = btn.dataset.action;
     if (action === "encherir") {
       if (!ui.suit) {
-        ui.hint = "Choisissez d’abord une couleur d’atout.";
+        ui.hint = "Choisis d’abord une couleur d’atout.";
         render();
         return;
       }

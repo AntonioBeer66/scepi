@@ -1,131 +1,195 @@
 # SCEP Invaders — Direction artistique
 
-Statut : direction proposée pour guider la conception du site. Les couleurs d'interface et dimensions ci-dessous sont des choix de travail, pas une charte officielle existante.
+Ce document décrit le site tel qu'il est et les règles pour le faire évoluer
+sans le dénaturer. Les valeurs viennent de `site/assets/css/styles.css` ; en
+cas d'écart, c'est le CSS qui a raison et ce document qu'il faut corriger.
 
-## Intention
+## L'idée en une phrase
 
-Créer un site moderne, identifiable dès le premier écran comme celui de SCEP Invaders, l'association de jeux vidéo de l'ESCP. Associer l'univers spatial et arcade des logos à une interface contemporaine : composition aérée, grands titres, visuels forts et navigation simple.
+Le club de jeux de l'ESCP, vu comme une borne d'arcade dans l'espace : fond
+nuit violette, or des lauriers de l'emblème, envahisseurs en pixels — mais
+une interface d'aujourd'hui, aérée, qui se lit avant de se regarder.
 
-Le caractère gaming vient des emblèmes, des touches de pixels et de la lumière. La lisibilité et les contenus de l'association restent prioritaires. Éviter de transformer toute l'interface en écran de jeu rétro.
+Le jeu se voit dans les **emblèmes, les envahisseurs pixelisés, la lumière
+dorée et les cartes** ; jamais dans des effets qui gênent la lecture (texte
+en police pixel, néons partout, faux terminal).
 
-## Identité existante et logos
+## Couleurs
 
-Les fichiers de référence proviennent du dossier `Logos/` de `main`, consulté au commit `8139e02` et repris localement sur `antonio`. Conserver les originaux intacts ; préparer séparément les éventuels exports web.
+Fond sombre partout. L'or est la couleur de l'action ; le vert n'appartient
+qu'à la coinche ; le violet clair sert de troisième ton, avec parcimonie.
 
-Les visuels examinés présentent un emblème spatial triangulaire, une couronne de lauriers, des étoiles, un alien pixelisé et le nom SCEP Invaders. Ces éléments constituent le vocabulaire graphique du site.
-
-| Fichier | Usage proposé |
-| --- | --- |
-| `Logos/0.logo_scepi_revisité_qualitatif.png` | Emblème principal violet/or, grand format sur l'accueil et présentation de l'asso |
-| `Logos/scepi_logo_vert_v2.png` | Variante arcade, principalement pour la rubrique coinche ou une mise en avant ponctuelle |
-| `Logos/scepi_logo_blanc_v2.png` | Variante envisagée pour la navigation sur fond sombre, après vérification du rendu et de la transparence |
-| `Logos/invadachan.png` | Mascotte secondaire accompagnant la rubrique jeux de société ou un message convivial |
-
-Les autres variantes noires, blanches et en dégradé du dossier restent disponibles ; leur rendu doit être vérifié sur le fond final avant utilisation. La prévisualisation du logo blanc sur fond blanc ne permet pas d'évaluer sa lisibilité.
-
-### Mise en évidence des logos
-
-- Sur l'accueil, placer le logo coloré complet dans le premier écran, à côté du titre sur ordinateur et au-dessus ou sous le titre sur mobile.
-- Taille indicative : 300 à 420 px de large sur ordinateur, 180 à 240 px sur mobile, dans la limite de l'espace disponible.
-- Dans l'en-tête de toutes les pages, afficher un logo de 48 à 64 px de haut accompagné du nom SCEP Invaders en texte lisible. Le lien ramène à l'accueil.
-- Réutiliser une version adaptée dans le pied de page, avec LinkedIn et Instagram.
-- Conserver les proportions, les couleurs natives et l'intégralité de l'emblème. Ne pas étirer, découper les lauriers, recolorer par filtre CSS ou remplacer le logo par une recréation.
-- Laisser autour du logo une marge libre d'au moins 10 % de sa largeur. Ne pas le placer sur une photo chargée.
-- Vérifier la transparence réelle des PNG ; si un fond opaque existe, adapter le support ou préparer un export dédié sans modifier l'original.
-- Pour les petits formats, privilégier le nom lisible à côté de l'emblème. Une éventuelle icône simplifiée ou un favicon devra faire l'objet d'un export spécifique, pas d'un recadrage improvisé.
-
-## Palette proposée
-
-La palette principale s'inspire visuellement du logo coloré : violet profond, or et ambre. Les codes ci-dessous sont des propositions pour l'interface, et non des valeurs extraites précisément des fichiers.
-
-| Rôle | Couleur proposée | Usage |
+| Jeton | Valeur | Rôle |
 | --- | --- | --- |
-| Fond principal | `#0C0914` | Fond sombre presque noir |
-| Surface | `#181127` | Cartes et blocs de contenu |
-| Violet identitaire | `#281747` | Grands aplats, rappels de l'emblème |
-| Or | `#F4C600` | Bouton principal, repères et détails importants |
-| Ambre | `#D87924` | Accent chaud et halo décoratif discret |
-| Texte principal | `#F7F4FC` | Titres et paragraphes |
-| Texte secondaire | `#BDB5CD` | Dates, légendes et informations complémentaires |
-| Vert arcade | `#39FF14` | Accent local dans la coinche, inspiré de la variante verte |
+| `--bg` | `#0C0914` | Fond de page, nuit violette presque noire |
+| `--surface` | `#181127` | Panneaux (règles, échecs, partie) |
+| carte | `#120D1D` | Cartes de contenu et blocs de l'accueil |
+| `--brand` | `#281747` | Grands aplats violets, rappel de l'emblème |
+| `--gold` | `#F4C600` | Bouton principal, page active, repères, dates |
+| `--text` | `#F7F4FC` | Titres et texte important |
+| `--muted` | `#BDB5CD` | Paragraphes, légendes |
+| `--line` | `#FFFFFF19` | Filets et bordures |
+| `--green` | `#39FF14` | Coinche uniquement (accent, « à toi », score de ton équipe) |
+| violet clair | `#A98BFF` | Troisième ton des pictogrammes, avec l'or et le vert |
 
-Privilégier les surfaces sombres et réserver les couleurs vives à quelques éléments. Ne pas donner la même importance à l'or et au vert sur une page. Sur les boutons or ou vert, utiliser un texte sombre. Vérifier les contrastes des associations finales, notamment les textes secondaires et les états interactifs.
+- **Une seule action en or par zone.** Les actions secondaires sont des
+  boutons à contour.
+- **Texte sombre sur l'or et sur le vert** (`#181127`, `#241A00`).
+- **Rouge** réservé aux couleurs des cartes (`#FF6B6B` sur fond sombre) et
+  aux actions risquées (abandonner, quitter).
+- L'ambre envisagé au départ n'est pas utilisé : ne pas l'introduire sans
+  raison.
 
 ## Typographie
 
-- Titres : sans-serif géométrique, avec une présence forte et des formes légèrement techniques.
-- Texte courant : sans-serif sobre, confortable pour lire les présentations et les règles de coinche ; démarrer avec une pile système (`system-ui`, `Segoe UI`, sans-serif).
-- Petits labels, scores et repères : monospace possible pour évoquer l'arcade.
-- Limiter la composition à deux familles principales. Choisir et vérifier la licence d'une éventuelle police de titre avant de l'intégrer ; privilégier un hébergement local des fichiers.
-- Réserver les capitales aux titres courts et labels. Pas de paragraphes en police pixel ou en capitales.
-- Repères : texte courant 16 à 18 px, interligne autour de 1,6 ; titre d'accueil 48 à 72 px sur ordinateur et 32 à 44 px sur mobile.
+| Rôle | Police | Réglages |
+| --- | --- | --- |
+| Titres | **Oxanium** 500–800, hébergée dans `assets/fonts/` (SIL OFL) | approche `-0.02em`, interligne serré |
+| Texte | pile système (`system-ui`, `-apple-system`, `Segoe UI`, Roboto) | 16–18 px, interligne 1,6–1,75 |
+| Repères | Consolas / monospace | 11–12 px, capitales, approche `+0.1em` : eyebrows, dates, pied de page |
 
-## Composition et composants
+Échelle :
 
-- Largeur de lecture maximale d'environ 1 200 px, avec des marges latérales de 20 à 24 px sur mobile.
-- Espacements généreux, basés sur des multiples de 8 px ; distinguer nettement les sections.
-- Navigation commune avec les six intitulés : Accueil, L'asso, Coinche, Échecs, Nos événements, Contact.
-- En-tête sombre, éventuellement fixe si sa hauteur reste raisonnable ; menu mobile accessible et facilement refermable.
-- Boutons nets, hauteur minimale visée de 44 px, coins légèrement arrondis. Une action principale par zone et des actions secondaires moins marquées.
-- Cartes avec visuel, titre, court texte et lien clair ; bordures fines et rayons de 12 à 16 px. Les longs textes restent sur des surfaces simples.
-- Fonds spatiaux subtils : quelques étoiles, une grille discrète ou un halo derrière le logo. Utiliser ces motifs surtout dans les zones d'ouverture, sans les répéter derrière chaque paragraphe.
-- Éviter les panneaux translucides généralisés, les néons omniprésents et les effets de terminal qui réduisent la lisibilité.
+| Élément | Taille |
+| --- | --- |
+| `h1` | `clamp(3rem, 5.4vw, 4.7rem)`, graisse 750, interligne 1,07 |
+| `h2` | `clamp(1.8rem, 3.2vw, 2.8rem)`, interligne 1,15 |
+| `h3` | 1,15 à 1,6 rem selon le bloc |
+| Texte d'introduction | 17–18 px |
 
-## Déclinaison par page
+- **Tailles en `rem`** sur les pages du site, pour qu'elles suivent le
+  réglage de taille de texte du téléphone. Exception : le HUD de la coinche
+  et l'échiquier restent en `px`, leur mise en page est trop serrée.
+- La deuxième ligne d'un grand titre peut passer en or (vert sur la
+  coinche) : c'est la signature des en-têtes de page. Une seule par page.
+- **Le monospace ne sert jamais à un paragraphe**, seulement à des repères
+  courts.
 
-### Accueil
+## Mise en page
 
-1. Premier écran : grand logo coloré, nom SCEP Invaders, courte présentation de l'association ESCP. Actions « Découvrir l'asso » et « Voir nos événements ».
-2. Jeu du moment : deux grandes cartes de poids équivalent (jeux vidéo / jeux de société) avec visuel, titre et recommandation de l'asso. Invadachan peut accompagner la carte jeux de société sans masquer son contenu.
-3. Actualités et prochain événement : une mise en avant claire, avec date et inscription seulement lorsqu'elles sont connues.
-4. Coinche : bloc distinct avec accent vert, présentant les règles et, lorsqu'il est disponible, l'accès au jeu. Avant cela, proposer « Découvrir les règles » uniquement lorsque ces règles sont publiées.
-5. Instagram : quelques publications sélectionnées, intégrées dans une section cohérente avec le site et accompagnées d'un lien vers le compte.
+- Conteneur de 1 200 px au plus ; marges de 40 px par côté sur ordinateur,
+  20 px sur téléphone.
+- Espacements en multiples de 8 ; sections séparées de 76 px (48 px sur
+  téléphone).
+- En-tête collant sur fond flouté. Le décor spatial (étoiles, grille, halos)
+  n'existe que sur le premier écran de chaque page et s'efface en
+  descendant.
+- Rayons : 6 px pour les boutons, 12 à 20 px pour les cartes et panneaux,
+  999 px pour les pastilles.
+- **Sur téléphone, les cartes s'effacent** : filets horizontaux et contenu
+  à plat, pas de boîtes empilées (accueil, contact, ludothèque).
+- Points de rupture : 1100, 1000, 900, 760 (téléphone), 640, 560 px ; et
+  500 px de haut pour un téléphone en paysage.
 
-### L'asso
+## Logos et images
 
-Mettre en scène l'emblème, une présentation humaine et des photos de l'équipe. Présenter le bureau avec des portraits cohérents et des rôles lisibles. Faire comprendre comment rejoindre l'association.
+- L'emblème complet (lauriers, triangle, alien) apparaît dans l'en-tête de
+  chaque page (48–56 px de haut, avec le nom en texte) et en grand sur la
+  page L'asso. Jamais recadré, recoloré, étiré ni posé sur une photo
+  chargée.
+- **Invadachan**, la mascotte, porte l'accueil : en orbite au milieu des
+  envahisseurs, elle dit « asso de jeux » plus vite que l'emblème.
+- Le logo vert est réservé à la coinche (filigrane du tapis).
+- Photos : uniquement celles de l'asso. Pas de banque d'images, pas de
+  visuels de jeux tiers sans autorisation.
+- Toute image décorative a `alt=""` ; toute photo de contenu a un `alt`
+  qui la décrit.
 
-### Coinche
+## Composants
 
-Conserver la navigation et l'identité globale, avec un accent arcade vert. Pour la table de jeu, privilégier la lisibilité des cartes, de l'atout, des annonces et du score. Les couleurs et symboles des cartes gardent leur sens habituel ; la décoration ne doit pas gêner la partie.
+- **Bouton** : 48 px de haut au moins (44 px dans la partie de coinche),
+  texte 13 px gras. Le bouton s'enfonce à l'appui (`scale(0.97)`, 80 ms).
+- **Survols** toujours sous `@media (hover: hover)` : au doigt, ils
+  restaient collés. Le retour tactile passe par `:active`.
+- **Cartes « projecteur »** (accueil, ludothèque) : un halo doré suit la
+  souris ; rien sur écran tactile.
+- **Panneaux** (règles, historique) : ils sortent de l'élément qui les
+  ouvre (`transform-origin` du côté du bouton), pas du centre.
+- **Focus clavier** : contour or de 2 à 3 px, toujours visible.
 
-### Échecs
+## Mouvement
 
-Présenter l'échiquier comme une arène locale claire et concentrée. Donner la priorité à la lisibilité des cases, des pièces, des coups joués et du profil adverse. Les panneaux de sélection des bots et de couleur doivent rester accessibles sans alourdir l'espace de jeu.
+Le mouvement explique (d'où vient ce panneau, où va ce pli) ou confirme
+(le bouton a entendu). S'il ne fait ni l'un ni l'autre, il n'existe pas.
 
-### Nos événements
+| Jeton | Valeur | Usage |
+| --- | --- | --- |
+| `--ease-out` | `cubic-bezier(0.23, 1, 0.32, 1)` | Ce qui apparaît : panneaux, bulles, visionneuse |
+| `--ease-in-out` | `cubic-bezier(0.77, 0, 0.175, 1)` | Ce qui se déplace à l'écran : pièces d'échecs, cartes |
 
-Donner au prochain événement une grande affiche et des informations pratiques immédiatement visibles. Regrouper ensuite les éditions précédentes en cartes avec année, photo et récapitulatif. Le faible nombre d'événements ne justifie pas un calendrier visuellement vide.
+- Retour d'appui : 80–160 ms. Panneaux et bulles : 200 ms. Fenêtre de fin
+  de partie : 300 ms. Révélation des sections au défilement : 700 ms
+  (contenu éditorial, vu une fois).
+- **Jamais de départ lent (`ease-in`) sur l'interface**, jamais
+  d'apparition depuis `scale(0)`.
+- Ce qui revient souvent (bulle du bot à chaque coup, barre d'enchères)
+  reste bref et ne rejoue pas son apparition quand seul son contenu change.
+- Le rebond est réservé aux moments de fête (Belote, coinche, émoticônes).
+- Gestes : la carte ou la photo suit le doigt depuis l'endroit saisi ; au
+  lâcher, la vitesse compte autant que la distance (un geste vif suffit).
+- **Moins d'animations** (`prefers-reduced-motion`) : les mouvements
+  deviennent instantanés, mais les temps de lecture restent (le pli posé,
+  le résultat de la donne).
+- **Moins de transparence / plus de contraste** : en-tête plein, filets et
+  textes secondaires plus clairs.
 
-### Contact
+## Téléphone
 
-Page sobre : contact de l'association, partenariats, LinkedIn et Instagram. Garder le logo bien visible et les liens explicites. Ne pas utiliser automatiquement l'adresse Git personnelle comme adresse publique de l'association.
+Le site sert surtout sur téléphone (et dans l'appli Android).
 
-## Instagram, images et mouvement
+- Champs de saisie à 16 px au moins sur écran tactile (sinon iOS zoome).
+- `touch-action: manipulation` sur ce qui se touche : pas de délai.
+- Texte des boutons non sélectionnable ; texte de contenu toujours
+  sélectionnable.
+- Hauteurs plein écran en `svh` (premier écran) ou `dvh` (visionneuse,
+  partie), jamais `vh` seul.
+- Coinche en plein écran : `viewport-fit=cover` et marges
+  `env(safe-area-inset-*)` autour des encoches.
+- `theme-color` `#0C0914` sur chaque page.
+- Vérifier sur un vrai téléphone, de préférence un ancien : l'émulateur du
+  navigateur ne montre ni les survols collés, ni le zoom des champs, ni les
+  encoches.
 
-- Prévoir un état initial soigné pour Instagram : titre, explication courte, bouton de chargement et lien externe. Suivre les modalités techniques décrites dans `TECHNIQUE.md`.
-- Accepter le style natif des publications intégrées ; ne pas compter sur leur personnalisation interne pour assurer la cohérence du site.
-- Utiliser les photos de l'asso et les visuels de jeux disponibles avec les droits nécessaires. Garder un traitement cohérent et éviter les banques d'images génériques en remplacement de l'identité réelle.
-- L'utilisateur indique que l'utilisation des logos fournis et de la mascotte est normalement autorisée ; ils constituent la base de travail du site.
-- Pour ce site public, ne pas ajouter d'affiches, captures ou personnages tiers sans autorisation identifiée. Sans visuel autorisé, présenter le jeu par son titre, le commentaire de l'asso et un décor original CSS/SVG.
-- Consigner les sources, licences et attributions des ressources externes retenues dans un futur `CREDITS.md`, avec les crédits publics requis. Les modalités d'implémentation sont intégrées à la section 3 de `TECHNIQUE.md`.
-- Animations courtes et discrètes : transition de bouton ou légère apparition, généralement 150 à 250 ms.
-- Respecter `prefers-reduced-motion`. Aucun clignotement, curseur personnalisé imposé, son automatique ou animation permanente indispensable à la compréhension.
-- Les décorations sont ignorées par les lecteurs d'écran ; les logos-liens et les images de contenu ont des alternatives adaptées.
+## Les pages
 
-## Critères de validation visuelle
+| Page | Ce qu'elle doit faire comprendre |
+| --- | --- |
+| Accueil | Qui on est (l'asso de jeux de l'ESCP), ce qu'on fait (jeux vidéo, jeux de société, nouvelles technologies), qu'on peut jouer tout de suite, l'année en événements, comment nous rejoindre |
+| L'asso | L'emblème en grand, l'esprit, les générations, le bureau, comment entrer |
+| Jeux | La ludothèque : chaque jeu a sa grande carte (coinche sur tapis vert, échecs sur plateau violet) |
+| Coinche | Choisir une table en trois étapes ; jouer seul en un geste. Accent vert, carte sur tapis |
+| Échecs | L'échiquier d'abord, le bot et sa personnalité à côté |
+| Nos événements | Le prochain événement en grande affiche, puis les photos et la frise de l'année |
+| Actus | Les posts des membres ; un état vide qui invite à écrire |
+| Contact | Deux portes : rejoindre (Instagram) et monter un projet (adresse de l'asso) |
 
-- Le logo SCEP Invaders est identifiable dès l'arrivée sur le site, sur mobile comme sur ordinateur.
-- L'ensemble évoque le spatial et l'arcade tout en restant moderne, aéré et lisible.
-- Le violet et l'or structurent l'identité ; le vert reste un accent ciblé.
-- Les six onglets sont immédiatement compréhensibles et accessibles au clavier.
-- Le jeu vidéo et les jeux de société du moment disposent chacun d'une vraie mise en avant.
-- Les textes restent lisibles sur tous les fonds et les états de focus sont visibles.
-- Aucun logo n'est déformé, tronqué ou noyé dans les effets.
-- Le rendu reste cohérent sans chargement Instagram et sans animations.
+Navigation : Accueil, L'asso, Jeux, Nos événements, Actus, Contact. La page
+courante est soulignée d'or.
 
-## Documents associés
+## Le ton
 
-- [Objectifs et rubriques](README.md)
-- [Cadrage technique](TECHNIQUE.md)
-- [Logos sources](Logos/)
+- **On tutoie**, partout : c'est une asso étudiante qui parle à des
+  étudiants. Seule exception, la page Contact, qui s'adresse aussi aux
+  entreprises et partenaires : là, on vouvoie.
+- Phrases courtes, verbes d'action sur les boutons (« Jouer à la coinche »,
+  « Rejoindre », « Créer »). Un bouton garde le même nom d'un bout à
+  l'autre du parcours.
+- Les erreurs disent ce qui se passe et quoi faire, sans s'excuser
+  (« Serveur de jeu injoignable : tu peux jouer seul contre
+  l'ordinateur. »).
+- Un peu d'humour dans les bulles des bots et le pied de page, jamais dans
+  les règles ni les erreurs.
+- Le site se suffit à lui-même : pas de lien vers GitHub ni vers des
+  fichiers `.md` ; les règles du jeu sont écrites dans la page.
+
+## Ne jamais
+
+- Recadrer, recolorer ou déformer l'emblème.
+- Mettre l'or et le vert au même niveau sur une page.
+- Écrire un paragraphe en monospace ou en capitales.
+- Laisser un survol hors de `@media (hover: hover)`.
+- Animer `left`/`top`/`width`/`height` quand `transform` suffit (dette
+  connue : les pièces d'échecs).
+- Ajouter une animation qui empêche de lire ou de jouer.
+- Flouter par-dessus le canevas de la partie de coinche (redessiné à chaque
+  image : le flou serait recalculé en continu).

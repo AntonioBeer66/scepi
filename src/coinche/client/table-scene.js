@@ -358,7 +358,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       // son pseudo marqué « (bot) » (voir devenirBot dans game.js).
       const name =
         seat === me
-          ? "Vous"
+          ? "Toi"
           : bot && G.seats[seat].name === "Ordinateur"
             ? `Bot ${compassOf(seat)}`
             : G.seats[seat].name;
@@ -403,7 +403,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         box.add(hit);
       }
       box.add(
-        txt(0, 0, seat === me ? "Vous" : bot ? "IA" : initials(name), {
+        txt(0, 0, seat === me ? "Toi" : bot ? "IA" : initials(name), {
           fontSize: `${Math.round(L.r * (seat === me ? 0.5 : 0.62))}px`,
           fontStyle: "bold",
           color: COLORS.text,

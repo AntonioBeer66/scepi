@@ -11,7 +11,7 @@ import { OnlineClient } from "./online-client.js";
 import { createTable } from "./table-scene.js";
 
 const SOLO_SEATS = [
-  { type: "human", name: "Vous" },
+  { type: "human", name: "Toi" },
   { type: "bot" },
   { type: "bot" },
   { type: "bot" },

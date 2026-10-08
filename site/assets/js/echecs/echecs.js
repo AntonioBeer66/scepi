@@ -542,13 +542,13 @@
       portrait.style.backgroundImage = `url(${current.picture})`;
     if (message)
       message.textContent = lost
-        ? "Bien joué… Cette fois, la victoire est à vous. Une revanche ?"
-        : "Quelle partie ! Je prends ma revanche dès que vous voulez.";
+        ? "Bien joué… Cette fois, la victoire est à toi. Une revanche ?"
+        : "Quelle partie ! Je prends ma revanche dès que tu veux.";
     $("#chess-game-end-title").textContent = title;
     if (winner)
       winner.textContent = lost
         ? `${current.name || "Le bot"} a gagné`
-        : "Vous avez gagné";
+        : "Tu as gagné";
     modal.classList.add("is-visible");
   }
   function endGame(title) {
@@ -583,8 +583,8 @@
       now = new Date(),
       date = now.toISOString().slice(0, 10).replaceAll("-", "."),
       time = now.toISOString().slice(11, 19),
-      white = playerColor === "w" ? "Vous" : current.name || "Bot",
-      black = playerColor === "b" ? "Vous" : current.name || "Bot",
+      white = playerColor === "w" ? "Toi" : current.name || "Bot",
+      black = playerColor === "b" ? "Toi" : current.name || "Bot",
       checkmate =
         typeof game.in_checkmate === "function" && game.in_checkmate(),
       result = checkmate ? (game.turn() === "w" ? "0-1" : "1-0") : "*",
@@ -786,7 +786,7 @@
     else if (game.turn() !== playerColor) {
       status("Le profil réfléchit…", "Il cherche un coup à son image");
       botTimer = setTimeout(botMove, 240);
-    } else status("À vous de jouer", `${played.from} → ${played.to}`);
+    } else status("À toi de jouer", `${played.from} → ${played.to}`);
     return true;
   }
   function clearSelection() {
@@ -861,7 +861,7 @@
         : null;
     render();
     status(
-      index === timeline.length - 1 ? "À vous de jouer" : "Historique",
+      index === timeline.length - 1 ? "À toi de jouer" : "Historique",
       index
         ? `${index} demi-coup${index === 1 ? "" : "s"} joué${index === 1 ? "" : "s"}`
         : "Position initiale",
@@ -1072,7 +1072,7 @@
       render();
       if (game.game_over())
         endGame(isCheckmate() ? "Échec et mat" : "Partie terminée");
-      else status("À vous de jouer", `${fallback.from} → ${fallback.to}`);
+      else status("À toi de jouer", `${fallback.from} → ${fallback.to}`);
       return;
     }
     const rates = profile.rates_per_own_move || {};
@@ -1162,7 +1162,7 @@
     render();
     if (game.game_over())
       endGame(isCheckmate() ? "Échec et mat" : "Partie terminée");
-    else status("À vous de jouer", `${chosen.from} → ${chosen.to}`);
+    else status("À toi de jouer", `${chosen.from} → ${chosen.to}`);
   }
   async function loadProfile(value) {
     const profile = profiles[value];
@@ -1219,7 +1219,7 @@
     animation = null;
     $("#chess-position-title").textContent =
       `Défi · ${profiles[$("#chess-profile").value]?.name ?? "Bot"}`;
-    status("À vous de jouer", "Les blancs commencent");
+    status("À toi de jouer", "Les blancs commencent");
     render();
   }
   function addNavigation() {

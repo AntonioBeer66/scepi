@@ -79,7 +79,7 @@ function seatMarkup(t, p, i, joinLabel = "Rejoindre") {
   const isMe = session?.matchID === t.matchID && session.playerID === String(i);
   if (p.name) {
     return `<li class="seat-row is-taken">${head}
-      <span class="seat-occupant">${esc(p.name)}${isMe ? " <em>(vous)</em>" : ""}</span>
+      <span class="seat-occupant">${esc(p.name)}${isMe ? " <em>(toi)</em>" : ""}</span>
       ${isMe ? '<button type="button" class="button outline seat-btn" data-action="leave">Quitter</button>' : ""}
     </li>`;
   }
@@ -92,7 +92,7 @@ function seatMarkup(t, p, i, joinLabel = "Rejoindre") {
   return `<li class="seat-row">${head}
     <form class="seat-join-form" data-action="join" data-match="${esc(t.matchID)}" data-seat="${i}">
       <label class="visually-hidden" for="${esc(id)}">Pseudo pour la place ${label}</label>
-      <input id="${esc(id)}" type="text" name="pseudo" maxlength="${MAX_NAME}" placeholder="Votre pseudo" autocomplete="nickname" required>
+      <input id="${esc(id)}" type="text" name="pseudo" maxlength="${MAX_NAME}" placeholder="Ton pseudo" autocomplete="nickname" required>
       <button type="submit" class="button primary seat-btn">${joinLabel}</button>
     </form>
   </li>`;
@@ -104,7 +104,7 @@ function render() {
   if (!grid) return;
   if (tables === false) {
     status.textContent =
-      "Serveur de jeu injoignable : le jeu en ligne est indisponible pour l’instant. Vous pouvez jouer seul contre l’ordinateur.";
+      "Serveur de jeu injoignable : le jeu en ligne est indisponible pour l’instant. Tu peux jouer seul contre l’ordinateur.";
   } else if (tables === null) {
     status.textContent =
       "Connexion au serveur de jeu…";
