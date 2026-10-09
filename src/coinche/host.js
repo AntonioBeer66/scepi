@@ -61,6 +61,7 @@ export function createHost({
   // Le bot décide sur sa propre vue (une copie : l'état reçu peut être figé) ;
   // sa mémoire d'enchère voyage avec son action.
   function botSend(seat, decision) {
+    if (!playable(seat)) return;
     const g = seatView(G, seat);
     const action = decision(g, seat);
     if (!action) return;
@@ -71,6 +72,11 @@ export function createHost({
   }
 
   const isBot = (s) => G.seats[s].type === "bot";
+  // Décision prévue quand le siège était un bot : entre-temps un humain a
+  // pu le reprendre, ou sa main n'est pas encore visible de l'hôte (en
+  // ligne, le serveur la cache tant que le siège n'est pas un bot) ; le bot
+  // jouerait alors avec des cartes nulles.
+  const playable = (s) => isBot(s) && !G.hands[s].includes(null);
 
   function update(state) {
     G = state;
@@ -106,6 +112,7 @@ export function createHost({
               G.phase === "SURCOINCHE" &&
               G.contract.id === id &&
               !G.contract.surcoinche &&
+              playable(s) &&
               decide.wantsToSurcoinche(seatView(G, s), s)
             )
               send(s, { type: "SURCOINCHER" });
@@ -125,6 +132,7 @@ export function createHost({
             G.phase === "ENCHERES" &&
             G.contract?.id === id &&
             !G.contract.coinche &&
+            playable(s) &&
             decide.wantsToCoinche(seatView(G, s), s)
           )
             send(s, { type: "COINCHER" });

@@ -1,7 +1,8 @@
 // Coinche en ligne de bout en bout, dans de vrais navigateurs (Playwright)
 // sur le serveur du site (Worker + Durable Object) : deux joueurs
-// s'assoient à une table libre, la lancent et jouent deux plis ; un spectateur
-// regarde ; un joueur quitte, un bot le remplace sous son pseudo ; un
+// s'assoient à une table libre, la lancent et jouent deux plis, s'envoient
+// émoticône et message ; un spectateur (pseudo unique) regarde et écrit,
+// l'hôte le bannit du chat puis le débannit ; un joueur quitte, un bot le remplace sous son pseudo ; un
 // visiteur prend la place d'un bot ; tous partis, la partie s'arrête.
 //   npm start  (dans un autre terminal), puis :
 //   node tests/coinche-online-e2e.js
@@ -11,6 +12,7 @@
 import assert from "assert";
 import fs from "fs";
 import { chromium } from "playwright";
+import { CHAT_GAP_MS } from "../src/online/tables.js";
 
 const BASE = process.env.BASE || "http://localhost:8000";
 const PASSWORD =
@@ -41,7 +43,7 @@ async function visitor(label) {
       : { viewport: { width: 1440, height: 900 } },
   );
   const page = await ctx.newPage();
-  page.on("pageerror", (e) => errors.push(`${label} : ${e}`));
+  page.on("pageerror", (e) => errors.push(`${label} : ${e.stack}`));
   // Émoticônes reçues par WebSocket (voir le test d'émoticône plus bas).
   page.emotes = [];
   page.chats = [];
@@ -63,6 +65,19 @@ async function visitor(label) {
 }
 
 const phase = (page) => page.locator(".cg-phase").textContent();
+
+// Messages : envoyé palette ouverte ; le bouton d'envoi reste bloqué
+// CHAT_GAP_MS (anti-spam), attendu ici ; chatCount attend que la page en ait reçu n.
+async function say(page, text) {
+  await page.fill(".cg-chat input", text);
+  await page.press(".cg-chat input", "Enter");
+  assert.ok(await page.locator(".cg-chat button").isDisabled(), "envoi bloqué juste après un message");
+  await page.waitForTimeout(CHAT_GAP_MS + 200);
+}
+async function chatCount(page, n) {
+  for (let i = 0; i < 25 && page.chats.length < n; i++) await page.waitForTimeout(200);
+  assert.ok(page.chats.length >= n, `${n} messages attendus, ${page.chats.length} reçus`);
+}
 
 // Joue ce qui se présente (passe aux enchères, première carte jouable).
 async function playStep(page) {
@@ -126,12 +141,34 @@ try {
   await bob.click(".cg-emote-toggle");
   await bob.fill(".cg-chat input", "  Bien joué\npartenaire ");
   await bob.press(".cg-chat input", "Enter");
-  for (let i = 0; i < 25 && !alice.chats.length; i++) await alice.waitForTimeout(200);
-  assert.deepStrictEqual(alice.chats[0], { type: "chat", seat: 2, text: "Bien joué partenaire" }, "message reçu par Alice");
+  await chatCount(alice, 1);
+  assert.deepStrictEqual(
+    alice.chats[0],
+    { type: "chat", seat: 2, name: "Bob", text: "Bien joué partenaire" },
+    "message reçu par Alice",
+  );
+  // Palette d'Alice fermée : une pastille compte le message ; l'ouvrir l'efface.
+  await alice.waitForSelector(".cg-badge:not([hidden])");
+  assert.strictEqual(await alice.locator(".cg-badge").textContent(), "1");
+  await alice.click(".cg-emote-toggle");
+  assert.match(await alice.locator(".cg-chat-log").textContent(), /Bob Bien joué partenaire/);
+  assert.ok(await alice.locator(".cg-badge").isHidden(), "pastille effacée à l'ouverture");
+  await alice.click(".cg-emote-toggle");
+  await bob.click(".cg-emote-toggle"); // palette laissée ouverte après l'envoi
 
-  // Spectateur : voit la partie, sans aucune commande de jeu.
+  // Spectateur : donne un pseudo (pas celui d'un joueur de la table : refusé,
+  // retour au salon), voit la partie, sans aucune commande de jeu.
   const watcher = await visitor("Spectateur");
-  await watcher.click(`[data-action="watch"][data-match="${matchID}"]`);
+  const watchAs = async (name) => {
+    const form = watcher.locator(`form[data-action="watch"][data-match="${matchID}"]`);
+    await form.locator("input").fill(name);
+    await form.locator("button").click();
+  };
+  const refused = new Promise((ok) => watcher.once("dialog", (d) => { ok(d.message()); d.accept(); }));
+  await watchAs("ALICE");
+  assert.match(await refused, /déjà pris/, "pseudo d'un joueur refusé au spectateur");
+  await watcher.waitForSelector("#game-view", { state: "hidden" });
+  await watchAs("Zoé");
   await watcher.waitForSelector(".cg-watch", { timeout: 20000 });
   assert.match(await phase(watcher), /Donne/);
   assert.strictEqual(await watcher.locator(".hand-buttons button, .cg-bidbar").count(), 0);
@@ -148,6 +185,37 @@ try {
   await (process.env.MOBILE ? watcher.touchscreen.tap : watcher.mouse.click).call(process.env.MOBILE ? watcher.touchscreen : watcher.mouse, box.x + box.width - 10 - r - 14, box.y + sideY);
   await until(async () => seen(watcher.lastG).join() === String(next), [alice], 20000, "autre main regardée");
 
+  // Le spectateur figure dans la liste des spectateurs ; il écrit aussi (sans
+  // émoticônes), et son message arrive signé de son pseudo.
+  await alice.click(".cg-emote-toggle");
+  assert.match(await alice.locator(".cg-chat-watchers").textContent(), /Spectateurs : Zoé/);
+  await watcher.click(".cg-emote-toggle");
+  assert.strictEqual(await watcher.locator(".cg-emote").count(), 0, "pas d'émoticônes pour un spectateur");
+  await say(watcher, "Allez Nord-Sud");
+  await chatCount(alice, 2);
+  assert.deepStrictEqual(alice.chats[1], { type: "chat", seat: null, name: "Zoé", text: "Allez Nord-Sud" }, "message du spectateur");
+
+  // /ban : refusé à Bob (pas hôte) ; Alice, hôte, bannit Zoé, dont les
+  // messages ne partent plus ; /deban la laisse de nouveau écrire.
+  await bob.click(".cg-emote-toggle");
+  await say(bob, "/ban Zoé");
+  await chatCount(bob, 3); // Bob a déjà reçu le message de Zoé
+  assert.match(bob.chats.at(-1).text, /Seul l'hôte/);
+  await bob.click(".cg-emote-toggle");
+  await say(alice, "/ban zoé");
+  await chatCount(alice, 3);
+  assert.deepStrictEqual(alice.chats[2], { type: "chat", seat: null, name: null, text: "zoé est banni du chat par l'hôte." });
+  await say(watcher, "Je suis encore là ?");
+  await chatCount(watcher, 3); // le sien, le bannissement, le refus
+  assert.match(watcher.chats.at(-1).text, /banni/);
+  assert.strictEqual(alice.chats.length, 3, "message d'une personne bannie non relayé");
+  await say(alice, "/deban Zoé");
+  await say(watcher, "Merci !");
+  await chatCount(alice, 5);
+  assert.deepStrictEqual(alice.chats[4], { type: "chat", seat: null, name: "Zoé", text: "Merci !" }, "débannie");
+  await alice.click(".cg-emote-toggle");
+  await watcher.click(".cg-emote-toggle");
+
   // Bob quitte : un bot prend sa place, sous son pseudo marqué « (bot) »,
   // et la partie continue.
   await bob.locator(".cg-icon", { hasText: "Quitter" }).click();
@@ -160,6 +228,11 @@ try {
   // Dave arrive en cours de partie et prend la place d'un bot (Est).
   const dave = await visitor("Dave");
   const daveForm = dave.locator(`form[data-match="${matchID}"][data-seat="1"]`);
+  // Pseudo de la spectatrice : refusé aussi pour s'asseoir.
+  const daveRefused = new Promise((ok) => dave.once("dialog", (d) => { ok(d.message()); d.accept(); }));
+  await daveForm.locator("input").fill("ZOÉ");
+  await daveForm.locator("button", { hasText: "Remplacer le bot" }).click();
+  assert.match(await daveRefused, /déjà pris/, "pseudo d'un spectateur refusé à une place");
   await daveForm.locator("input").fill("Dave");
   await daveForm.locator("button", { hasText: "Remplacer le bot" }).click();
   await dave.waitForSelector(".cg-phase", { timeout: 20000 });

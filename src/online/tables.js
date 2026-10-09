@@ -37,6 +37,10 @@ export const EMOTES = new Map([
 // Message libre d'un joueur (palette des émoticônes) : une ligne, sans
 // caractères de contrôle, MAX_CHAT caractères au plus ; "" s'il n'en reste rien.
 export const MAX_CHAT = 140;
+export const CHAT_GAP_MS = 3000; // entre deux messages d'une même personne (anti-spam)
+// Deux pseudos sont les mêmes à la casse et aux espaces près.
+export const sameName = (a, b) =>
+  !!a && !!b && a.trim().toLocaleLowerCase("fr") === b.trim().toLocaleLowerCase("fr");
 export const cleanChat = (text) =>
   typeof text === "string"
     ? [...text.replace(/[\s\p{Cc}\p{Cf}]+/gu, " ").trim()].slice(0, MAX_CHAT).join("").trim()
@@ -214,6 +218,8 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
       const pseudo = String(name ?? "").trim().slice(0, MAX_NAME);
       if (!seatOk(seat) || !pseudo) return { error: "INVALIDE" };
       if (m.players[seat].name) return { error: "OCCUPEE" };
+      // Un pseudo par personne à une table (majuscules comprises).
+      if (m.players.some((p) => sameName(p.name, pseudo))) return { error: "PSEUDO_PRIS" };
       m.players[seat] = { name: pseudo, credentials: newCredentials() };
       // Partie en cours : il prend la main du bot qui tenait la place.
       const G = fiche.takeSeat?.(m.G, seat, pseudo);

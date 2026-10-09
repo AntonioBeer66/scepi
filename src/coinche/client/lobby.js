@@ -22,7 +22,12 @@ async function api(path, body) {
     headers: body ? { "content-type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(String(res.status));
+  if (!res.ok) {
+    const err = new Error(String(res.status));
+    const { error } = await res.json().catch(() => ({}));
+    if (error === "PSEUDO_PRIS") err.alert = "Ce pseudo est déjà pris à cette table : choisis-en un autre.";
+    throw err;
+  }
   return res.json();
 }
 const lobbyClient = {
@@ -152,7 +157,15 @@ function render() {
       <ul class="seat-list">${seats}</ul>
       <p class="caption">${live ? "Partie en cours" : `${filled}/4 places occupées`} · 2 équipes</p>
       ${mine && t.phase === "ATTENTE" ? `<button type="button" class="button primary seat-btn" data-action="start" data-match="${esc(t.matchID)}">Lancer la partie</button>` : ""}
-      ${live ? `<button type="button" class="button outline seat-btn" data-action="watch" data-match="${esc(t.matchID)}">Regarder</button>` : ""}
+      ${
+        live
+          ? `<form class="seat-join-form" data-action="watch" data-match="${esc(t.matchID)}">
+        <label class="visually-hidden" for="watch-${esc(t.matchID)}">Pseudo pour regarder et discuter</label>
+        <input id="watch-${esc(t.matchID)}" type="text" name="pseudo" maxlength="${MAX_NAME}" placeholder="Ton pseudo" autocomplete="nickname" required>
+        <button type="submit" class="button outline seat-btn">Regarder</button>
+      </form>`
+          : ""
+      }
     </article>`;
     })
     .join("");
@@ -246,7 +259,7 @@ function soloID(fresh) {
   }
 }
 
-async function enterGame({ online, launch = false, fresh = false, watch = null }) {
+async function enterGame({ online, launch = false, fresh = false, watch = null, watchName = null }) {
   // Réservé avant l'import : un rafraîchissement du salon qui aboutit
   // pendant le chargement lancerait sinon une seconde session.
   if (playing) return;
@@ -267,6 +280,7 @@ async function enterGame({ online, launch = false, fresh = false, watch = null }
     session,
     soloID: online ? null : soloID(fresh),
     watch,
+    watchName,
     seatsFromTable: () =>
       (tables || [])
         .find((t) => t.matchID === session?.matchID)
@@ -300,11 +314,16 @@ function init() {
   if (!grid) return;
 
   grid.addEventListener("submit", (event) => {
-    const form = event.target.closest('[data-action="join"]');
+    const form = event.target.closest('[data-action="join"], [data-action="watch"]');
     if (!form) return;
     event.preventDefault();
     const name = new FormData(form).get("pseudo").toString().trim().slice(0, MAX_NAME);
     if (!name || session) return;
+    // Spectateur : son pseudo signe ses messages à la table.
+    if (form.dataset.action === "watch") {
+      if (!playing) enterGame({ online: true, watch: form.dataset.match, watchName: name });
+      return;
+    }
     const { match: matchID, seat } = form.dataset;
     act(async () => {
       const { playerCredentials } = await lobbyClient.joinMatch(
@@ -320,10 +339,6 @@ function init() {
   grid.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    if (button.dataset.action === "watch" && !session && !playing) {
-      enterGame({ online: true, watch: button.dataset.match });
-      return;
-    }
     if (!session) return;
     if (button.dataset.action === "leave") {
       const { matchID, playerID, credentials } = session;

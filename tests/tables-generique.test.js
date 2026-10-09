@@ -36,6 +36,7 @@ const [id] = tables.list(() => false).map((t) => t.matchID);
 assert.strictEqual(tables.get(id).players.length, 2, "deux places, pas quatre");
 assert.strictEqual(tables.join(id, 2, "Zoé").error, "INVALIDE", "pas de troisième place");
 const cred = tables.join(id, 0, "Ana").credentials;
+assert.strictEqual(tables.join(id, 1, " ana ").error, "PSEUDO_PRIS", "même pseudo refusé à la même table");
 assert.ok(tables.auth(id, 0, cred));
 assert.ok(!tables.move(id, 0, "inconnu", []), "coup inconnu refusé");
 for (let i = 0; i < 3; i++) assert.ok(tables.move(id, 0, "avancer", []));

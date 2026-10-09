@@ -18,17 +18,24 @@
 // args } ; il reçoit { type: "state", G, stateID, players } à chaque
 // changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
 // { type: "emote", emote } → { type: "emote", seat, emote } à toute la table ;
-// messages : { type: "chat", text } → { type: "chat", seat, text } (cleanChat).
+// messages : { type: "chat", text } → { type: "chat", seat, name, text }
+// (cleanChat) ; un spectateur peut écrire s'il a donné son pseudo (hello.name,
+// unique à la table : sinon fermée en 4409). { type: "watchers", names } :
+// spectateurs, à chaque arrivée ou départ. L'hôte écrit « /ban pseudo » ou
+// « /deban pseudo » ; messages système : { type: "chat", seat: null, name: null }.
 // Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
 // Délais : le serveur les tient seul, avec une alarme pour tout le salon ;
 // elle joue l'action par défaut des tables dont la fenêtre est échue.
 import { DurableObject } from "cloudflare:workers";
 import {
+  CHAT_GAP_MS,
   cleanChat,
   createTables,
   EMOTES,
   historyCSV,
   historyRow,
+  MAX_NAME,
+  sameName,
   weekOf,
 } from "../src/online/tables.js";
 import { coinche as FICHE } from "../src/coinche/fiche.js";
@@ -98,6 +105,33 @@ export class Tables extends DurableObject {
       name: p.name,
       isConnected: live.has(s),
     }));
+  }
+
+  // Spectateurs connectés qui ont donné un pseudo.
+  watchers(id) {
+    return this.ctx
+      .getWebSockets(id)
+      .map((ws) => ws.deserializeAttachment())
+      .filter((a) => a?.ready && a.seat == null && a.name)
+      .map((a) => a.name);
+  }
+
+  // Pseudo déjà pris à cette table, par un joueur assis ou un spectateur.
+  nameTaken(id, name) {
+    const names = [...this.tables.get(id).players.map((p) => p.name), ...this.watchers(id)];
+    return names.some((n) => sameName(n, name));
+  }
+
+  // À toute la table (messages, liste des spectateurs) : rien n'est enregistré.
+  relay(id, msg) {
+    const out = JSON.stringify(msg);
+    for (const ws of this.ctx.getWebSockets(id)) {
+      try {
+        ws.send(out);
+      } catch {
+        // fermée entre-temps
+      }
+    }
   }
 
   save(id) {
@@ -274,8 +308,12 @@ export class Tables extends DurableObject {
       }
       const seat = Number(body?.playerID);
       if (action === "join") {
+        // Pseudo d'un spectateur en train de regarder : pris aussi.
+        if (this.nameTaken(id, String(body?.playerName ?? "").slice(0, MAX_NAME)))
+          return json({ error: "PSEUDO_PRIS" }, 409);
         const r = this.tables.join(id, seat, body?.playerName);
-        if (r.error) return json({ error: r.error }, r.error === "OCCUPEE" ? 409 : 400);
+        if (r.error)
+          return json({ error: r.error }, r.error === "OCCUPEE" || r.error === "PSEUDO_PRIS" ? 409 : 400);
         await this.save(id);
         this.broadcast(id);
         return json({ playerCredentials: r.credentials });
@@ -310,9 +348,14 @@ export class Tables extends DurableObject {
       const seat = msg.playerID == null ? null : Number(msg.playerID);
       // Mauvais identifiants : spectateur, rien de plus.
       const ok = seat != null && this.tables.auth(id, seat, msg.credentials);
-      ws.serializeAttachment({ id, seat: ok ? seat : null, ready: true });
+      // Pseudo d'un spectateur (ses messages, la liste des spectateurs) :
+      // refusé s'il est déjà pris à cette table.
+      const name = ok ? null : cleanChat(msg.name).slice(0, MAX_NAME).trim() || null;
+      if (name && this.nameTaken(id, name)) return ws.close(4409, "Pseudo pris");
+      ws.serializeAttachment({ id, seat: ok ? seat : null, name, ready: true });
       if (ok) this.broadcast(id); // les autres le voient connecté
       else this.send(ws, id);
+      this.relay(id, { type: "watchers", names: this.watchers(id) });
       return;
     }
     // Spectateur : regarde la main d'un joueur (il peut en changer).
@@ -321,25 +364,52 @@ export class Tables extends DurableObject {
       this.send(ws, id);
       return;
     }
-    // Émoticône ou message d'un joueur assis : relayé à toute la table, un
-    // par seconde au plus (rien n'est enregistré).
-    const text = msg?.type === "chat" ? cleanChat(msg.text) : "";
-    const social = (msg?.type === "emote" && EMOTES.has(msg.emote)) || text;
-    if (social && att.ready && att.seat != null) {
+    // Émoticône d'un joueur assis, ou message d'un joueur ou d'un spectateur
+    // qui a donné un pseudo : relayé à toute la table, délais anti-spam
+    // compris (rien n'est enregistré). Message système : seat et name null.
+    const m = this.tables.get(id);
+    const seated = att.ready && att.seat != null;
+    const name = seated ? m.players[att.seat].name : att.ready ? att.name : null;
+    const text = msg?.type === "chat" && name ? cleanChat(msg.text) : "";
+    if (text || (seated && msg?.type === "emote" && EMOTES.has(msg.emote))) {
       const now = Date.now();
-      if (now - (att.lastEmote || 0) < 1000) return;
-      ws.serializeAttachment({ ...att, lastEmote: now });
-      const out = JSON.stringify(
-        text ? { type: "chat", seat: att.seat, text } : { type: "emote", seat: att.seat, emote: msg.emote },
-      );
-      for (const other of this.ctx.getWebSockets(id)) {
-        try {
-          other.send(out);
-        } catch {
-          // fermée entre-temps
-        }
+      const tell = (t) => ws.send(JSON.stringify({ type: "chat", seat: null, name: null, text: t }));
+      // Anti-spam : une émoticône par seconde, un message toutes les CHAT_GAP_MS.
+      if (text) {
+        if (now - (att.lastChat || 0) < CHAT_GAP_MS) return tell("Pas si vite : attends un peu avant d'écrire.");
+        ws.serializeAttachment({ ...att, lastChat: now });
+      } else {
+        if (now - (att.lastEmote || 0) < 1000) return;
+        ws.serializeAttachment({ ...att, lastEmote: now });
       }
-      return;
+      const bans = m.chatBans || [];
+      // « /ban pseudo », « /deban pseudo » : l'hôte de la partie (G.hote)
+      // seulement ; la liste est enregistrée avec la table.
+      const command = text.match(/^\/(ban|deban)\b\s*(.*)$/i);
+      if (command) {
+        const [, verb, target] = command;
+        if (!seated || att.seat !== m.G?.hote) return tell("Seul l'hôte de la table peut bannir ou débannir.");
+        if (!target) return tell(`Écris /${verb.toLowerCase()} suivi du pseudo.`);
+        if (verb.toLowerCase() === "deban") {
+          if (!bans.some((b) => sameName(b, target))) return tell(`« ${target} » n'est pas banni.`);
+          m.chatBans = bans.filter((b) => !sameName(b, target));
+          await this.save(id);
+          return this.relay(id, { type: "chat", seat: null, name: null, text: `${target} peut de nouveau écrire.` });
+        }
+        if (sameName(target, name)) return tell("Tu ne peux pas te bannir toi-même.");
+        if (!this.nameTaken(id, target)) return tell(`Personne ne s'appelle « ${target} » à cette table.`);
+        if (!bans.some((b) => sameName(b, target))) m.chatBans = [...bans, target];
+        await this.save(id);
+        return this.relay(id, { type: "chat", seat: null, name: null, text: `${target} est banni du chat par l'hôte.` });
+      }
+      // Banni : plus rien ne part, émoticônes comprises. ponytail: banni par
+      // pseudo ; un spectateur peut revenir sous un autre (bannir par
+      // empreinte d'IP, voir ownerOf, si ça arrive).
+      if (bans.some((b) => sameName(b, name))) return tell("Tu es banni du chat de cette table.");
+      return this.relay(
+        id,
+        text ? { type: "chat", seat: att.seat, name, text } : { type: "emote", seat: att.seat, emote: msg.emote },
+      );
     }
     if (msg?.type === "move" && att.ready && att.seat != null) {
       // Identifiants revérifiés : la place a pu être libérée entre-temps.
@@ -367,6 +437,7 @@ export class Tables extends DurableObject {
       // déjà fermée
     }
     if (att?.id) this.broadcast(att.id);
+    if (att?.id && att.name) this.relay(att.id, { type: "watchers", names: this.watchers(att.id) });
   }
 
   webSocketError(ws) {

@@ -6,6 +6,7 @@ import { Client } from "boardgame.io/client";
 import { Local } from "boardgame.io/multiplayer";
 import { Coinche } from "../game.js";
 import { trickPause } from "../host.js";
+import { sameName } from "../../online/tables.js";
 import { createHud } from "./hud.js";
 import { OnlineClient } from "./online-client.js";
 import { createTable } from "./table-scene.js";
@@ -26,6 +27,7 @@ export function startSession({
   session,
   soloID,
   watch, // matchID d'une partie à regarder en spectateur
+  watchName, // pseudo du spectateur (ses messages)
   seatsFromTable,
   onExit,
 }) {
@@ -38,6 +40,7 @@ export function startSession({
         matchID: watch || session.matchID,
         playerID,
         credentials: watch ? undefined : session.credentials,
+        name: watch ? watchName : undefined,
       })
     : // Solo : état gardé dans ce navigateur (reprise après rechargement),
       // effacé en quittant ; soloID est propre à chaque partie.
@@ -174,10 +177,21 @@ export function startSession({
   });
   if (online) {
     client.onEmote((seat, e) => table.showEmote(seat, e));
-    client.onChat((seat, text) => {
-      if (seat === me || !hud.chatOff()) table.showChat(seat, text);
+    // Message d'un joueur : dans la liste et en bulle près de lui ; d'un
+    // spectateur (seat null) ou du serveur (name null) : dans la liste seulement.
+    client.onChat((seat, name, text) => {
+      if (name == null) return hud.chat(null, text, { system: true });
+      const mine = watch ? seat == null && sameName(name, watchName) : seat === me;
+      if (hud.chat(name, text, { mine, watcher: seat == null }) && seat != null)
+        table.showChat(seat, text);
     });
-    client.onGone(stop); // partie arrêtée : retour au salon
+    client.onWatchers((names) => hud.watchers(names));
+    // Partie arrêtée, ou pseudo de spectateur déjà pris : retour au salon.
+    client.onGone((why) => {
+      stop();
+      if (why === "PSEUDO_PRIS")
+        window.alert("Ce pseudo est déjà pris à cette table : choisis-en un autre.");
+    });
   }
   client.start();
 

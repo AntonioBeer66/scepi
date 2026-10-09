@@ -3105,7 +3105,67 @@ body.is-playing .header {
   outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
-/* Message à la table, sous les émoticônes (en ligne seulement). */
+/* Pastille : messages arrivés palette fermée. */
+.cg-emote-toggle {
+  position: relative;
+}
+.cg-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid #1a0710;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #181127;
+  font: 800 11px/16px system-ui, sans-serif;
+  text-align: center;
+}
+.cg-badge[hidden] {
+  display: none;
+}
+/* Messages de la table (en ligne seulement), sous les émoticônes. */
+.cg-chat-log {
+  grid-column: 1 / -1;
+  max-height: 8.5em;
+  margin: 0;
+  padding: 6px 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  border-radius: 12px;
+  background: #0006;
+  color: #f7f4fc;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.cg-chat-log[hidden] {
+  display: none;
+}
+.cg-chat-log b {
+  color: var(--gold);
+}
+.cg-chat-log .is-mine b {
+  color: #ff8a8a;
+}
+.cg-chat-log .is-system {
+  color: #f7f4fcb3;
+  font-style: italic;
+}
+.cg-chat-watchers {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #f7f4fcb3;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+/* Spectateur : la palette n'a que les messages, sur une colonne assez large. */
+.cg-emote-list.is-chat-only {
+  grid-template-columns: min(300px, calc(100vw - 48px));
+}
 .cg-chat {
   grid-column: 1 / -1;
   display: flex;
@@ -3139,6 +3199,13 @@ body.is-playing .header {
   font-size: 18px;
   cursor: pointer;
   touch-action: manipulation;
+}
+.cg-chat button:disabled {
+  background: #5a2430;
+  color: #f7f4fcb3;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: default;
 }
 .cg-chat-off {
   grid-column: 1 / -1;

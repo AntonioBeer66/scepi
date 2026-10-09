@@ -17,7 +17,7 @@ import {
   computeLegal,
   teamOf,
 } from "../engine.js";
-import { EMOTES, MAX_CHAT } from "../../online/tables.js";
+import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
 
 const RED_SUITS = new Set(["H", "D"]);
 const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
@@ -492,37 +492,55 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
 
   preloadFlash();
 
-  // Émoticônes rapides, en bas à droite (pas pour les spectateurs) : le
-  // bouton ouvre la palette ; une par seconde au plus. En ligne, la palette
-  // a aussi une ligne de message, et une case pour masquer ceux des autres
-  // (retenue dans ce navigateur).
+  // Bouton en bas à droite : il ouvre la palette ; une émoticône ou un
+  // message par seconde au plus. Émoticônes : joueurs assis seulement. En
+  // ligne, la palette a aussi les messages de la table (spectateurs compris),
+  // une ligne pour écrire et une case pour masquer ceux des autres (retenue
+  // dans ce navigateur) ; une pastille compte les messages pas encore vus.
   let chatOff = false;
   try {
     chatOff = localStorage.getItem(CHAT_OFF_KEY) === "1";
   } catch {
     // stockage bloqué : messages affichés
   }
-  if (!spectator) {
+  let addChat = () => {};
+  let setWatchers = () => {};
+  if (!spectator || onChat) {
+    const label = spectator ? "Messages" : "Émoticônes et messages";
     const box = document.createElement("div");
     box.className = "cg-emotes";
-    box.innerHTML = `<div class="cg-emote-list" hidden>${[...EMOTES]
-      .map(
-        ([e, taunt]) =>
-          `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e} ${taunt}"><span aria-hidden="true">${e}</span><b>${taunt}</b></button>`,
-      )
-      .join("")}${
+    box.innerHTML = `<div class="cg-emote-list${spectator ? " is-chat-only" : ""}" hidden>${
+      spectator
+        ? ""
+        : [...EMOTES]
+            .map(
+              ([e, taunt]) =>
+                `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e} ${taunt}"><span aria-hidden="true">${e}</span><b>${taunt}</b></button>`,
+            )
+            .join("")
+    }${
       onChat
-        ? `<form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="Message à la table" aria-label="Message à la table"><button type="submit" aria-label="Envoyer le message">➤</button></form>
+        ? `<p class="cg-chat-watchers">👀 Aucun spectateur</p>
+      <ol class="cg-chat-log" aria-label="Messages de la table" aria-live="polite" hidden></ol>
+      <form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="Message à la table" aria-label="Message à la table"><button type="submit" aria-label="Envoyer le message">➤</button></form>
       <label class="cg-chat-off"><input type="checkbox"${chatOff ? " checked" : ""}> Masquer les messages des autres</label>`
         : ""
     }</div>
-      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="Émoticônes et messages">😈</button>`;
+      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="${label}">${spectator ? "💬" : "😈"}<span class="cg-badge" hidden></span></button>`;
     root.append(box);
     const list = box.querySelector(".cg-emote-list");
     const toggle = box.querySelector(".cg-emote-toggle");
+    const badge = box.querySelector(".cg-badge");
+    const log = box.querySelector(".cg-chat-log");
+    let unread = 0;
     const open = (yes) => {
       list.hidden = !yes;
       toggle.setAttribute("aria-expanded", String(yes));
+      if (!yes) return;
+      unread = 0;
+      badge.hidden = true;
+      toggle.setAttribute("aria-label", label);
+      if (log) log.scrollTop = log.scrollHeight;
     };
     let nextEmote = 0;
     box.addEventListener("click", (event) => {
@@ -533,16 +551,25 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       onEmote(btn.dataset.emote);
       open(false);
     });
+    // Palette laissée ouverte après un message ; le bouton d'envoi compte
+    // les secondes avant le suivant (anti-spam, le serveur vérifie aussi).
+    const send = box.querySelector(".cg-chat button");
     box.querySelector(".cg-chat")?.addEventListener("submit", (event) => {
       event.preventDefault();
       const input = event.target.elements.text;
       const text = input.value.trim();
-      if (!text || Date.now() < nextEmote) return;
-      nextEmote = Date.now() + 1000;
+      if (!text || send.disabled) return;
       onChat(text);
       input.value = "";
-      input.blur(); // ferme le clavier du téléphone
-      open(false);
+      send.disabled = true;
+      let left = Math.ceil(CHAT_GAP_MS / 1000);
+      send.textContent = String(left);
+      const tick = setInterval(() => {
+        if (--left > 0) return (send.textContent = String(left));
+        clearInterval(tick);
+        send.disabled = false;
+        send.textContent = "➤";
+      }, 1000);
     });
     box.querySelector(".cg-chat-off input")?.addEventListener("change", (event) => {
       chatOff = event.target.checked;
@@ -552,10 +579,45 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         // stockage bloqué : réglage pour cette partie seulement
       }
     });
+    // Texte posé en textContent : jamais interprété comme du HTML.
+    // Message du serveur (name null : bannissement…) : en italique, sans pseudo.
+    addChat = (name, text, mine, watcher) => {
+      if (!log) return;
+      const li = document.createElement("li");
+      if (mine) li.className = "is-mine";
+      if (name == null) {
+        li.className = "is-system";
+        li.textContent = text;
+      } else {
+        const who = document.createElement("b");
+        who.textContent = watcher ? `${name} 👀` : name;
+        li.append(who, " ", text);
+      }
+      log.append(li);
+      while (log.children.length > 50) log.firstChild.remove();
+      log.hidden = false;
+      log.scrollTop = log.scrollHeight;
+      if (!list.hidden || mine) return;
+      unread++;
+      badge.textContent = unread > 9 ? "9+" : String(unread);
+      badge.hidden = false;
+      toggle.setAttribute("aria-label", `${label}, ${unread} non lu${unread > 1 ? "s" : ""}`);
+    };
+    const watchersLine = box.querySelector(".cg-chat-watchers");
+    setWatchers = (names) => {
+      if (watchersLine)
+        watchersLine.textContent = names.length ? `👀 Spectateurs : ${names.join(", ")}` : "👀 Aucun spectateur";
+    };
   }
 
   return {
-    chatOff: () => chatOff,
+    // Message reçu : ajouté à la liste ; false s'il est masqué (pas de bulle).
+    chat(name, text, { mine = false, watcher = false, system = false } = {}) {
+      if (chatOff && !mine && !system) return false;
+      addChat(name, text, mine, watcher);
+      return true;
+    },
+    watchers: (names) => setWatchers(names),
     waiting() {
       paint([
         `<div class="cg-topbar"><div class="cg-top-left"><span class="cg-contract is-empty">Table en préparation</span></div>
@@ -568,6 +630,10 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     },
     update(next, prev) {
       G = next;
+      // L'hôte de la partie peut bannir du chat (worker/tables.js).
+      const chatInput = root.querySelector(".cg-chat input");
+      if (chatInput)
+        chatInput.placeholder = G.hote === me ? "Message, /ban ou /deban pseudo" : "Message à la table";
       if (prev && prev.donneNumero !== G.donneNumero && ui.panel === "trick")
         ui.panel = null;
       if (prev && G.contract?.coinche && !prev.contract?.coinche) flash("coinche");

@@ -2,11 +2,14 @@
 // même interface que le client boardgame.io qu'utilise session.js :
 // moves.<coup>(...args), subscribe(fn), getState(), matchData, start(), stop().
 // En plus : sendEmote(e) et onEmote(fn(seat, e)) pour les émoticônes rapides,
-// sendChat(text) et onChat(fn(seat, text)) pour les messages,
-// onGone(fn) quand la table est effacée (tous les joueurs partis),
+// sendChat(text) et onChat(fn(seat, name, text)) pour les messages (seat
+// null : un spectateur, name : son pseudo, donné à la connexion ; seat et
+// name null : message du serveur), onWatchers(fn(names)) pour les spectateurs,
+// onGone(fn(why)) quand la table est effacée (tous les joueurs partis) ou
+// que le pseudo du spectateur est déjà pris (why = "PSEUDO_PRIS"),
 // peek(seat) pour qu'un spectateur voie la main d'un joueur.
 // Reconnexion automatique (délai croissant) si la connexion tombe.
-export function OnlineClient({ api, matchID, playerID, credentials }) {
+export function OnlineClient({ api, matchID, playerID, credentials, name }) {
   let ws = null;
   let state = null;
   let stopped = false;
@@ -15,7 +18,8 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
   const subs = new Set();
   let emoteFn = null;
   let chatFn = null;
-  let goneFn = null; // la table n'existe plus (partie arrêtée)
+  let watchersFn = null;
+  let goneFn = null; // la table n'existe plus (partie arrêtée), ou pseudo pris
   let peekSeat = null; // spectateur : main regardée, redemandée à la reconnexion
   const notify = () => subs.forEach((fn) => fn(state));
 
@@ -54,6 +58,9 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
     onChat(fn) {
       chatFn = fn;
     },
+    onWatchers(fn) {
+      watchersFn = fn;
+    },
     onGone(fn) {
       goneFn = fn;
     },
@@ -73,7 +80,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
     ws.onopen = () => {
       retry = 0;
       // Identifiants dans le premier message plutôt que dans l'adresse.
-      ws.send(JSON.stringify({ type: "hello", playerID, credentials }));
+      ws.send(JSON.stringify({ type: "hello", playerID, credentials, name }));
       if (peekSeat != null) ws.send(JSON.stringify({ type: "peek", seat: peekSeat }));
     };
     ws.onmessage = (event) => {
@@ -84,7 +91,8 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
         return;
       }
       if (msg.type === "emote") return emoteFn?.(msg.seat, msg.emote);
-      if (msg.type === "chat") return chatFn?.(msg.seat, msg.text);
+      if (msg.type === "chat") return chatFn?.(msg.seat, msg.name, msg.text);
+      if (msg.type === "watchers") return watchersFn?.(msg.names);
       if (msg.type !== "state") return;
       client.matchData = msg.players;
       state = { G: msg.G, _stateID: msg.stateID, isConnected: true };
@@ -98,6 +106,8 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
       }
       // Table fermée (abandonnée, effacée) : inutile d'insister.
       if (event.code === 4404) return goneFn?.();
+      // Pseudo de spectateur déjà pris à cette table.
+      if (event.code === 4409) return goneFn?.("PSEUDO_PRIS");
       timer = setTimeout(connect, Math.min(10000, 500 * 2 ** retry++));
     };
   }
