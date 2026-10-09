@@ -337,8 +337,8 @@ function botTurnAction(seat) {
 //   Compétition : soutenir le partenaire en « forçant » de 10, deux fois au
 //     plus par ligne ; au-dessus de l'adversaire, surenchérir seulement si
 //     la donne simulée le vaut mieux que le laisser jouer (voir étape 3).
-//   Ouverture au barème, sauf contrat que la simulation voit chuter une
-//     fois sur deux ; 80 hors barème s'il réussit 7 fois sur 10.
+//   Ouverture au barème, sauf contrat que la simulation réussit moins de
+//     6 fois sur 10 ; 80 hors barème s'il réussit 7 fois sur 10.
 //   Ces barèmes ont été calibrés en simulation (parties bots contre bots
 //     sur les mêmes donnes) : le système d'origine surenchérissait.
 //   Coinche : jouer la donne sur des mondes compatibles avec les enchères
@@ -539,6 +539,7 @@ function raiseBy(seat, suit) {
 // simulation. En duel : +4,7 pts/donne.
 const BID_DECISION_MS = 400;
 const COMPETE_MARGIN = 60; // voir l'étape 3
+const OPEN_VETO = 0.6; // voir l'étape 4
 // Capot : seulement si la simulation le réussit assez souvent. Le barème
 // seul (clefs, ouverture sans fausse carte) en réussissait moins d'un sur
 // trois : les relances de compétition se lisaient comme des As.
@@ -760,13 +761,16 @@ function decideBid(seat) {
   // (prédit 7 % → 41 % réels, 93 % → 85 %). Mesuré en duel contre le
   // barème : marge 0 → +3,8 pts/donne, 30 → +9,8, 60 → +14,3, 90 → +10,7 ;
   // les interventions du barème non retenues ici coûtaient des points.
+  // La couleur annoncée par le partenaire est candidate dès un atout en
+  // main (les autres, à partir de trois) : il en tient la longueur.
   if (cur && !ours && !capotOnTable && min <= 160) {
     const pOpp = makeProbability(seat, cur);
     if (pOpp !== null) {
       const evPass = -pOpp * cur.montant + (1 - pOpp) * 160;
       let best = null;
       for (const s of SUITS) {
-        if (suitCards(hand, s).length < 3) continue;
+        const partnerSuit = !!partnerBid && partnerBid.atout === s;
+        if (suitCards(hand, s).length < (partnerSuit ? 1 : 3)) continue;
         // Main forte : le palier du barème est candidat aussi (130 plutôt
         // que 90, +1,9 pt/donne), il renseigne le partenaire.
         const sys = Math.min(160, openingBid(hand, s, false));
@@ -785,8 +789,10 @@ function decideBid(seat) {
 
   // 4. Ouvrir au barème (il renseigne le partenaire : l'ouverture « à
   // l'espérance » seule perdait 1,7 pt/donne), mais pas un contrat que la
-  // simulation voit chuter une fois sur deux (+2,3 pts/donne) ; et ouvrir
-  // 80 hors barème quand la simulation le réussit 7 fois sur 10 (+1,5).
+  // simulation réussit moins de 6 fois sur 10 (seuil 0,5 : +2,3 pts/donne ;
+  // 0,6 et la couleur du partenaire à l'étape 3 : encore +0,8, mesuré au
+  // Monte-Carlo sur 125 000 donnes jumelles ; 0,4 coûtait 0,2) ; et ouvrir
+  // 80 hors barème quand la simulation le réussit 7 fois sur 10 (+1,5 ; 6 fois : −1,1).
   if (!ours && !capotOnTable) {
     const light =
       (!cur && G.passesConsecutives === 3) || Math.random() < p.bluff;
@@ -803,7 +809,7 @@ function decideBid(seat) {
         return o160 && (p160 === null || p160 >= 0.5) ? o160 : PASS;
       }
       const pm = o ? pMake(o.montant, o.atout) : null;
-      if (o && (pm === null || pm >= 0.5)) return o;
+      if (o && (pm === null || pm >= OPEN_VETO)) return o;
       if (o && !plain) G.forced[team]--; // veto : ce forçage n'a pas servi
     } else if (!cur) {
       let best = null;
