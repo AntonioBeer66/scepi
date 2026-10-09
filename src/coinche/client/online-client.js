@@ -2,6 +2,7 @@
 // même interface que le client boardgame.io qu'utilise session.js :
 // moves.<coup>(...args), subscribe(fn), getState(), matchData, start(), stop().
 // En plus : sendEmote(e) et onEmote(fn(seat, e)) pour les émoticônes rapides,
+// sendChat(text) et onChat(fn(seat, text)) pour les messages,
 // onGone(fn) quand la table est effacée (tous les joueurs partis),
 // peek(seat) pour qu'un spectateur voie la main d'un joueur.
 // Reconnexion automatique (délai croissant) si la connexion tombe.
@@ -13,6 +14,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
   let timer = null;
   const subs = new Set();
   let emoteFn = null;
+  let chatFn = null;
   let goneFn = null; // la table n'existe plus (partie arrêtée)
   let peekSeat = null; // spectateur : main regardée, redemandée à la reconnexion
   const notify = () => subs.forEach((fn) => fn(state));
@@ -39,12 +41,18 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
     sendEmote(emote) {
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "emote", emote }));
     },
+    sendChat(text) {
+      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "chat", text }));
+    },
     peek(seat) {
       peekSeat = seat;
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "peek", seat }));
     },
     onEmote(fn) {
       emoteFn = fn;
+    },
+    onChat(fn) {
+      chatFn = fn;
     },
     onGone(fn) {
       goneFn = fn;
@@ -76,6 +84,7 @@ export function OnlineClient({ api, matchID, playerID, credentials }) {
         return;
       }
       if (msg.type === "emote") return emoteFn?.(msg.seat, msg.emote);
+      if (msg.type === "chat") return chatFn?.(msg.seat, msg.text);
       if (msg.type !== "state") return;
       client.matchData = msg.players;
       state = { G: msg.G, _stateID: msg.stateID, isConnected: true };

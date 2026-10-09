@@ -2,7 +2,13 @@
 // minimal à deux joueurs (le premier à 3 l'emporte) y tourne avec sa seule fiche.
 //   node tests/tables-generique.test.js
 import assert from "assert";
-import { createTables, historyCSV, historyRow } from "../src/online/tables.js";
+import { cleanChat, createTables, historyCSV, historyRow, MAX_CHAT } from "../src/online/tables.js";
+
+// Messages : une ligne nette, bornée, rien si vide ou pas du texte.
+assert.strictEqual(cleanChat("  Bien\n\tjoué\u0000 ! "), "Bien joué !");
+assert.strictEqual(cleanChat(" \n "), "");
+assert.strictEqual(cleanChat(42), "");
+assert.strictEqual([...cleanChat("😂".repeat(500))].length, MAX_CHAT, "coupé sans casser d'émoji");
 
 const Course = {
   setup: () => ({ points: [0, 0], fini: false }),

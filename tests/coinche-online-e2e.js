@@ -44,9 +44,11 @@ async function visitor(label) {
   page.on("pageerror", (e) => errors.push(`${label} : ${e}`));
   // Émoticônes reçues par WebSocket (voir le test d'émoticône plus bas).
   page.emotes = [];
+  page.chats = [];
   page.on("websocket", (ws) =>
     ws.on("framereceived", ({ payload }) => {
       if (String(payload).includes('"type":"emote"')) page.emotes.push(JSON.parse(payload));
+      if (String(payload).includes('"type":"chat"')) page.chats.push(JSON.parse(payload));
       if (String(payload).includes('"type":"state"')) page.lastG = JSON.parse(payload).G;
     }),
   );
@@ -118,6 +120,14 @@ try {
   await alice.click('.cg-emote[data-emote="😭"]');
   for (let i = 0; i < 25 && !bob.emotes.length; i++) await bob.waitForTimeout(200);
   assert.deepStrictEqual(bob.emotes[0], { type: "emote", seat: 0, emote: "😭" }, "émoticône reçue par Bob");
+
+  // Message de Bob (siège 2), une seconde plus tard (une par seconde au plus).
+  await bob.waitForTimeout(1100);
+  await bob.click(".cg-emote-toggle");
+  await bob.fill(".cg-chat input", "  Bien joué\npartenaire ");
+  await bob.press(".cg-chat input", "Enter");
+  for (let i = 0; i < 25 && !alice.chats.length; i++) await alice.waitForTimeout(200);
+  assert.deepStrictEqual(alice.chats[0], { type: "chat", seat: 2, text: "Bien joué partenaire" }, "message reçu par Alice");
 
   // Spectateur : voit la partie, sans aucune commande de jeu.
   const watcher = await visitor("Spectateur");

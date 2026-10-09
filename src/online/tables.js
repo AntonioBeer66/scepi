@@ -34,6 +34,14 @@ export const EMOTES = new Map([
   ["🤷", "Bah"],
 ]);
 
+// Message libre d'un joueur (palette des émoticônes) : une ligne, sans
+// caractères de contrôle, MAX_CHAT caractères au plus ; "" s'il n'en reste rien.
+export const MAX_CHAT = 140;
+export const cleanChat = (text) =>
+  typeof text === "string"
+    ? [...text.replace(/[\s\p{Cc}\p{Cf}]+/gu, " ").trim()].slice(0, MAX_CHAT).join("").trim()
+    : "";
+
 export const PERMANENT_TABLES = 4;
 export const MAX_MATCHES = 40;
 // Salons et tables privées ouverts par une même personne (empreinte de son

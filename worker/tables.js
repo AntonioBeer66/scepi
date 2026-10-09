@@ -17,12 +17,14 @@
 // credentials? } (sans playerID : spectateur), puis { type: "move", name,
 // args } ; il reçoit { type: "state", G, stateID, players } à chaque
 // changement, G filtré pour ce qu'il a le droit de voir. Émoticônes :
-// { type: "emote", emote } → { type: "emote", seat, emote } à toute la table.
+// { type: "emote", emote } → { type: "emote", seat, emote } à toute la table ;
+// messages : { type: "chat", text } → { type: "chat", seat, text } (cleanChat).
 // Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
 // Délais : le serveur les tient seul, avec une alarme pour tout le salon ;
 // elle joue l'action par défaut des tables dont la fenêtre est échue.
 import { DurableObject } from "cloudflare:workers";
 import {
+  cleanChat,
   createTables,
   EMOTES,
   historyCSV,
@@ -319,13 +321,17 @@ export class Tables extends DurableObject {
       this.send(ws, id);
       return;
     }
-    // Émoticône d'un joueur assis : relayée à toute la table, une par
-    // seconde au plus (rien n'est enregistré).
-    if (msg?.type === "emote" && att.ready && att.seat != null && EMOTES.has(msg.emote)) {
+    // Émoticône ou message d'un joueur assis : relayé à toute la table, un
+    // par seconde au plus (rien n'est enregistré).
+    const text = msg?.type === "chat" ? cleanChat(msg.text) : "";
+    const social = (msg?.type === "emote" && EMOTES.has(msg.emote)) || text;
+    if (social && att.ready && att.seat != null) {
       const now = Date.now();
       if (now - (att.lastEmote || 0) < 1000) return;
       ws.serializeAttachment({ ...att, lastEmote: now });
-      const out = JSON.stringify({ type: "emote", seat: att.seat, emote: msg.emote });
+      const out = JSON.stringify(
+        text ? { type: "chat", seat: att.seat, text } : { type: "emote", seat: att.seat, emote: msg.emote },
+      );
       for (const other of this.ctx.getWebSockets(id)) {
         try {
           other.send(out);

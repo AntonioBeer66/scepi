@@ -1037,6 +1037,40 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         onComplete: () => box.destroy(),
       });
     },
+    // Message d'un siège : bulle de BD près de son avatar (placée comme
+    // l'émoticône), restée le temps de la lire puis effacée. Texte Phaser :
+    // jamais interprété comme du HTML.
+    showChat(seat, text) {
+      if (!scene || !L) return;
+      const { x, y } = L.seat[posOf(seat)];
+      const r = L.r;
+      const label = txt(0, 0, text, {
+        fontSize: "15px",
+        fontStyle: "700",
+        color: COLORS.ink,
+        wordWrap: { width: Math.min(240, parent.clientWidth * 0.55), useAdvancedWrap: true },
+      }).setOrigin(0.5, 0.5);
+      const w = label.width + 22;
+      const h = label.height + 14;
+      const bg = scene.add.graphics();
+      bg.fillStyle(0xfffaf0, 1).lineStyle(2, COLORS.gold, 1);
+      bg.fillRoundedRect(-w / 2, -h / 2, w, h, 12).strokeRoundedRect(-w / 2, -h / 2, w, h, 12);
+      const below = y < L.cy;
+      if (below) bg.fillTriangle(-7, -h / 2 + 1, 7, -h / 2 + 1, 0, -h / 2 - 10);
+      else bg.fillTriangle(-7, h / 2 - 1, 7, h / 2 - 1, 0, h / 2 + 10);
+      const bx = Phaser.Math.Clamp(x, w / 2 + 8, parent.clientWidth - w / 2 - 8);
+      const by = below ? y + r + h / 2 + 14 : y - r - h / 2 - 14;
+      const box = scene.add.container(bx, by, [bg, label]).setDepth(86).setScale(0.6).setAlpha(0);
+      scene.tweens.chain({
+        targets: box,
+        tweens: [
+          { scale: 1, alpha: 1, duration: dur(180), ease: "Back.easeOut" },
+          // Le temps de lire : ~60 ms par caractère, entre 2,5 et 7 s.
+          { alpha: 0, delay: Phaser.Math.Clamp(text.length * 60, 2500, 7000), duration: dur(300) },
+        ],
+        onComplete: () => box.destroy(),
+      });
+    },
     destroy() {
       resizer.disconnect();
       game.destroy(true);

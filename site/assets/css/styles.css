@@ -3105,6 +3105,53 @@ body.is-playing .header {
   outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
+/* Message à la table, sous les émoticônes (en ligne seulement). */
+.cg-chat {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+}
+.cg-chat input {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #ff5b5b66;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #181127;
+  font-family: inherit;
+  font-size: 16px; /* 16 px : pas de zoom sur iPhone */
+  font-weight: 600;
+}
+.cg-chat input:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 1px;
+}
+.cg-chat button {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: 2px solid var(--gold);
+  border-radius: 999px;
+  background: #d62839;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.cg-chat-off {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f7f4fcb3;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cg-chat-off input {
+  accent-color: var(--gold);
+}
 @media (prefers-reduced-motion: reduce) {
   .cg-emote,
   .cg-emote-toggle {

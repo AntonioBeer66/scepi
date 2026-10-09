@@ -102,6 +102,7 @@ export function startSession({
     onFocusCard: (id) => table.focusCard(id),
     // En ligne, le serveur renvoie l'émoticône à toute la table (vous compris).
     onEmote: online ? (e) => client.sendEmote(e) : (e) => table.showEmote(me, e),
+    onChat: online ? (text) => client.sendChat(text) : null, // seul contre les bots : pas de messages
   });
 
   let launched = false;
@@ -173,6 +174,9 @@ export function startSession({
   });
   if (online) {
     client.onEmote((seat, e) => table.showEmote(seat, e));
+    client.onChat((seat, text) => {
+      if (seat === me || !hud.chatOff()) table.showChat(seat, text);
+    });
     client.onGone(stop); // partie arrêtée : retour au salon
   }
   client.start();

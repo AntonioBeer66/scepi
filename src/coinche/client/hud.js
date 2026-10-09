@@ -17,9 +17,10 @@ import {
   computeLegal,
   teamOf,
 } from "../engine.js";
-import { EMOTES } from "../../online/tables.js";
+import { EMOTES, MAX_CHAT } from "../../online/tables.js";
 
 const RED_SUITS = new Set(["H", "D"]);
+const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
 const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
 const FLASH = {
@@ -60,7 +61,7 @@ function suitSpan(s) {
   return `<span class="cg-suit${RED_SUITS.has(s) ? " is-red" : ""}">${SUIT_SYMBOL[s]}</span>`;
 }
 
-export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard, onEmote }) {
+export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard, onEmote, onChat }) {
   const root = view.querySelector("#game-hud");
   // Barre de jeu, panneau, résultat, enchères, boutons des cartes (voir paint).
   const painted = [];
@@ -492,7 +493,15 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   preloadFlash();
 
   // Émoticônes rapides, en bas à droite (pas pour les spectateurs) : le
-  // bouton ouvre la palette ; une par seconde au plus.
+  // bouton ouvre la palette ; une par seconde au plus. En ligne, la palette
+  // a aussi une ligne de message, et une case pour masquer ceux des autres
+  // (retenue dans ce navigateur).
+  let chatOff = false;
+  try {
+    chatOff = localStorage.getItem(CHAT_OFF_KEY) === "1";
+  } catch {
+    // stockage bloqué : messages affichés
+  }
   if (!spectator) {
     const box = document.createElement("div");
     box.className = "cg-emotes";
@@ -501,8 +510,13 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         ([e, taunt]) =>
           `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e} ${taunt}"><span aria-hidden="true">${e}</span><b>${taunt}</b></button>`,
       )
-      .join("")}</div>
-      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="Émoticônes">😈</button>`;
+      .join("")}${
+      onChat
+        ? `<form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="Message à la table" aria-label="Message à la table"><button type="submit" aria-label="Envoyer le message">➤</button></form>
+      <label class="cg-chat-off"><input type="checkbox"${chatOff ? " checked" : ""}> Masquer les messages des autres</label>`
+        : ""
+    }</div>
+      <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="Émoticônes et messages">😈</button>`;
     root.append(box);
     const list = box.querySelector(".cg-emote-list");
     const toggle = box.querySelector(".cg-emote-toggle");
@@ -519,9 +533,29 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       onEmote(btn.dataset.emote);
       open(false);
     });
+    box.querySelector(".cg-chat")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const input = event.target.elements.text;
+      const text = input.value.trim();
+      if (!text || Date.now() < nextEmote) return;
+      nextEmote = Date.now() + 1000;
+      onChat(text);
+      input.value = "";
+      input.blur(); // ferme le clavier du téléphone
+      open(false);
+    });
+    box.querySelector(".cg-chat-off input")?.addEventListener("change", (event) => {
+      chatOff = event.target.checked;
+      try {
+        localStorage.setItem(CHAT_OFF_KEY, chatOff ? "1" : "0");
+      } catch {
+        // stockage bloqué : réglage pour cette partie seulement
+      }
+    });
   }
 
   return {
+    chatOff: () => chatOff,
     waiting() {
       paint([
         `<div class="cg-topbar"><div class="cg-top-left"><span class="cg-contract is-empty">Table en préparation</span></div>
