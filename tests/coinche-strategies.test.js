@@ -34,7 +34,7 @@ const bid = (b) => (b.type === 'PASSER' ? 'passe' : `${b.montant}${b.atout}`);
 function setup(over = {}) {
   const g = {
     hands: [[], [], [], []], contract: null, donneAnnonces: [], bidMemo: [{}, {}, {}, {}], forced: [0, 0],
-    scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0, coincheAppetite: 1 })),
+    scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0 })),
     seen: {}, void: [{}, {}, {}, {}], trumpMax: [8, 8, 8, 8], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
     pointsPlis: [0, 0], plisGagnes: [0, 0], playedBy: [[], [], [], []], seats: [0, 1, 2, 3].map(() => ({ type: 'bot' })), donneur: 3,
     belote: { beloteDeclared: false, rebeloteDeclared: false, kingPlayed: false, queenPlayed: false }, ...over,
@@ -98,7 +98,7 @@ const huitPiques = 'JS 9S AS 10S KS QS 8S 7S';
 setup({ hands: hands(huitPiques) });
 check('Huit atouts : ouvrir directement en Générale belotée', bid(api.botDecideBid(0)), '520S');
 setup({ hands: hands('AH AD AC 10H 10D 10C KH KD', huitPiques), mainsInitiales: hands('', huitPiques), contract: contract(1, 270, 'S'),
-  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0, coincheAppetite: 2.5 })) });
+  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0 })) });
 check('Huit atouts : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
 setup({ hands: hands(huitPiques), mainsInitiales: hands(huitPiques), contract: contract(0, 270, 'S', { coinche: true }) });
 check('Huit atouts coinchés : surcoincher d’office', api.botWantsToSurcoinche(0), true);

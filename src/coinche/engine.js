@@ -10,8 +10,8 @@
 // qui est public : ils imaginent les autres mains (mondes compatibles avec
 // les cartes tombées, les manques, les obligations de couper, les enchères
 // relues avec leur propre système et les appels). Chaque robot a une
-// « personnalité » tirée en début de partie (agressivité, bluff, appétit à
-// coincher) pour ne pas être parfaitement prévisible.
+// « personnalité » tirée en début de partie (agressivité, bluff) pour ne
+// pas être parfaitement prévisible.
 
 export const SUITS = ["H", "D", "C", "S"];
 export const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -222,12 +222,11 @@ function newGame(seats) {
     // la fenêtre qu'il vise, jamais pour la suivante.
     tour: 0,
     // Personnalité tirée une fois par siège : agressivité (relève les
-    // enchères plus tôt), bluff (probabilité d'annoncer au-delà de sa
-    // force réelle) et appétit à coincher.
+    // enchères plus tôt) et bluff (probabilité d'annoncer au-delà de sa
+    // force réelle). La coinche, elle, suit la même règle pour tous.
     personalities: [0, 1, 2, 3].map(() => ({
       aggr: 0.75 + rand() * 0.6,
       bluff: rand() * 0.14,
-      coincheAppetite: 0.7 + rand() * 0.7,
     })),
   };
   startNewDonne();
@@ -848,7 +847,6 @@ function contractHuitAtouts(contract) {
 function botWantsToCoinche(seat) {
   const contract = G.contract;
   if (!contract || teamOf(seat) === contract.equipePreneur) return false;
-  const p = personality(seat);
   const hand = G.hands[seat];
   const atout = contract.atout;
   // Score de la partie. Le preneur sort s'il réussit, coinché ou non : la
@@ -872,17 +870,19 @@ function botWantsToCoinche(seat) {
   // La coinche double tout : rentable dès que le contrat réussit moins
   // souvent que 160/(160+M) (67 % à 80, 57 % à 120). On joue la donne sur
   // des mondes compatibles avec les enchères ; la marge couvre la
-  // surcoinche et une estimation encore pessimiste (72 % prédits pour 78 %
-  // réels). Calibrée en duel contre l'ancienne formule : 0,1 → −2,7
-  // pts/donne, 0,25 → 0, 0,4 → +0,6, 0,5 → +0,9, 0,6 → +0,4.
+  // surcoinche et des probabilités simulées trop tranchées (un contrat vu
+  // réussir 5 % des fois réussit 26 % des fois, 15 % → 46 %). Calibrée en
+  // duel : 0,1 → −2,7 pts/donne, 0,25 → 0, 0,4 → +0,6, 0,5 → +0,9, 0,6 →
+  // +0,4 contre l'ancienne formule ; puis, la même pour tous les bots (plus
+  // d'appétit à coincher tiré au hasard) et sur 96 mondes, 0,35 → +2,0
+  // contre 0,5 (0,25 : −0,8 ; 0,15 : −2,1).
   const pMake = makeProbability(seat, contract);
   return (
     pMake !== null &&
-    pMake <
-      160 / (160 + contract.montant) - COINCHE_MARGIN / p.coincheAppetite
+    pMake < 160 / (160 + contract.montant) - COINCHE_MARGIN
   );
 }
-const COINCHE_MARGIN = 0.5;
+const COINCHE_MARGIN = 0.35;
 
 function botWantsToSurcoinche(seat) {
   const contract = G.contract;
@@ -1450,7 +1450,7 @@ function heuristicCard(seat) {
 export const tuning = {
   mcSamples: 96,
   bidWorlds: 96,
-  bidSamples: 48, // coinche et surcoinche (+1,4 pt/donne contre 24)
+  bidSamples: 96, // coinche et surcoinche (48 : +1,4 pt/donne contre 24 ; 96 : 7 ms par décision sur PC)
   now: () => Date.now(),
 };
 const MC_BUDGET_MS = 250;
