@@ -41,6 +41,15 @@ if (
 // android/, voir README) : proposé seulement sur Android, et masqué dans
 // l'appli elle-même (WebView : « ; wv) »).
 const footerSocial = document.querySelector(".footer-social");
+// Les pages d'information restent accessibles depuis tout le site, y compris
+// lorsque le pied de page est rendu dans une page de jeu.
+const footerBottom = document.querySelector(".footer-bottom");
+if (footerBottom && !footerBottom.querySelector("[data-legal-links]")) {
+  const legalLinks = document.createElement("span");
+  legalLinks.dataset.legalLinks = "";
+  legalLinks.innerHTML = `<a href="${siteRoot}confidentialite/index.html">Confidentialité</a> · <a href="${siteRoot}cookies/index.html">Cookies</a> · <a href="${siteRoot}accessibilite/index.html">Accessibilité</a>`;
+  footerBottom.append(legalLinks);
+}
 if (
   footerSocial &&
   /Android/i.test(navigator.userAgent) &&
