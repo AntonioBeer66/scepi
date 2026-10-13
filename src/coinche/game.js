@@ -63,6 +63,11 @@ export const Coinche = {
   }),
 
   turn: { activePlayers: ALL_ACTIVE },
+  // Pas d'annulation : le tour ne finit jamais, boardgame.io empilait une
+  // copie de l'état à chaque coup (1 Mo par donne). En solo, l'état gardé
+  // dans le navigateur dépassait son quota (vite sur Safari) : plus aucun
+  // coup n'était accepté, seuls les délais faisaient encore avancer.
+  disableUndo: true,
 
   moves: {
     // Lancer (ou relancer après la fin) : seats = [{ type, name }], les

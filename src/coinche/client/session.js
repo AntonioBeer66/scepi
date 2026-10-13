@@ -34,6 +34,17 @@ export function startSession({
   // Spectateur : ni place ni identifiants ; le serveur n'envoie aucune main.
   const playerID = watch ? undefined : online ? session.playerID : "0";
   const me = watch ? -1 : Number(playerID);
+  // Partie solo enregistrée avant disableUndo (game.js) : sa pile
+  // d'annulation, inutile, remplit le stockage ; on la vide pour la reprendre.
+  if (!online)
+    try {
+      const key = `${SOLO_STORAGE}_state`;
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (saved?.some(([, s]) => s?._undo?.length)) {
+        for (const [, s] of saved) s._undo = s._redo = [];
+        localStorage.setItem(key, JSON.stringify(saved));
+      }
+    } catch {}
   const client = online
     ? OnlineClient({
         api,
