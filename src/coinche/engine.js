@@ -407,6 +407,18 @@ function sideAces(hand, atout) {
   for (const s of SUITS) if (s !== atout && has(m, s, "A")) n++;
   return n;
 }
+// Tenue d'atout pour annoncer une couleur hors barème (intervention à
+// l'espérance, 80 par la simulation) : Valet, 9 ou As, ou quatre atouts et
+// deux As à côté. Sans elle, la simulation laissait passer des 120 avec
+// Roi-Dame-10 cinquièmes : réussis 29 % du temps, −124 pts nets.
+function tenue(hand, s) {
+  return (
+    holds(hand, s, "J") ||
+    holds(hand, s, "9") ||
+    holds(hand, s, "A") ||
+    (suitCards(hand, s).length >= 4 && sideAces(hand, s) >= 2)
+  );
+}
 function round10(n) {
   return Math.floor(n / 10) * 10;
 }
@@ -761,7 +773,8 @@ function decideBid(seat) {
   // barème : marge 0 → +3,8 pts/donne, 30 → +9,8, 60 → +14,3, 90 → +10,7 ;
   // les interventions du barème non retenues ici coûtaient des points.
   // La couleur annoncée par le partenaire est candidate dès un atout en
-  // main (les autres, à partir de trois) : il en tient la longueur.
+  // main (il en tient la longueur) ; les autres, à partir de trois cartes
+  // et avec une tenue d'atout (voir tenue).
   if (cur && !ours && !capotOnTable && min <= 160) {
     const pOpp = makeProbability(seat, cur);
     if (pOpp !== null) {
@@ -770,6 +783,7 @@ function decideBid(seat) {
       for (const s of SUITS) {
         const partnerSuit = !!partnerBid && partnerBid.atout === s;
         if (suitCards(hand, s).length < (partnerSuit ? 1 : 3)) continue;
+        if (!partnerSuit && !tenue(hand, s)) continue;
         // Main forte : le palier du barème est candidat aussi (130 plutôt
         // que 90, +1,9 pt/donne), il renseigne le partenaire.
         const sys = Math.min(160, openingBid(hand, s, false));
@@ -813,7 +827,7 @@ function decideBid(seat) {
     } else if (!cur) {
       let best = null;
       for (const s of SUITS) {
-        if (suitCards(hand, s).length < 3) continue;
+        if (suitCards(hand, s).length < 3 || !tenue(hand, s)) continue;
         const pm = pMake(80, s);
         if (pm !== null && (!best || pm > best.pm)) best = { pm, s };
       }
@@ -2014,6 +2028,13 @@ function mcValue(seat, card, world) {
   );
 }
 
+// À l'entame, atout ou pas atout : le réflexe (l'attaque tire les atouts,
+// la défense n'entame pas atout) l'emporte tant que la simulation ne lui
+// préfère pas l'autre choix de plus de 8 pts en moyenne. Sans lui, le
+// preneur ne tirait atout au premier pli que 35 % du temps et la défense
+// entamait atout 24 % du temps ; +1,2 ± 1,0 pt/donne en duel.
+const TRUMP_LEAD_MARGIN = 8;
+
 // Monde par monde, toutes les cartes sur les mêmes mondes : au-delà du
 // budget de réflexion (téléphone lent), on s'arrête avec les mondes déjà vus.
 function mcChooseCard(seat, legal, reflex) {
@@ -2022,16 +2043,26 @@ function mcChooseCard(seat, legal, reflex) {
   const cards = [reflex, ...legal.filter((c) => c.id !== reflex.id)];
   const totals = cards.map(() => 0);
   const stop = tuning.now() + MC_BUDGET_MS;
+  let n = 0;
   for (const w of worlds) {
     cards.forEach((c, i) => {
       totals[i] += mcValue(seat, c, w);
     });
+    n++;
     if (tuning.now() > stop) break;
   }
   let best = 0;
   totals.forEach((t, i) => {
     if (t > totals[best] + 1e-9) best = i;
   });
+  const atout = G.contract.atout;
+  if (
+    best &&
+    !G.pliCourant.length &&
+    (cards[best].suit === atout) !== (reflex.suit === atout) &&
+    totals[0] >= totals[best] - TRUMP_LEAD_MARGIN * n
+  )
+    best = 0;
   return cards[best];
 }
 
