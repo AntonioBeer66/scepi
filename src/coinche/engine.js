@@ -1515,8 +1515,12 @@ function bidReadings() {
 // la relit avec le système des bots lui-même (openingBid, supportPoints),
 // si bien qu'émetteur et lecteur parlent la même langue par construction.
 // Renvoie la vraisemblance : 1, BLUFF (ouverture « légère » hors quatrième
-// position, que seul le bluff produit) ou 0 (il aurait parlé autrement).
+// position, que seul le bluff produit), SIM_FIT (ce que la simulation a pu
+// décider hors barème) ou 0 (il aurait parlé autrement).
 function bidFits({ e, partnerBid, acted }, h) {
+  // Intervention au-dessus de l'adversaire : décidée à l'espérance (étape 3).
+  const overOpp =
+    !!e.cur && teamOf(e.cur.preneur) !== teamOf(e.seat) && e.montant <= 160;
   if (e.montant) {
     const min = e.cur ? e.cur.montant + 10 : 80;
     const forced = e.montant === min; // forcer ne se fait qu'au minimum
@@ -1525,10 +1529,10 @@ function bidFits({ e, partnerBid, acted }, h) {
       // Relance = soutien − 10 (palier de prudence), ou soutien au ras si forcée.
       const pts = supportPoints(h, e.atout, partnerBid.montant);
       const r = e.montant - partnerBid.montant;
-      return pts >= (forced ? r : r + 10) &&
-        (acted || e.montant >= 160 || pts < r + 20)
-        ? 1
-        : 0;
+      if (pts >= (forced ? r : r + 10) && (acted || e.montant >= 160 || pts < r + 20))
+        return 1;
+      // L'étape 3 essaie la couleur du partenaire dès un atout.
+      return overOpp && countOf(h, e.atout) >= 1 ? SIM_FIT : 0;
     }
     const fitsAt = (light) => {
       const v = openingBid(h, e.atout, light);
@@ -1540,25 +1544,38 @@ function bidFits({ e, partnerBid, acted }, h) {
     };
     const fourth = !e.cur && e.passes === 3;
     if (fitsAt(fourth)) return 1;
-    return !fourth && fitsAt(true) ? BLUFF : 0;
+    if (!fourth && fitsAt(true)) return BLUFF;
+    // Intervention à l'espérance (dès trois cartes), ou 80 hors barème
+    // ouvert par la simulation (dès trois cartes).
+    const len = countOf(h, e.atout);
+    return (overOpp || (!e.cur && e.montant === 80)) && len >= 3 ? SIM_FIT : 0;
   }
-  if (!e.cur) return bestOpening(h, e.passes === 3) ? 0 : 1;
+  // Passe avec une ouverture au barème : la simulation a pu la refuser (veto).
+  if (!e.cur) return bestOpening(h, e.passes === 3) ? SIM_FIT : 1;
   if (e.cur.montant >= 250) return 1;
   if (teamOf(e.cur.preneur) === teamOf(e.seat))
     return acted || supportPoints(h, e.cur.atout, e.cur.montant) <= 10
       ? 1
       : 0;
+  // Passe sur l'adversaire avec de quoi intervenir : l'étape 3 a jugé que
+  // l'intervention ne valait pas le coup.
   const own = bestOpening(h, false);
-  return !own || own.montant < e.cur.montant ? 1 : 0;
+  return !own || own.montant < e.cur.montant ? 1 : SIM_FIT;
 }
 
 // Poids d'une main qui aurait parlé autrement : un bot suit exactement
-// son système (aucune de ses vraies mains n'est rejetée, mesuré sur 1 728
-// annonces), un humain beaucoup moins. Toute tolérance laisse entrer les
+// son système, un humain beaucoup moins. Toute tolérance laisse entrer les
 // mains faibles, bien plus nombreuses : avec 1 %, la réussite des
 // contrats était sous-estimée de 16 points.
 const MISFIT = { bot: 0.0001, human: 0.15 };
 const BLUFF = 0.07; // probabilité moyenne de bluff d'un bot (personnalité)
+// Ce que la simulation décide hors barème (interventions et remontées à
+// l'espérance, veto d'ouverture, 80 hors barème). Lu comme impossible
+// (MISFIT), la vraie main était rejetée pour 57 % des interventions et
+// 30 % des remontées : mondes trop sûrs (prédit 99 % → 81 % réels).
+// Mesuré en duel (MC 48, trois séries de donnes jumelles) : +4,4 ± 1,3
+// pt/donne ; 0,05 et 0,15 font pareil, 0,3 moins bien.
+const SIM_FIT = 0.1;
 const SIGNAL_MISFIT = 0.3; // appel sans l'As
 
 // Plausibilité de la main actuelle d'un siège au vu de ce qu'il a dit.
@@ -1604,13 +1621,18 @@ function mcWorlds(seat, n) {
   // le rapport des plausibilités ; un monde est relevé tous les THIN pas.
   // Un « 90 fort » ne concerne que 2 % des mains au hasard : un simple
   // tirage par rejet ne les trouvait presque jamais.
+  // Relevés trop rapprochés (tous les 8 pas), les mondes se ressemblaient :
+  // une carte restait collée chez le même siège, d'où des mondes trop sûrs
+  // (prédit 85 % → 69 % réels, mesuré contre les vraies mains). Tous les
+  // 32 pas : 85 % → 77 %, 99 % → 95 % ; +3,7 ± 1,6 pts/donne en duel,
+  // pour 3 ms de plus par carte sur PC.
   const readings = bidReadings();
   const weight = {};
   for (const s of others) weight[s] = seatWeight(s, w[s], readings);
   const seats = others.filter((s) => size[s] > 0);
   const worlds = [];
-  const BURN = 200;
-  const THIN = 8;
+  const BURN = 400;
+  const THIN = 32;
   for (let step = 0; worlds.length < n && seats.length > 1; step++) {
     const a = seats[Math.floor(Math.random() * seats.length)];
     let b = seats[Math.floor(Math.random() * (seats.length - 1))];
