@@ -1511,13 +1511,76 @@ function bidReadings() {
   });
 }
 
-// La main de départ `h` colle-t-elle à cette enchère ou à cette passe ? On
-// la relit avec le système des bots lui-même (openingBid, supportPoints),
-// si bien qu'émetteur et lecteur parlent la même langue par construction.
-// Renvoie la vraisemblance : 1, BLUFF (ouverture « légère » hors quatrième
-// position, que seul le bluff produit), SIM_FIT (ce que la simulation a pu
-// décider hors barème) ou 0 (il aurait parlé autrement).
-function bidFits({ e, partnerBid, acted }, h) {
+// Au-dessus de l'adversaire (palier ≤ 160), c'est l'étape 3 qui parle : une
+// décision à l'espérance, qu'aucun barème ne relit. On la lit avec un modèle
+// appris sur 36 587 décisions des bots (régression logistique) : la chance
+// d'intervenir dans la couleur s selon la main. Traits : biais, longueur,
+// Valet, 9, As, 10, belote, As à côté, As-10 à côté, chicanes, couleur du
+// partenaire, palier ((min − 80) / 10). Perte log 0,31 contre 0,49 pour
+// un taux constant ; en duel +3,5 ± 1,6 pt/donne (deux séries).
+const INTERVENTION_W = [
+  -7.1698, 1.4845, 2.5608, 1.3118, 0.0304, 0.0779, 1.7192, 0.7587, 0.6295,
+  0.018, 3.0833, -0.8344,
+];
+function interventionP(h, s, partnerSuit, min) {
+  const side = SUITS.filter((x) => x !== s);
+  const x = [
+    1,
+    countOf(h, s),
+    has(h, s, "J") ? 1 : 0,
+    has(h, s, "9") ? 1 : 0,
+    has(h, s, "A") ? 1 : 0,
+    has(h, s, "10") ? 1 : 0,
+    has(h, s, "K") && has(h, s, "Q") ? 1 : 0,
+    side.filter((x) => has(h, x, "A")).length,
+    side.filter((x) => has(h, x, "10") && has(h, x, "A")).length,
+    side.filter((x) => countOf(h, x) === 0).length,
+    partnerSuit ? 1 : 0,
+    (min - 80) / 10,
+  ];
+  let z = 0;
+  for (let i = 0; i < x.length; i++) z += INTERVENTION_W[i] * x[i];
+  return Math.min(0.995, Math.max(0.002, 1 / (1 + Math.exp(-z))));
+}
+
+// La main de départ `h` colle-t-elle à cette enchère ou à cette passe ?
+// Au-dessus de l'adversaire, par le modèle appris : une enchère par sa
+// chance dans sa couleur (ou le soutien du partenaire, étape 2, qui reste
+// au barème), une passe par la chance de n'être intervenu nulle part.
+function bidFits(r, h) {
+  const { e, partnerBid } = r;
+  const min = e.cur ? e.cur.montant + 10 : 0;
+  if (
+    !e.cur ||
+    teamOf(e.cur.preneur) === teamOf(e.seat) ||
+    e.cur.montant >= 250 ||
+    min > 160 ||
+    e.montant >= 250
+  )
+    return baremeFits(r, h);
+  const pOf = (s) => {
+    const ps = !!partnerBid && partnerBid.atout === s;
+    return countOf(h, s) < (ps ? 1 : 3) ? 0 : interventionP(h, s, ps, min);
+  };
+  if (e.montant) {
+    const s = e.atout;
+    const sys = Math.min(160, openingBid(h, s, false));
+    const support =
+      partnerBid && partnerBid.atout === s && baremeFits(r, h) === 1 ? 1 : 0;
+    const p = e.montant === min || e.montant === sys ? pOf(s) : 0;
+    return Math.max(support, p);
+  }
+  let q = 1;
+  for (const s of SUITS) q *= 1 - pOf(s);
+  return Math.max(q, 0.002);
+}
+
+// Le reste se relit avec le système des bots lui-même (openingBid,
+// supportPoints), si bien qu'émetteur et lecteur parlent la même langue par
+// construction. Renvoie la vraisemblance : 1, BLUFF (ouverture « légère »
+// hors quatrième position, que seul le bluff produit), SIM_FIT (ce que la
+// simulation a pu décider hors barème) ou 0 (il aurait parlé autrement).
+function baremeFits({ e, partnerBid, acted }, h) {
   // Intervention au-dessus de l'adversaire : décidée à l'espérance (étape 3).
   const overOpp =
     !!e.cur && teamOf(e.cur.preneur) !== teamOf(e.seat) && e.montant <= 160;
