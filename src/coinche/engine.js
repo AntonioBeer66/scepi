@@ -336,8 +336,8 @@ function botTurnAction(seat) {
 //     plus par ligne ; au-dessus de l'adversaire, surenchérir seulement si
 //     la donne simulée le vaut mieux que le laisser jouer (voir étape 3).
 //   Ouverture au barème, sauf contrat que la simulation réussit moins de
-//     6 fois sur 10 ; 80 hors barème s'il réussit 7 fois sur 10 (à trois
-//     atouts, avec un As à côté lui aussi).
+//     6 fois sur 10 ; 80 hors barème s'il réussit 7 fois sur 10 (toujours
+//     avec un As à côté).
 //   Ces barèmes ont été calibrés en simulation (parties bots contre bots
 //     sur les mêmes donnes) : le système d'origine surenchérissait.
 //   Coinche : jouer la donne sur des mondes compatibles avec les enchères
@@ -837,11 +837,12 @@ function decideBid(seat) {
       for (const s of SUITS) {
         const n = suitCards(hand, s).length;
         if (n < 3 || !tenue(hand, s)) continue;
-        // Trois atouts : comme au barème, un As à côté, et le Valet ou
-        // As-9 / As-10 (9 troisième seul : −15 pts par donne).
+        // Toujours un As à côté (9 ou As-10 quatrièmes sans As : −35 et −24
+        // pts par donne ; en duel +0,2 ± 0,5), et à trois atouts le Valet ou
+        // As-9 / As-10 (9 troisième seul : −15).
         if (
-          n < 4 &&
-          (!sideAces(hand, s) ||
+          !sideAces(hand, s) ||
+          (n < 4 &&
             !(
               holds(hand, s, "J") ||
               (holds(hand, s, "A") &&
