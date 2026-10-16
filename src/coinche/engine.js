@@ -10,7 +10,7 @@
 // qui est public : ils imaginent les autres mains (mondes compatibles avec
 // les cartes tombées, les manques, les obligations de couper, les enchères
 // relues avec leur propre système et les appels). Chaque robot a une
-// « personnalité » tirée en début de partie (agressivité, bluff) pour ne
+// « personnalité » tirée en début de partie (agressivité) pour ne
 // pas être parfaitement prévisible.
 
 export const SUITS = ["H", "D", "C", "S"];
@@ -222,11 +222,9 @@ function newGame(seats) {
     // la fenêtre qu'il vise, jamais pour la suivante.
     tour: 0,
     // Personnalité tirée une fois par siège : agressivité (relève les
-    // enchères plus tôt) et bluff (probabilité d'annoncer au-delà de sa
-    // force réelle). La coinche, elle, suit la même règle pour tous.
+    // enchères plus tôt). La coinche, elle, suit la même règle pour tous.
     personalities: [0, 1, 2, 3].map(() => ({
       aggr: 0.75 + rand() * 0.6,
-      bluff: rand() * 0.14,
     })),
   };
   startNewDonne();
@@ -319,7 +317,8 @@ function botTurnAction(seat) {
 // leurs cartes.
 //
 //   Ouverture à la couleur (tenue de l'atout) :
-//     80   Valet troisième, 9 + As troisième, As + 10 quatrième, Valet + belote
+//     80   Valet troisième, 9 + As troisième, As + 10 quatrième, Valet + belote,
+//          avec un As à côté sauf quatre atouts (Valet ou 9) ou Valet + belote
 //     90   « 90 fort » : Valet + 9 troisième, la tenue est garantie
 //     100  4 atouts avec Valet ou 9 et As/10, ou 5 atouts belotés + un As
 //     110 / 120 / 130  Valet + 9 et 3 / 2 / 1 fausses cartes ; 0 = capot
@@ -337,7 +336,8 @@ function botTurnAction(seat) {
 //     plus par ligne ; au-dessus de l'adversaire, surenchérir seulement si
 //     la donne simulée le vaut mieux que le laisser jouer (voir étape 3).
 //   Ouverture au barème, sauf contrat que la simulation réussit moins de
-//     6 fois sur 10 ; 80 hors barème s'il réussit 7 fois sur 10.
+//     6 fois sur 10 ; 80 hors barème s'il réussit 7 fois sur 10 (à trois
+//     atouts, avec un As à côté lui aussi).
 //   Ces barèmes ont été calibrés en simulation (parties bots contre bots
 //     sur les mêmes donnes) : le système d'origine surenchérissait.
 //   Coinche : jouer la donne sur des mondes compatibles avec les enchères
@@ -441,8 +441,8 @@ function fausses(hand, atout) {
 }
 
 // Ouverture que la main justifie à cet atout (0 = pas d'ouverture).
-// « light » : dernier à parler après trois passes, ou profil bluffeur ;
-// personne n'a de quoi ouvrir, on peut forcer un 80.
+// « light » : dernier à parler après trois passes ; personne n'a de quoi
+// ouvrir, on peut forcer un 80.
 function openingBid(hand, suit, light) {
   const m = asMask(hand);
   const n = countOf(m, suit);
@@ -470,7 +470,14 @@ function openingBid(hand, suit, light) {
     (A && X && n >= 4) ||
     (V && bel) ||
     (V && N);
-  if (tenue) return 80;
+  // Sans As à côté, un 80 à trois atouts chutait trop souvent (Valet
+  // troisième sec : resté à 80, réussi 62 % du temps ; −13 pts par donne,
+  // avec un As +18) : il faut alors quatre atouts dont le Valet ou le 9, ou
+  // Valet et belote. En quatrième position (light), comme avant. En duel,
+  // avec la même règle pour le 80 par la simulation et sans bluff : +0,6 ±
+  // 1,0 pt/donne (MC 48 et 96), 6 % de contrats en moins, autant de réussis.
+  if (tenue && (light || aces >= 1 || (V && bel) || ((V || N) && n >= 4)))
+    return 80;
   if (light && (V || (N && n >= 2)) && aces >= 1) return 80;
   return 0;
 }
@@ -628,7 +635,6 @@ function generaleBid(seat, hand, cur, team) {
 function decideBid(seat) {
   const PASS = { type: "PASSER" };
   const hand = G.hands[seat];
-  const p = personality(seat);
   const cur = G.contract;
   const team = teamOf(seat);
   const partner = partnerOf(seat);
@@ -806,9 +812,11 @@ function decideBid(seat) {
   // 0,6 et la couleur du partenaire à l'étape 3 : encore +0,8, mesuré au
   // Monte-Carlo sur 125 000 donnes jumelles ; 0,4 coûtait 0,2) ; et ouvrir
   // 80 hors barème quand la simulation le réussit 7 fois sur 10 (+1,5 ; 6 fois : −1,1).
+  // Ouverture légère seulement en quatrième, après trois passes : le bluff
+  // (n'importe où, au hasard) faisait ouvrir 80 avec un Valet sec et un As,
+  // pour rien (sans lui : +0,2 ± 0,3 pt/donne).
   if (!ours && !capotOnTable) {
-    const light =
-      (!cur && G.passesConsecutives === 3) || Math.random() < p.bluff;
+    const light = !cur && G.passesConsecutives === 3;
     const own = bestOpening(hand, light);
     if (own) {
       const plain = offer(own.montant, own.atout);
@@ -827,7 +835,20 @@ function decideBid(seat) {
     } else if (!cur) {
       let best = null;
       for (const s of SUITS) {
-        if (suitCards(hand, s).length < 3 || !tenue(hand, s)) continue;
+        const n = suitCards(hand, s).length;
+        if (n < 3 || !tenue(hand, s)) continue;
+        // Trois atouts : comme au barème, un As à côté, et le Valet ou
+        // As-9 / As-10 (9 troisième seul : −15 pts par donne).
+        if (
+          n < 4 &&
+          (!sideAces(hand, s) ||
+            !(
+              holds(hand, s, "J") ||
+              (holds(hand, s, "A") &&
+                (holds(hand, s, "9") || holds(hand, s, "10")))
+            ))
+        )
+          continue;
         const pm = pMake(80, s);
         if (pm !== null && (!best || pm > best.pm)) best = { pm, s };
       }
@@ -1645,7 +1666,7 @@ function baremeFits({ e, partnerBid, acted }, h) {
 // mains faibles, bien plus nombreuses : avec 1 %, la réussite des
 // contrats était sous-estimée de 16 points.
 const MISFIT = { bot: 0.0001, human: 0.15 };
-const BLUFF = 0.07; // probabilité moyenne de bluff d'un bot (personnalité)
+const BLUFF = 0.07; // ouverture légère hors quatrième : un humain peut bluffer, plus les bots
 // Ce que la simulation décide hors barème (interventions et remontées à
 // l'espérance, veto d'ouverture, 80 hors barème). Lu comme impossible
 // (MISFIT), la vraie main était rejetée pour 57 % des interventions et

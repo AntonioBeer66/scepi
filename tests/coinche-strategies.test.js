@@ -6,8 +6,7 @@
 import { bots } from '../src/coinche/engine.js';
 
 // Hasard reproductible : les enchères jouent la donne sur des mondes tirés
-// au hasard, un hasard constant n'en fabriquerait qu'un seul. Pas de bluff
-// (bluff à 0 dans les personnalités).
+// au hasard, un hasard constant n'en fabriquerait qu'un seul.
 const seed = (n) => { let s = n; Math.random = () => (s = (s * 16807) % 2147483647) / 2147483647; };
 seed(42);
 let cur = null;
@@ -34,7 +33,7 @@ const bid = (b) => (b.type === 'PASSER' ? 'passe' : `${b.montant}${b.atout}`);
 function setup(over = {}) {
   const g = {
     hands: [[], [], [], []], contract: null, donneAnnonces: [], bidMemo: [{}, {}, {}, {}], forced: [0, 0],
-    scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0 })),
+    scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1 })),
     seen: {}, void: [{}, {}, {}, {}], trumpMax: [8, 8, 8, 8], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
     pointsPlis: [0, 0], plisGagnes: [0, 0], playedBy: [[], [], [], []], seats: [0, 1, 2, 3].map(() => ({ type: 'bot' })), donneur: 3,
     belote: { beloteDeclared: false, rebeloteDeclared: false, kingPlayed: false, queenPlayed: false }, ...over,
@@ -62,6 +61,8 @@ setup({ hands: hands('JH 9H 7H 8S 7S KD QC 7C') });
 check('Ouverture « 90 fort » : Valet + 9 troisième', bid(api.botDecideBid(0)), '90H');
 setup({ hands: hands('JH 8H 7H AS 9S 8D 7D 8C') });
 check('Ouverture 80 : Valet troisième + un As', bid(api.botDecideBid(0)), '80H');
+setup({ hands: hands('JH 8H 7H KS 9S 8D 7D 8C') });
+check('Valet troisième sans As : passe', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('7H 8H KS QS 9D 8D 7C 10C') });
 check('Main faible : passe', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('9H KH QH 7S 8S 7D 8D 7C') });
@@ -98,7 +99,7 @@ const huitPiques = 'JS 9S AS 10S KS QS 8S 7S';
 setup({ hands: hands(huitPiques) });
 check('Huit atouts : ouvrir directement en Générale belotée', bid(api.botDecideBid(0)), '520S');
 setup({ hands: hands('AH AD AC 10H 10D 10C KH KD', huitPiques), mainsInitiales: hands('', huitPiques), contract: contract(1, 270, 'S'),
-  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1, bluff: 0 })) });
+  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1 })) });
 check('Huit atouts : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
 setup({ hands: hands(huitPiques), mainsInitiales: hands(huitPiques), contract: contract(0, 270, 'S', { coinche: true }) });
 check('Huit atouts coinchés : surcoincher d’office', api.botWantsToSurcoinche(0), true);
