@@ -344,7 +344,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
           .sort((a, b) => force(s)[b] - force(s)[a])
           .map((r) => {
             const st = fallen.has(r + s) ? "fallen" : mine.has(r + s) ? "mine" : "out";
-            const label = `${cardLabel({ rank: r, suit: s })} : ${{ fallen: "tombé", mine: "dans ta main", out: "pas encore tombé" }[st]}`;
+            const label = `${cardLabel({ rank: r, suit: s })} : ${{ fallen: "tombée", mine: "dans ta main", out: "pas encore jouée" }[st]}`;
             return `<li class="is-${st}" aria-label="${esc(label)}">${RANK_SHORT[r] ?? r}</li>`;
           })
           .join("");
@@ -678,8 +678,12 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
 
   root.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && ui.panel) {
+      const opener = `toggle-${ui.panel}`;
       ui.panel = null;
       render();
+      // Focus resté dans le panneau fermé (onglets) : retour au bouton qui l'ouvre.
+      if (!root.contains(document.activeElement))
+        root.querySelector(`[data-focus-key="${opener}"]`)?.focus();
     }
   });
 
