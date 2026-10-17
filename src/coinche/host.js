@@ -22,25 +22,21 @@ const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une 
 
 // Temps que prend un bot pour parler ou jouer, hors pause de pli et fenêtre
 // de coinche. u : tirage uniforme dans [0, 1[.
-//   - carte forcée (une seule carte légale) : 150 à 300 ms, rien à réfléchir ;
-//   - sinon 350 ms plus une part en u² : la plupart des coups partent vite,
-//     quelques-uns hésitent longtemps. La part croît avec le choix (2 cartes
-//     légales : jusqu'à 950 ms en tout, 8 cartes : 1 670 ms) ; une enchère va
-//     jusqu'à 1 850 ms.
-// Mesuré sur 3 parties de bots (1 081 décisions, 29 % de coups forcés) : 542 ms
-// en moyenne, contre 575 ms avant (350 + 450 u, quel que soit le coup).
-// Un humain joue vite quand il n'a pas le choix et plus lentement quand il
-// en a un ; une loi uniforme unique ne le faisait pas.
-const BID_SPAN_MS = 1500;
+//   - carte forcée (une seule carte légale) : 450 à 600 ms ;
+//   - sinon 800 ms, plus 60 ms par carte légale au-delà de deux, plus 0 à
+//     400 ms (2 cartes : 0,8 à 1,2 s ; 8 cartes : 1,16 à 1,56 s) ;
+//   - enchère : 0,9 à 1,4 s.
+// Rythme régulier et jamais trop vif : la loi en u² d'avant (0,15 à 1,85 s)
+// faisait partir des coups aussitôt et paraissait au hasard aux joueurs.
+const BID_SPAN_MS = 500;
 export function thinkMs(G, seat, u) {
-  let span = BID_SPAN_MS;
   const hand = G.hands[seat];
   if (G.phase === "JEU" && hand && !hand.includes(null)) {
     const n = computeLegal(hand, G.pliCourant, G.contract.atout, seat).length;
-    if (n === 1) return 150 + 150 * u;
-    span = 600 + 120 * Math.min(n - 2, 6);
+    if (n === 1) return 450 + 150 * u;
+    return 800 + 60 * Math.min(n - 2, 6) + 400 * u;
   }
-  return 350 + span * u * u;
+  return 900 + BID_SPAN_MS * u;
 }
 
 // G n'est que du JSON. Pas de structuredClone ni de .at() ici : sur un
@@ -169,7 +165,7 @@ export function createHost({
         if (teamOf(s) !== G.contract.equipePreneur || !isBot(s) || decided[s] === t)
           continue;
         decided[s] = t;
-        later(300 + random() * 1500, () => {
+        later(800 + random() * 700, () => {
           if (
             G.phase === "SURCOINCHE" &&
             G.contract.id === id &&

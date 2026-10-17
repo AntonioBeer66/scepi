@@ -194,11 +194,13 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   G.hands[2] = [card("8S"), card("7H"), card("9D")]; // une seule pique : coup forcé
   for (const u of [0, 0.5, 0.999]) {
     const ms = thinkMs(G, 2, u);
-    ok(ms >= 150 && ms < 300, `HAS-4 : carte forcée entre 150 et 300 ms (${Math.round(ms)})`);
+    ok(ms >= 450 && ms < 600, `HAS-4 : carte forcée entre 450 et 600 ms (${Math.round(ms)})`);
   }
   G.hands[2] = [card("8S"), card("9S"), card("7H")]; // deux piques : un choix
-  ok(thinkMs(G, 2, 0) === 350 && thinkMs(G, 2, 0.999) > 900, "HAS-4 : un choix demande plus de temps");
-  ok(thinkMs(G, 2, 0.5) < thinkMs(G, 2, 0.999) - 400, "HAS-4 : délais asymétriques (la plupart vifs, quelques-uns longs)");
+  ok(thinkMs(G, 2, 0) === 800 && thinkMs(G, 2, 0.999) < 1200, "HAS-4 : un choix demande 0,8 à 1,2 s");
+  G.phase = "ENCHERES";
+  ok(thinkMs(G, 2, 0) >= 900 && thinkMs(G, 2, 0.999) < 1400, "HAS-4 : une enchère, 0,9 à 1,4 s (rythme régulier)");
+  G.phase = "JEU";
   // Dans l'hôte : le minuteur du bot dépend du nombre de cartes légales.
   const delays = [];
   const h = createHost({
@@ -212,7 +214,7 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   G.hands[2] = [card("8S"), card("9S"), card("7H")];
   h.update({ ...G, tour: 51 });
   const [forced, choix] = delays.filter((ms) => ms < 20000);
-  ok(forced <= 300 && choix > 350, `HAS-4 : minuteur ${forced} ms (forcé) contre ${Math.round(choix)} ms (choix)`);
+  ok(forced <= 600 && choix >= 800, `HAS-4 : minuteur ${forced} ms (forcé) contre ${Math.round(choix)} ms (choix)`);
 }
 
 // ---- ZON-3 : carte jouée d'office, aucun signal ------------------------------------
@@ -255,7 +257,7 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   ok(G.bidLog[0].type === "human", "MON-4 : le type est enregistré avec l'enchère");
   const avant = bots.seatWeight(G, s, sansCoeur);
   G.seats[s] = { type: "bot", name: "Bob (bot)" }; // devenirBot
-  ok(bots.seatWeight(G, s, sansCoeur) === avant && avant === 0.05, "MON-4 : un humain devenu bot reste lu comme un humain");
+  ok(bots.seatWeight(G, s, sansCoeur) === avant && avant === 0.15, "MON-4 : un humain devenu bot reste lu comme un humain");
   delete G.bidLog[0].type; // partie sauvegardée avant ce champ
   ok(bots.seatWeight(G, s, sansCoeur) === 0.0001, "MON-4 : sans type enregistré, on retombe sur le type actuel");
   // ZON-4 : un siège qui passe à l'ouverture avec une main d'ouverture.

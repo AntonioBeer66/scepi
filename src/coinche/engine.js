@@ -1879,7 +1879,10 @@ function baremeFits({ e, partnerBid, acted }, h) {
 // contrats était sous-estimée de 16 points. Humain à 0,05 plutôt que 0,15 :
 // +6 à +10 pts de justesse sur sa main, au plus 3 % de placements « sûrs
 // mais faux ».
-const MISFIT = { bot: 0.0001, human: 0.05 };
+// Humain : 0,15. Un humain de club simulé se lisait mieux à 0,05, mais les
+// vrais joueurs annoncent plus librement : des mondes trop sûrs de leur main
+// faisaient jouer leur partenaire bot à contresens.
+const MISFIT = { bot: 0.0001, human: 0.15 };
 const BLUFF = 0.07; // ouverture légère hors quatrième : un humain peut bluffer, plus les bots
 // Ce que la simulation décide hors barème (interventions et remontées à
 // l'espérance, veto d'ouverture, 80 hors barème). Lu comme impossible
@@ -1891,6 +1894,9 @@ const SIM_FIT = 0.1;
 // Appel sans l'As : un appel lu (7 ou 8 volontaire avant le pli 4) est vrai
 // 77 % du temps ; 0,1 est calibré sur ces appels (0,3 avec l'ancienne lecture).
 const SIGNAL_MISFIT = 0.1;
+// Un humain défausse souvent un petit sans rien vouloir dire : son « appel »
+// n'est qu'un indice.
+const SIGNAL_MISFIT_HUMAN = 0.5;
 
 // Plausibilité de la main actuelle d'un siège au vu de ce qu'il a dit.
 // La tolérance dépend de qui parlait quand il a parlé (e.type), pas de qui
@@ -1906,7 +1912,7 @@ function seatWeight(s, hand, readings) {
   }
   for (const suit of Object.keys(G.appel[s])) {
     if (!G.seen["A" + suit] && !hand.some((c) => c.id === "A" + suit))
-      w *= SIGNAL_MISFIT;
+      w *= G.seats[s].type === "bot" ? SIGNAL_MISFIT : SIGNAL_MISFIT_HUMAN;
   }
   return w;
 }
@@ -2360,7 +2366,10 @@ function mcChooseCard(seat, legal, reflex, why) {
     if (def && reflex.rank === "A" && reflex.suit !== atout && choice.rank !== "A")
       margin = Math.max(margin, M.defAce);
     // La couleur appelée ou annoncée par le partenaire revient.
-    if ((why === "called" || why === "partner") && choice.suit !== reflex.suit)
+    // Couleur appelée : seulement par un bot (l'appel d'un humain peut être un
+    // hasard de défausse).
+    const calledByBot = why === "called" && G.seats[partnerOf(seat)].type === "bot";
+    if ((calledByBot || why === "partner") && choice.suit !== reflex.suit)
       margin = Math.max(margin, M.called);
   }
   return totals[0] >= totals[best] - margin * n ? reflex : choice;
