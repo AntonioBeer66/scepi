@@ -1,0 +1,354 @@
+--- engine.base.js	2026-10-17 07:38:41.366657136 +0000
++++ engine.proto.js	2026-10-17 08:04:28.254627033 +0000
+@@ -1086,8 +1086,18 @@
+   return false;
+ }
+ 
++const SUIT_ORD = { H: 0, D: 1, C: 2, S: 3 };
++const canonKey = (c) => SUIT_ORD[c.suit] * 8 + RANKS.indexOf(c.rank);
++function canonSort(h) {
++  for (let i = 1; i < h.length; i++)
++    if (canonKey(h[i - 1]) > canonKey(h[i])) {
++      h.sort((a, b) => canonKey(a) - canonKey(b));
++      break;
++    }
++  return h;
++}
+ function playContext(seat) {
+-  const hand = G.hands[seat];
++  const hand = V.sortHand ? canonSort(G.hands[seat]) : G.hands[seat];
+   const atout = G.contract.atout;
+   const team = teamOf(seat);
+   const opponents = [0, 1, 2, 3].filter((s) => teamOf(s) !== team);
+@@ -1160,12 +1170,19 @@
+ }
+ 
+ // Appel : une petite carte d'une couleur dont on tient l'As, une fois par donne.
++function volontaire(legal, atout) {
++  const suits = new Set();
++  for (const c of legal) if (c.suit !== atout) suits.add(c.suit);
++  return suits.size >= 2;
++}
+ function appelCard(ctx, cards) {
+   if (Object.keys(G.appel[ctx.seat]).length) return null;
++  if (V.sigNew && (G.plisJoues >= V.sigMaxTrick || !volontaire(ctx.legal, ctx.atout))) return null;
+   return (
+     cards.find(
+       (c) =>
+         cardPoints(c, ctx.atout) === 0 &&
++        (!V.sigNew || c.rank === "7" || c.rank === "8") &&
+         holds(ctx.hand, c.suit, "A") &&
+         suitCards(ctx.hand, c.suit).length >= 2,
+     ) || null
+@@ -1175,16 +1192,58 @@
+ // Les signaux se lisent sur la carte posée, pour tout le monde (bots
+ // compris : pas de canal privé entre partenaires) : première défausse
+ // petite = appel, Roi/Dame/Valet = refus.
+-function readDiscardSignal(seat, carte) {
++// Ce que dit une défausse (sans rien modifier) : 'appel' | 'refus' | null.
++function sigReading(carte, legalBefore) {
++  const atout = G.contract.atout;
++  if (carte.suit === atout || G.plisJoues >= V.sigMaxTrick) return null;
++  if (legalBefore && !volontaire(legalBefore, atout)) return null;
++  if (carte.rank === "7" || carte.rank === "8") return G.seen["A" + carte.suit] ? null : "appel";
++  if (carte.rank === "K" || carte.rank === "Q") return "refus";
++  return null;
++}
++// Cette carte, défaussée, serait-elle un faux signal ? (main du siège = G.hands[seat])
++function sigFalse(seat, c, legal) {
++  const lead = G.pliCourant.length ? G.pliCourant[0].carte.suit : null;
++  if (!lead || c.suit === lead) return false;
++  const k = sigReading(c, legal);
++  const h = G.hands[seat];
++  if (k === "appel") return !holds(h, c.suit, "A");
++  if (k === "refus") return holds(h, c.suit, "A") || holds(h, c.suit, "10");
++  return false;
++}
++function sigTrue(seat, c, legal) {
++  const lead = G.pliCourant.length ? G.pliCourant[0].carte.suit : null;
++  if (!lead || c.suit === lead) return false;
++  return sigReading(c, legal) === "appel" && holds(G.hands[seat], c.suit, "A");
++}
++function readDiscardSignal(seat, carte, legalBefore) {
++  lastRead = null;
++  if (V.sigNew) {
++    const k = sigReading(carte, legalBefore);
++    if (k === "appel") {
++      for (const s of Object.keys(G.appel[seat])) delete G.appel[seat][s];
++      G.appel[seat][carte.suit] = true;
++      delete G.refus[seat][carte.suit];
++    } else if (k === "refus") {
++      for (const s of Object.keys(G.refus[seat])) delete G.refus[seat][s];
++      G.refus[seat][carte.suit] = true;
++      delete G.appel[seat][carte.suit];
++    }
++    lastRead = k ? { kind: k, suit: carte.suit } : null;
++    return;
++  }
++  readDiscardSignalOld(seat, carte);
++}
++function readDiscardSignalOld(seat, carte) {
+   if (
+     carte.suit === G.contract.atout ||
+     Object.keys(G.appel[seat]).length ||
+     Object.keys(G.refus[seat]).length
+   )
+     return;
+-  if (["7", "8", "9"].includes(carte.rank)) G.appel[seat][carte.suit] = true;
++  if (["7", "8", "9"].includes(carte.rank)) { G.appel[seat][carte.suit] = true; lastRead = { kind: "appel", suit: carte.suit }; }
+   else if (["K", "Q", "J"].includes(carte.rank))
+-    G.refus[seat][carte.suit] = true;
++    { G.refus[seat][carte.suit] = true; lastRead = { kind: "refus", suit: carte.suit }; }
+ }
+ 
+ function leadCard(ctx) {
+@@ -1216,7 +1275,7 @@
+       if (toRuff.length) return lowest(toRuff, atout);
+     }
+     const called = calledSuit(ctx);
+-    if (called)
++    if (called && (reflexWhy = "called"))
+       return lowest(
+         side.filter((c) => c.suit === called),
+         atout,
+@@ -1240,9 +1299,9 @@
+       safeMaster(ctx, c) &&
+       (G.plisJoues || ctx.capot || c.rank !== "A" || holds(hand, c.suit, "10")),
+   );
+-  if (masters.length) return highest(masters, atout);
++  if (masters.length) { reflexWhy = "master"; return highest(masters, atout); }
+   const called = calledSuit(ctx);
+-  if (called)
++  if (called && (reflexWhy = "called"))
+     return lowest(
+       side.filter((c) => c.suit === called),
+       atout,
+@@ -1259,6 +1318,7 @@
+     !oppCanRuff(ctx, partnerSuit)
+   ) {
+     const cards = side.filter((c) => c.suit === partnerSuit);
++    reflexWhy = "partner";
+     return cards.find((c) => c.rank === "A") || lowest(cards, atout);
+   }
+   const nTrumps = suitCards(hand, atout).length;
+@@ -1452,10 +1512,21 @@
+       v += 40; // garde du 10
+     return v;
+   };
+-  return firstMin(side, cost);
++  const pick = firstMin(side, cost);
++  if (V.sigNew && V.discardNeutral > 0 && sigFalse(ctx.seat, pick, ctx.legal)) {
++    const neutral = side.filter(
++      (c) => c !== pick && sigReading(c, ctx.legal) === null,
++    );
++    if (neutral.length) {
++      const alt = firstMin(neutral, cost);
++      if (cost(alt) - cost(pick) <= V.discardNeutral) return alt;
++    }
++  }
++  return pick;
+ }
+ 
+ function heuristicCard(seat) {
++  reflexWhy = null;
+   const ctx = playContext(seat);
+   if (ctx.legal.length === 1) return ctx.legal[0];
+   return G.pliCourant.length ? followCard(ctx) : leadCard(ctx);
+@@ -1483,6 +1554,25 @@
+ // Nombre de mondes imaginés et horloge du temps de réflexion (réglables
+ // par les tests et les duels A/B : une horloge figée rend les bots
+ // reproductibles).
++// PROTOTYPE (audit vague 2) : tous les drapeaux à leur valeur « moteur actuel » = comportement d'origine.
++const FLAGS_DEFAULT = {
++  simDefTrump: 0,      // A : défense simulée qui rejoue atout : 0 | p (0..1) | 'ruff' (coupe du preneur) | 'all'
++  mcTrumpDef: null,    // B1 : marge (pts/monde) pour garder le réflexe quand la défense serait poussée à entamer atout ; Infinity = règle dure
++  mcTakerDraw: null,   // B2 : idem, preneur V+9+3 atouts dont le réflexe tire atout
++  mcDefAce: null,      // B3 : idem, défense dont le réflexe entame un As
++  mcCalled: null,      // B4 : idem, réflexe = couleur appelée / annoncée par le partenaire
++  sigNew: false,       // C1 : lecture « appel = 7/8 volontaire avant le pli 4, As non tombé ; refus = R/D » + dernier signal
++  sigMaxTrick: 3,      //      fenêtre de lecture : plis 1..3
++  discardNeutral: 0,   // C2 : écart de coût toléré pour préférer une défausse neutre à un faux signal (0 = non)
++  sortHand: false,     // C3 : main triée avant toute sélection
++  mcSigPenalty: 0,     // C4 : pénalité/monde d'une défausse au signal faux (Infinity = exclusion)
++  mcKeepAppel: null,   // C4 : marge pour garder un vrai appel du réflexe
++  misfit: 0.3,         // C5 : SIGNAL_MISFIT
++};
++export const V = { ...FLAGS_DEFAULT, ...(typeof process !== 'undefined' && process.env.CONV_FLAGS ? JSON.parse(process.env.CONV_FLAGS) : {}) };
++let reflexWhy = null;
++let lastMC = null;
++let lastRead = null;
+ export const tuning = {
+   mcSamples: 96,
+   bidWorlds: 96,
+@@ -1685,7 +1775,7 @@
+   for (const r of readings) if (r.e.seat === s) w *= bidFits(r, h) || misfit;
+   for (const suit of Object.keys(G.appel[s])) {
+     if (!G.seen["A" + suit] && !hand.some((c) => c.id === "A" + suit))
+-      w *= SIGNAL_MISFIT;
++      w *= V.misfit;
+   }
+   return w;
+ }
+@@ -1784,6 +1874,9 @@
+ 
+ function simPlay(sim, seat, carte) {
+   const hand = sim.hands[seat];
++  let legalBefore = null;
++  if (V.sigNew && sim.pliCourant.length && sim.plisJoues < V.sigMaxTrick && carte.suit !== sim.pliCourant[0].carte.suit && carte.suit !== sim.contract.atout)
++    legalBefore = computeLegal(hand, sim.pliCourant, sim.contract.atout, seat);
+   hand.splice(
+     hand.findIndex((c) => c.id === carte.id),
+     1,
+@@ -1792,7 +1885,7 @@
+   // G est le monde simulé pendant la simulation.
+   if (lead && carte.suit !== lead) {
+     sim.void[seat][lead] = true;
+-    readDiscardSignal(seat, carte);
++    readDiscardSignal(seat, carte, legalBefore);
+   }
+   noteTrumpObligations(seat, carte);
+   sim.pliCourant.push({ siege: seat, carte });
+@@ -1851,7 +1944,7 @@
+         sim.exactValue = exactEnd(sim, next, bel, exactTeam);
+         break;
+       }
+-      next = simPlay(sim, next, heuristicCard(next));
++      next = simPlay(sim, next, V.simDefTrump ? simCard(sim, next) : heuristicCard(next));
+     }
+   } finally {
+     G = real;
+@@ -1859,6 +1952,39 @@
+   return { sim, bel };
+ }
+ 
++function hash01(s) {
++  let h = 2166136261;
++  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
++  return (h >>> 0) / 4294967296;
++}
++// Le preneur (main réelle du monde) a-t-il une coupe à préserver : au moins un atout et une couleur à 0 ou 1 carte.
++function takerHasRuff(sim) {
++  const h = sim.hands[sim.contract.preneur];
++  const atout = sim.contract.atout;
++  if (!h.some((c) => c.suit === atout)) return false;
++  return SUITS.some((s) => s !== atout && h.filter((c) => c.suit === s).length <= 1);
++}
++// Carte jouée par un joueur imaginé : réflexe, sauf que la défense peut rejouer atout (prototype).
++function simCard(sim, seat) {
++  if (!sim.pliCourant.length && sim.plisJoues <= 3 && teamOf(seat) !== sim.contract.equipePreneur) {
++    const atout = sim.contract.atout;
++    const hand = sim.hands[seat];
++    const trumps = hand.filter((c) => c.suit === atout);
++    if (trumps.length >= 2 && sim.contract.type === "NUMERIQUE") {
++      const f = V.simDefTrump;
++      const go =
++        f === "all" ||
++        (f === "ruff" && takerHasRuff(sim)) ||
++        (typeof f === "number" && hash01(seat + ":" + sim.plisJoues + ":" + hand.map((c) => c.id).join(",")) < f);
++      if (go) {
++        const top = strongest(trumps, atout);
++        return higherOut(hand, top, atout) ? weakest(trumps, atout) : top;
++      }
++    }
++  }
++  return heuristicCard(seat);
++}
++
+ // Score de la donne vu d'une équipe, plus un soupçon de points de plis
+ // pour départager.
+ function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team, plisSiege) {
+@@ -2059,7 +2185,8 @@
+ 
+ // Monde par monde, toutes les cartes sur les mêmes mondes : au-delà du
+ // budget de réflexion (téléphone lent), on s'arrête avec les mondes déjà vus.
+-function mcChooseCard(seat, legal, reflex) {
++function mcChooseCard(seat, legal, reflex, why) {
++  lastMC = null;
+   const worlds = mcWorlds(seat, tuning.mcSamples);
+   if (!worlds.length) return reflex;
+   const cards = [reflex, ...legal.filter((c) => c.id !== reflex.id)];
+@@ -2073,18 +2200,50 @@
+     n++;
+     if (tuning.now() > stop) break;
+   }
++  lastMC = { ids: cards.map((c) => c.id), totals: totals.slice(), n };
++  const following = G.pliCourant.length > 0;
++  const adj = totals.slice();
++  // C4 : une défausse dont le signal lu serait faux est pénalisée (ou exclue) tant qu'il reste un choix honnête.
++  if (V.sigNew && V.mcSigPenalty > 0 && following) {
++    const bad = cards.map((c) => sigFalse(seat, c, legal));
++    if (bad.some(Boolean) && !bad.every(Boolean))
++      bad.forEach((x, i) => {
++        if (x) adj[i] -= V.mcSigPenalty === Infinity ? 1e9 : V.mcSigPenalty * n;
++      });
++  }
+   let best = 0;
+-  totals.forEach((t, i) => {
+-    if (t > totals[best] + 1e-9) best = i;
++  adj.forEach((t, i) => {
++    if (t > adj[best] + 1e-9) best = i;
+   });
++  // C4 : un vrai appel du réflexe est gardé tant que la simulation ne lui préfère pas autre chose de plus de la marge.
++  if (V.mcKeepAppel !== null && following && best && sigTrue(seat, reflex, legal) && adj[0] >= adj[best] - V.mcKeepAppel * n)
++    best = 0;
+   const atout = G.contract.atout;
+   if (
+     best &&
+     !G.pliCourant.length &&
+     (cards[best].suit === atout) !== (reflex.suit === atout) &&
+-    totals[0] >= totals[best] - TRUMP_LEAD_MARGIN * n
++    adj[0] >= adj[best] - TRUMP_LEAD_MARGIN * n
+   )
+     best = 0;
++  if (best && !following) {
++    const c = G.contract;
++    const keep = (m) => m !== null && adj[0] >= adj[best] - m * n;
++    const def = teamOf(seat) !== c.equipePreneur;
++    const hand = G.hands[seat];
++    const choice = cards[best];
++    // B1 : la défense n'entame pas atout (sauf capot / Générale)
++    if (def && c.type === "NUMERIQUE" && choice.suit === atout && reflex.suit !== atout && keep(V.mcTrumpDef)) best = 0;
++    // B2 : le preneur avec Valet-9 et trois atouts tire atout quand le réflexe le fait
++    else if (
++      seat === c.preneur && reflex.suit === atout && choice.suit !== atout &&
++      holds(hand, atout, "J") && holds(hand, atout, "9") && suitCards(hand, atout).length >= 3 && keep(V.mcTakerDraw)
++    ) best = 0;
++    // B3 : la défense entame son As quand le réflexe le fait
++    else if (def && reflex.rank === "A" && reflex.suit !== atout && choice.rank !== "A" && keep(V.mcDefAce)) best = 0;
++    // B4 : la couleur appelée / annoncée par le partenaire revient
++    else if ((why === "called" || why === "partner") && choice.suit !== reflex.suit && keep(V.mcCalled)) best = 0;
++  }
+   return cards[best];
+ }
+ 
+@@ -2120,6 +2279,7 @@
+ 
+ // Le réflexe propose, la simulation dispose.
+ function botChooseCard(seat) {
++  if (V.sortHand) canonSort(G.hands[seat]);
+   const legal = computeLegal(
+     G.hands[seat],
+     G.pliCourant,
+@@ -2127,7 +2287,11 @@
+     seat,
+   );
+   if (legal.length === 1) return legal[0];
+-  return mcChooseCard(seat, legal, heuristicCard(seat));
++  const reflex = heuristicCard(seat);
++  const why = reflexWhy;
++  const final = mcChooseCard(seat, legal, reflex, why);
++  if (V.onDecision) V.onDecision({ seat, legal, reflex, why, final, mc: lastMC, G });
++  return final;
+ }
+ 
+ // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
+@@ -2372,7 +2536,8 @@
+     G.seen[carte.id] = true;
+     if (couleurDemandeeAvant && carte.suit !== couleurDemandeeAvant) {
+       G.void[seat][couleurDemandeeAvant] = true;
+-      readDiscardSignal(seat, carte);
++      readDiscardSignal(seat, carte, legal);
++      if (V.onSignal) V.onSignal(G, seat, carte, legal, lastRead);
+     }
+     declareBeloteIfNeeded(seat, carte);
+ 
