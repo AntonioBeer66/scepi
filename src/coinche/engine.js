@@ -9,9 +9,9 @@
 // réflexes de club affinés au Monte-Carlo) ne voient que leur main et ce
 // qui est public : ils imaginent les autres mains (mondes compatibles avec
 // les cartes tombées, les manques, les obligations de couper, les enchères
-// relues avec leur propre système et les appels). Chaque robot a une
-// « personnalité » tirée en début de partie (agressivité) pour ne
-// pas être parfaitement prévisible.
+// relues avec leur propre système et les appels). Leur hasard (les mondes
+// imaginés) dérive de ce qu'ils savent : la même situation donne toujours
+// la même décision, sur un PC comme sur un téléphone lent (voir withSeed).
 
 export const SUITS = ["H", "D", "C", "S"];
 export const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -57,7 +57,7 @@ export const WIN_SCORE = 1010;
 
 // Hasard des règles (mélange, carte jouée d'office) : fourni par l'appelant
 // le temps d'une action, pour que le serveur et les clients boardgame.io
-// tirent la même chose. Les bots gardent Math.random.
+// tirent la même chose. Les bots ont le leur (mcRand, voir withSeed).
 let rand = Math.random;
 
 export function bidType(montant) {
@@ -557,13 +557,12 @@ function raiseBy(seat, suit) {
 }
 
 // Une enchère peut enchaîner plusieurs simulations (adversaire, chaque
-// couleur, chaque palier) : au-delà de ce temps total, celles qui restent
-// répondent « je ne sais pas » et le barème décide.
+// couleur, chaque palier), toutes jouées jusqu'au bout, sans horloge : la
+// même main donne la même enchère sur un PC et sur un téléphone lent.
 // Toutes ces simulations se jouent sur les mêmes mondes, tirés une fois
 // par décision (bidWorlds) : les options se comparent sur les mêmes donnes,
 // et 96 mondes partagés coûtent à peine plus que 24 retirés à chaque
 // simulation. En duel : +4,7 pts/donne.
-const BID_DECISION_MS = 400;
 const COMPETE_MARGIN = 60; // voir l'étape 3
 const OPEN_VETO = 0.6; // voir l'étape 4
 // Paliers d'ouverture du barème (openingBid), du plus haut au plus bas : le
@@ -573,21 +572,22 @@ const PALIERS_OUVERTURE = [160, 130, 120, 110, 100, 90, 80];
 // seul (clefs, ouverture sans fausse carte) en réussissait moins d'un sur
 // trois : les relances de compétition se lisaient comme des As.
 // CAPOT_MIN valide un capot du barème, CAPOT_SIM en propose un hors barème
-// (duel en réflexes contre le barème seul : +1,3 pt/donne). Sur moins de
-// CAPOT_WORLDS mondes (appareil lent, temps écoulé), pas de capot : la
-// simulation est trop bruitée pour le valider.
+// (duel en réflexes contre le barème seul : +1,3 pt/donne). Réglé sur moins
+// de CAPOT_WORLDS mondes (les tests en mettent 4), pas de capot : la
+// simulation est trop bruitée pour le valider. La Générale, la coinche et
+// la surcoinche demandent min(CAPOT_WORLDS, mondes réglés).
 const CAPOT_MIN = 0.7;
 const CAPOT_SIM = 0.7;
 const CAPOT_WORLDS = 24;
-let bidDeadline = Infinity;
+let inBid = false; // enchère en cours : makeProbability joue bidWorlds
 let bidWorlds = null;
 function botDecideBid(seat) {
-  bidDeadline = tuning.now() + BID_DECISION_MS;
+  inBid = true;
   bidWorlds = null;
   try {
-    return decideBid(seat);
+    return withSeed(seat, "bid", () => decideBid(seat));
   } finally {
-    bidDeadline = Infinity;
+    inBid = false;
     bidWorlds = null;
   }
 }
@@ -622,7 +622,7 @@ function generaleBid(seat, hand, cur, team) {
       equipePreneur: team,
       coinche: false,
       surcoinche: false,
-    });
+    }, Math.min(CAPOT_WORLDS, tuning.bidWorlds));
     if (pm !== null && (!best || pm > best.pm)) best = { pm, atout, montant };
   }
   if (!best || best.pm < (oppCapot ? GENERALE_OVER : GENERALE_SURE)) return null;
@@ -976,7 +976,11 @@ function botWantsToCoinche(seat) {
   // +0,4 contre l'ancienne formule ; puis, la même pour tous les bots (plus
   // d'appétit à coincher tiré au hasard) et sur 96 mondes, 0,35 → +2,0
   // contre 0,5 (0,25 : −0,8 ; 0,15 : −2,1).
-  const pMake = makeProbability(seat, contract);
+  const pMake = makeProbability(
+    seat,
+    contract,
+    Math.min(CAPOT_WORLDS, tuning.bidSamples),
+  );
   return (
     pMake !== null &&
     pMake < 160 / (160 + contract.montant) - COINCHE_MARGIN
@@ -1001,12 +1005,12 @@ function botWantsToSurcoinche(seat) {
     return true;
   // Réussite simulée, capots et Générales compris (ZON-7 : un capot coinché
   // n'était jamais surcoinché, +336 pts par donne laissés sur la table dans
-  // le cas mesuré) ; comme pour les annoncer, sur au moins CAPOT_WORLDS mondes.
+  // le cas mesuré) ; sur au moins CAPOT_WORLDS mondes (ou tous ceux réglés).
   // Aucun tirage au sort : la même main, la même décision (COI-1).
   const pm = makeProbability(
     seat,
     contract,
-    contract.type === "NUMERIQUE" ? 1 : CAPOT_WORLDS,
+    Math.min(CAPOT_WORLDS, tuning.bidSamples),
   );
   return pm !== null && pm >= surcoincheSeuil(contractValue(contract));
 }
@@ -1164,8 +1168,14 @@ function mayTrump(s, force, hand) {
   return false;
 }
 
+// Copie de la main dans l'ordre de SUITS puis de RANKS (CARD_INDEX) : l'ordre
+// de la donne ne tranche plus les égalités des réflexes ni l'ordre des coups
+// essayés. G.hands, affiché au joueur, n'est jamais réordonné.
+const canonSort = (cards) =>
+  cards.slice().sort((a, b) => CARD_INDEX[a.id] - CARD_INDEX[b.id]);
+
 function playContext(seat) {
-  const hand = G.hands[seat];
+  const hand = canonSort(G.hands[seat]);
   const atout = G.contract.atout;
   const team = teamOf(seat);
   const opponents = [0, 1, 2, 3].filter((s) => teamOf(s) !== team);
@@ -1556,18 +1566,67 @@ function heuristicCard(seat) {
 // En simulation (bots contre bots, mêmes donnes), 16 mondes gagnaient 64 %
 // des parties contre les réflexes seuls, 48 mondes 59 % contre 16, et 96
 // mondes +2,6 pts/donne contre 48 (le moteur ayant été rendu 2,6 fois plus
-// rapide, 96 mondes coûtent moins que 48 auparavant) ; le temps de
-// réflexion reste plafonné pour les appareils lents.
-// Nombre de mondes imaginés et horloge du temps de réflexion (réglables
-// par les tests et les duels A/B : une horloge figée rend les bots
-// reproductibles).
+// rapide, 96 mondes coûtent moins que 48 auparavant). Tous les mondes sont
+// joués, sans horloge : couper la réflexion au bout d'un temps donné faisait
+// changer 16 % des cartes sur un appareil 10 fois plus lent. Un appareil
+// extrême passe à 48 mondes pour toute la session (client/host-worker.js).
+// Nombre de mondes imaginés (réglable par les tests et les duels A/B).
+// tuning.now n'est plus lu par les bots : gardé pour les outils qui le règlent.
 export const tuning = {
   mcSamples: 96,
   bidWorlds: 96,
   bidSamples: 96, // coinche et surcoinche (48 : +1,4 pt/donne contre 24 ; 96 : 7 ms par décision sur PC)
   now: () => Date.now(),
 };
-const MC_BUDGET_MS = 250;
+
+// Hasard des bots : tiré d'une graine qui ne dépend que de ce que le siège
+// sait (voir stateSeed), le temps d'une décision (withSeed) : la même
+// situation donne toujours la même décision. Hors décision (bots.mcWorlds
+// appelé par un test), le Math.random du moment.
+let mcRand = () => Math.random();
+// mulberry32, comme rng dans tests/coinche-sim.js.
+function prng(seed) {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// FNV-1a sur ce que le siège sait, en sièges relatifs : sa main triée, les
+// enchères, le contrat, les cartes jouées par chacun et le pli en cours, sa
+// mémoire d'enchère, le score et les forçages (les enchères et la coinche
+// les lisent). Ni numéro de donne, ni identifiants, ni ordre de la main.
+function stateSeed(seat, tag) {
+  let h = 2166136261;
+  const mix = (str) => {
+    for (let i = 0; i < str.length; i++)
+      h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+    h = Math.imul(h ^ 124, 16777619); // séparateur
+  };
+  const rel = (s) => (s - seat + 4) % 4;
+  const team = teamOf(seat);
+  const c = G.contract;
+  mix([tag, G.phase, G.plisJoues, rel(G.donneur)].join());
+  mix(G.hands[seat].map((k) => k.id).sort().join());
+  for (const e of G.bidLog) mix(rel(e.seat) + ":" + (e.montant || "P") + (e.atout || ""));
+  if (c) mix([c.montant, c.atout, rel(c.preneur), c.coinche, c.surcoinche].join());
+  for (let r = 0; r < 4; r++) mix(G.playedBy[(seat + r) % 4].map((k) => k.id).join());
+  mix(G.pliCourant.map((e) => rel(e.siege) + e.carte.id).join());
+  mix(JSON.stringify(G.bidMemo[seat] || null));
+  mix([G.scores[team], G.scores[1 - team], G.forced[team], G.forced[1 - team]].join());
+  return h >>> 0;
+}
+function withSeed(seat, tag, fn) {
+  const prev = mcRand;
+  mcRand = prng(stateSeed(seat, tag));
+  try {
+    return fn();
+  } finally {
+    mcRand = prev;
+  }
+}
 
 // Ce siège peut-il tenir cette carte ? Manques et obligations de couper.
 function canHold(s, c) {
@@ -1584,7 +1643,7 @@ function dealUnknown(unknown, others, size, pinned) {
   const room = { ...size };
   const hands = {};
   for (const s of others) hands[s] = [];
-  const cards = shuffle(unknown)
+  const cards = shuffle(unknown, mcRand)
     .map((c) => ({
       c,
       e:
@@ -1596,7 +1655,7 @@ function dealUnknown(unknown, others, size, pinned) {
   for (const { c, e } of cards) {
     const open = e.filter((s) => room[s] > 0);
     if (!open.length) return null;
-    let r = Math.random() * open.reduce((t, s) => t + room[s], 0);
+    let r = mcRand() * open.reduce((t, s) => t + room[s], 0);
     const s = open.find((x) => (r -= room[x]) < 0) ?? open[open.length - 1];
     hands[s].push(c);
     room[s]--;
@@ -1828,11 +1887,11 @@ function mcWorlds(seat, n) {
   const BURN = 400;
   const THIN = 32;
   for (let step = 0; worlds.length < n && seats.length > 1; step++) {
-    const a = seats[Math.floor(Math.random() * seats.length)];
-    let b = seats[Math.floor(Math.random() * (seats.length - 1))];
+    const a = seats[Math.floor(mcRand() * seats.length)];
+    let b = seats[Math.floor(mcRand() * (seats.length - 1))];
     if (b === a) b = seats[seats.length - 1];
-    const ia = Math.floor(Math.random() * w[a].length);
-    const ib = Math.floor(Math.random() * w[b].length);
+    const ia = Math.floor(mcRand() * w[a].length);
+    const ib = Math.floor(mcRand() * w[b].length);
     const ca = w[a][ia];
     const cb = w[b][ib];
     if (
@@ -1845,7 +1904,7 @@ function mcWorlds(seat, n) {
       w[b][ib] = ca;
       const wa = seatWeight(a, w[a], readings);
       const wb = seatWeight(b, w[b], readings);
-      if (Math.random() * weight[a] * weight[b] < wa * wb) {
+      if (mcRand() * weight[a] * weight[b] < wa * wb) {
         weight[a] = wa;
         weight[b] = wb;
       } else {
@@ -2152,22 +2211,19 @@ function mcValue(seat, card, world) {
 // entamait atout 24 % du temps ; +1,2 ± 1,0 pt/donne en duel.
 const TRUMP_LEAD_MARGIN = 8;
 
-// Monde par monde, toutes les cartes sur les mêmes mondes : au-delà du
-// budget de réflexion (téléphone lent), on s'arrête avec les mondes déjà vus.
+// Monde par monde, toutes les cartes sur les mêmes mondes, et tous les
+// mondes : jamais d'horloge (voir tuning).
 function mcChooseCard(seat, legal, reflex) {
   const worlds = mcWorlds(seat, tuning.mcSamples);
   if (!worlds.length) return reflex;
   const cards = [reflex, ...legal.filter((c) => c.id !== reflex.id)];
   const totals = cards.map(() => 0);
-  const stop = tuning.now() + MC_BUDGET_MS;
-  let n = 0;
   for (const w of worlds) {
     cards.forEach((c, i) => {
       totals[i] += mcValue(seat, c, w);
     });
-    n++;
-    if (tuning.now() > stop) break;
   }
+  const n = worlds.length;
   let best = 0;
   totals.forEach((t, i) => {
     if (t > totals[best] + 1e-9) best = i;
@@ -2184,28 +2240,26 @@ function mcChooseCard(seat, legal, reflex) {
 }
 
 // Chances de réussite d'un contrat avant la première carte : la donne est
-// jouée en entier (réflexes) sur des mondes compatibles avec les enchères.
-const BID_BUDGET_MS = 150;
-// minWorlds : en dessous, la réponse est « je ne sais pas » (null).
+// jouée en entier (réflexes) sur des mondes compatibles avec les enchères,
+// tous joués (jamais d'horloge).
+// minWorlds : en dessous, la réponse est « je ne sais pas » (null) ; sans
+// horloge, cela n'arrive que si le générateur ne rend aucun monde, ou s'il
+// est réglé sur moins de minWorlds mondes (tests).
 function makeProbability(seat, contract, minWorlds = 1) {
-  if (tuning.now() >= bidDeadline) return null;
   const saved = G.contract;
   G.contract = contract;
   try {
-    const stop = Math.min(tuning.now() + BID_BUDGET_MS, bidDeadline);
     let ok = 0;
     let n = 0;
     // Pendant une enchère, les mondes de la décision (voir bidWorlds) ;
     // pour une coinche ou une surcoinche, des mondes à part.
-    const worlds =
-      bidDeadline === Infinity
-        ? mcWorlds(seat, tuning.bidSamples)
-        : bidWorlds || (bidWorlds = mcWorlds(seat, tuning.bidWorlds));
+    const worlds = inBid
+      ? bidWorlds || (bidWorlds = mcWorlds(seat, tuning.bidWorlds))
+      : mcWorlds(seat, tuning.bidSamples);
     for (const w of worlds) {
       const { sim, bel } = playOut(seat, w, null);
       n++;
       if (contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege)) ok++;
-      if (tuning.now() > stop) break;
     }
     return n >= minWorlds ? ok / n : null;
   } finally {
@@ -2213,16 +2267,19 @@ function makeProbability(seat, contract, minWorlds = 1) {
   }
 }
 
-// Le réflexe propose, la simulation dispose.
+// Le réflexe propose, la simulation dispose. Coups légaux dans l'ordre
+// canonique (voir canonSort), comme la main des réflexes.
 function botChooseCard(seat) {
   const legal = computeLegal(
-    G.hands[seat],
+    canonSort(G.hands[seat]),
     G.pliCourant,
     G.contract.atout,
     seat,
   );
   if (legal.length === 1) return legal[0];
-  return mcChooseCard(seat, legal, heuristicCard(seat));
+  return withSeed(seat, "card", () =>
+    mcChooseCard(seat, legal, heuristicCard(seat)),
+  );
 }
 
 // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
@@ -2579,8 +2636,12 @@ export const bots = {
   turnAction: withG(botTurnAction),
   decideBid: withG(botDecideBid),
   chooseCard: withG(botChooseCard),
-  wantsToCoinche: withG(botWantsToCoinche),
-  wantsToSurcoinche: withG(botWantsToSurcoinche),
+  wantsToCoinche: withG((s) =>
+    withSeed(s, "coinche", () => botWantsToCoinche(s)),
+  ),
+  wantsToSurcoinche: withG((s) =>
+    withSeed(s, "surcoinche", () => botWantsToSurcoinche(s)),
+  ),
   heuristicCard: withG(heuristicCard),
   mcWorlds: withG(mcWorlds),
   seatWeight: withG((s, hand) => seatWeight(s, hand, bidReadings())),
