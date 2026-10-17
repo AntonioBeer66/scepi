@@ -20,16 +20,26 @@
     "run_worker_first": ["/api/*"],
   },
   "durable_objects": {
-    "bindings": [
-      { "name": "TABLES", "class_name": "Tables" },
-      // Journal anonyme des donnes jouées par des humains (worker/journal.js).
-      { "name": "JOURNAL", "class_name": "Journal" },
-    ],
+    "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
   },
-  // Stockage SQLite : celui de l'offre gratuite des Durable Objects.
+  // Stockage SQLite : celui de l'offre gratuite des Durable Objects. Le
+  // journal y a vécu une journée (v2) avant de passer dans D1 (v3).
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Tables"] },
     { "tag": "v2", "new_sqlite_classes": ["Journal"] },
+    { "tag": "v3", "deleted_classes": ["Journal"] },
+  ],
+  // Journal anonyme des donnes jouées par des humains (worker/journal.js) :
+  // le site y écrit seulement ; on le lit avec son compte Cloudflare
+  //   npx wrangler d1 execute scepi-journal --remote --json --command "SELECT …"
+  // (table créée une fois : CREATE TABLE donnes (id INTEGER PRIMARY KEY
+  // AUTOINCREMENT, data TEXT NOT NULL)). La version de test n'en a pas.
+  "d1_databases": [
+    {
+      "binding": "JOURNAL_DB",
+      "database_name": "scepi-journal",
+      "database_id": "e20ccb96-a2a8-4566-bc81-cd2df578d31c",
+    },
   ],
   // Version de test (npm run deploy:staging) : scepi-staging.<compte>.workers.dev,
   // avec ses propres tables et actus ; son mot de passe des actus se règle à part
@@ -40,10 +50,7 @@
       "routes": [],
       "workers_dev": true,
       "durable_objects": {
-        "bindings": [
-          { "name": "TABLES", "class_name": "Tables" },
-          { "name": "JOURNAL", "class_name": "Journal" },
-        ],
+        "bindings": [{ "name": "TABLES", "class_name": "Tables" }],
       },
     },
   },

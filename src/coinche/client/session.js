@@ -160,33 +160,17 @@ export function startSession({
   }
 
   // Journal anonyme (voir journal.js) : le navigateur hôte, seul à voir
-  // toutes les mains, envoie chaque donne finie ou passée ; le temps de
-  // décision n'est connu que pour le joueur de ce navigateur. Rien si le
-  // navigateur demande de ne pas être suivi (Global Privacy Control).
-  let times = [];
-  let turnStart = null;
-  const myActions = (G) =>
-    G.bidLog.filter((e) => e.seat === me).length + (G.playedBy?.[me]?.length || 0);
+  // toutes les mains, envoie chaque donne finie ou passée — les coups
+  // seulement. Rien si le navigateur demande de ne pas être suivi (Global
+  // Privacy Control).
   function journal(G, prevG) {
-    if (watch || !prevG || navigator.globalPrivacyControl) return;
-    if (G.phase === "ENCHERES" || G.phase === "JEU") {
-      if (G.donneNumero === prevG.donneNumero && myActions(G) > myActions(prevG) && turnStart != null) {
-        // Dernière carte jouée toute seule (autoLastCard) : pas une décision.
-        if (prevG.hands[me]?.length !== 1) times.push(performance.now() - turnStart);
-        turnStart = null;
-      }
-      if (G.joueurActif === me && turnStart == null) turnStart = performance.now();
-    }
+    if (watch || !prevG || G.hote !== me || navigator.globalPrivacyControl) return;
+    const mode = online ? "ligne" : "solo";
     let rec = null;
-    if (G.phase === "SCORE" && prevG.phase !== "SCORE")
-      rec = buildRecord(G, { mode: online ? "ligne" : "solo", me, times });
+    if (G.phase === "SCORE" && prevG.phase !== "SCORE") rec = buildRecord(G, { mode, me });
     else if (G.donneNumero > prevG.donneNumero && prevG.phase === "ENCHERES")
-      rec = buildRecord(prevG, { mode: online ? "ligne" : "solo", me, times, lastPass: prevG.joueurActif });
-    if (G.donneNumero !== prevG.donneNumero) {
-      times = [];
-      turnStart = null;
-    }
-    if (!rec || G.hote !== me) return;
+      rec = buildRecord(prevG, { mode, me, lastPass: prevG.joueurActif });
+    if (!rec) return;
     const body = JSON.stringify(rec);
     if (body.length > JOURNAL_MAX_BYTES) return;
     fetch("/api/journal", {

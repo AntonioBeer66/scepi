@@ -1,22 +1,26 @@
 // Ce que font les humains (journal anonyme, worker/journal.js), à côté des
-// bots : une observation, pas une vérité. Télécharge les nouvelles donnes
-// puis résume enchères, remontées, entames d'atout et temps de réflexion.
-//   SCEPI_PASSWORD=<mot de passe des actus> node tests/coinche-humains.js [fichier, défaut donnes-humaines.jsonl]
-// Sans mot de passe : analyse seulement le fichier déjà téléchargé.
+// bots : une observation, pas une vérité. Télécharge les nouvelles donnes de
+// la base D1 avec le compte Cloudflare de cette machine (npx wrangler login),
+// puis résume enchères, remontées, entames d'atout et réussite des contrats.
+//   node tests/coinche-humains.js [fichier, défaut donnes-humaines.jsonl] [--hors-ligne]
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import { trickWinnerSeat } from '../src/coinche/engine.js';
 
-const FILE = process.argv[2] || 'donnes-humaines.jsonl';
-const SITE = 'https://www.scepinvaders.com';
+const FILE = process.argv.slice(2).find((a) => !a.startsWith('--')) || 'donnes-humaines.jsonl';
 const SUITS = ['H', 'D', 'C', 'S'];
 
 const rows = fs.existsSync(FILE) ? fs.readFileSync(FILE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
-if (process.env.SCEPI_PASSWORD) {
+if (!process.argv.includes('--hors-ligne')) {
   for (;;) {
     const since = rows.length ? rows[rows.length - 1].id : 0;
-    const res = await fetch(`${SITE}/api/journal?depuis=${since}`, { headers: { 'x-articles-password': process.env.SCEPI_PASSWORD } });
-    if (!res.ok) throw new Error(`export refusé (${res.status})`);
-    const got = (await res.text()).split('\n').filter(Boolean).map((l) => JSON.parse(l));
+    const sql = `SELECT id, data FROM donnes WHERE id > ${Number(since)} ORDER BY id LIMIT 5000`;
+    const out = execFileSync('npx', ['wrangler', 'd1', 'execute', 'scepi-journal', '--remote', '--json', '--command', `"${sql}"`], {
+      encoding: 'utf8',
+      shell: true,
+      maxBuffer: 1 << 28,
+    });
+    const got = JSON.parse(out)[0].results.map((r) => ({ id: r.id, donne: JSON.parse(r.data) }));
     if (!got.length) break;
     rows.push(...got);
     fs.appendFileSync(FILE, got.map((r) => JSON.stringify(r)).join('\n') + '\n');
@@ -27,12 +31,10 @@ if (!donnes.length) { console.log('Aucune donne pour l\'instant.'); process.exit
 
 const add = (o, k, x = 1) => { o[k] = (o[k] || 0) + x; };
 const pct = (a, b) => (b ? `${Math.round((100 * (a || 0)) / b)} %` : '—');
-const median = (a) => { if (!a.length) return '—'; const s = [...a].sort((x, y) => x - y); return `${(s[s.length >> 1] / 1000).toFixed(1)} s`; };
 const who = (d, s) => (d.humains[s] ? 'humain' : 'bot');
 const card = (id) => ({ id, rank: id.slice(0, -1), suit: id.slice(-1) });
 
 const bids = {}; const leads = {}; const contracts = {};
-const thinkBid = []; const thinkCard = [];
 for (const d of donnes) {
   // Annonces : tenue d'atout de celui qui parle, remontée ou non.
   d.encheres.forEach(([s, m, a], i) => {
@@ -87,9 +89,6 @@ for (const d of donnes) {
     if (d.reussi) add(o, 'ok');
     add(o, 'montant', montant);
   }
-  // Temps : les annonces du joueur viennent d'abord, puis ses cartes.
-  const nb = d.encheres.filter(([s]) => s === d.moi).length;
-  d.temps.forEach((t, i) => (i < nb ? thinkBid : thinkCard).push(t));
 }
 
 console.log(`\n${donnes.length} donnes (${donnes.filter((d) => d.mode === 'solo').length} en solo, ${donnes.filter((d) => d.mode === 'ligne').length} en ligne), ${donnes.filter((d) => d.contrat).length} jouées.`);
@@ -99,4 +98,3 @@ console.log('\n| entames | n | atout |\n|---|---|---|');
 for (const [k, o] of Object.entries(leads).sort()) console.log(`| ${k} | ${o.n} | ${pct(o.atout, o.n)} |`);
 console.log('\n| contrats | n | réussis | montant moyen |\n|---|---|---|---|');
 for (const [k, o] of Object.entries(contracts).sort()) console.log(`| ${k} | ${o.n} | ${pct(o.ok, o.n)} | ${(o.montant / o.n).toFixed(0)} |`);
-console.log(`\nTemps de décision médian du joueur : annonce ${median(thinkBid)}, carte ${median(thinkCard)}.`);

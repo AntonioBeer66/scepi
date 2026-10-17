@@ -22,12 +22,11 @@ play(engine, {
   on: {
     trick(G) { prev = structuredClone(G); },
     score(G) {
-      const rec = buildRecord(G, { mode: 'solo', me: 0, times: [1234.5, 800] });
+      const rec = buildRecord(G, { mode: 'solo', me: 0 });
       // Toutes les cartes, une fois chacune ; les mains sont les cartes jouées.
       assert.equal(new Set(rec.mains.flat()).size, 32);
       assert.deepEqual(rec.mains, rec.jeu);
       assert.equal(rec.contrat[0], G.contract.preneur);
-      assert.deepEqual(rec.temps, [1235, 800]);
       check({ ...rec, humains: [1, 0, 0, 0] });
       played++;
     },
@@ -44,11 +43,11 @@ assert.equal('contrat' in rp, false);
 check(rp);
 passed++;
 
-// Refus : champ inconnu, carte inventée, temps absurde, joueur qui n'est pas humain.
+// Refus : champ inconnu (une durée, un pseudo), carte inventée, joueur qui n'est pas humain.
 const ok = buildRecord(fake, { mode: 'solo', me: 0, lastPass: 0 });
 assert.equal(checkRecord({ ...ok, pseudo: 'x' }), 'CHAMP');
 assert.equal(checkRecord({ ...ok, mains: [['ZZ'], [], [], []] }), 'MAINS');
-assert.equal(checkRecord({ ...ok, temps: [-5] }), 'TEMPS');
+assert.equal(checkRecord({ ...ok, temps: [1200] }), 'CHAMP');
 assert.equal(checkRecord({ ...ok, moi: 1 }), 'HUMAINS');
 assert.equal(checkRecord({ ...ok, mode: 'autre' }), 'VERSION');
 assert.equal(checkRecord(null), 'FORME');

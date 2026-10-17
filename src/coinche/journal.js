@@ -1,8 +1,7 @@
 // Journal anonyme des donnes jouées par des humains : pour comprendre comment
-// on joue vraiment (enchères, entames, temps de réflexion) et en tirer des
-// idées pour les bots — une observation, pas une vérité (un humain se trompe
-// aussi). Ni pseudo, ni identifiant, ni adresse : seulement les cartes, les
-// annonces et, pour le joueur de ce navigateur, le temps mis à décider.
+// on joue vraiment (enchères, entames) et en tirer des idées pour les bots —
+// une observation, pas une vérité (un humain se trompe aussi). Seulement les
+// coups : ni pseudo, ni message, ni émoticône, ni date, ni durée.
 // Le navigateur hôte (seul à voir les mains des bots) envoie chaque donne
 // finie à /api/journal (worker/journal.js), qui la vérifie avec checkRecord.
 
@@ -11,9 +10,9 @@ const SUITS = ["H", "D", "C", "S"];
 export const JOURNAL_MAX_BYTES = 8 * 1024;
 
 // Une donne finie (phase SCORE) ou passée (quatre passes : G est alors
-// l'état d'avant la dernière passe, `lastPass` son siège). `times` : temps
-// de décision en ms du joueur `me`, dans l'ordre de ses actions.
-export function buildRecord(G, { mode, me, times = [], lastPass = null }) {
+// l'état d'avant la dernière passe, `lastPass` son siège). `me` : le siège
+// de ce navigateur, humain.
+export function buildRecord(G, { mode, me, lastPass = null }) {
   const played = lastPass == null;
   const bids = G.bidLog.map((e) => [e.seat, e.montant || 0, e.atout || ""]);
   if (!played) bids.push([lastPass, 0, ""]);
@@ -30,7 +29,6 @@ export function buildRecord(G, { mode, me, times = [], lastPass = null }) {
     mains: hands,
     encheres: bids,
     moi: me,
-    temps: times.map((t) => Math.round(t)),
   };
   if (played) {
     const c = G.contract;
@@ -53,7 +51,7 @@ const cards = (a) => Array.isArray(a) && a.length <= 8 && a.every((id) => typeof
 // Motif du refus, ou null si l'enregistrement est bien formé.
 export function checkRecord(r) {
   if (!r || typeof r !== "object" || Array.isArray(r)) return "FORME";
-  const keys = ["v", "mode", "donneur", "humains", "mains", "encheres", "moi", "temps", "contrat", "jeu", "points", "reussi", "scores"];
+  const keys = ["v", "mode", "donneur", "humains", "mains", "encheres", "moi", "contrat", "jeu", "points", "reussi", "scores"];
   if (Object.keys(r).some((k) => !keys.includes(k))) return "CHAMP";
   if (r.v !== 1 || (r.mode !== "solo" && r.mode !== "ligne")) return "VERSION";
   if (!isSeat(r.donneur) || !isSeat(r.moi)) return "SIEGE";
@@ -64,7 +62,6 @@ export function checkRecord(r) {
   for (const e of r.encheres)
     if (!Array.isArray(e) || e.length !== 3 || !isSeat(e[0]) || !isInt(e[1], 0, 520) || !(e[2] === "" || SUITS.includes(e[2])))
       return "ENCHERES";
-  if (!Array.isArray(r.temps) || r.temps.length > 64 || !r.temps.every((t) => isInt(t, 0, 3_600_000))) return "TEMPS";
   if ("contrat" in r) {
     const c = r.contrat;
     if (!Array.isArray(c) || c.length !== 6 || !isSeat(c[0]) || !isInt(c[1], 80, 520) || !SUITS.includes(c[2]) ||
