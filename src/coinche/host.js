@@ -64,6 +64,7 @@ export function createHost({
   timers = globalThis,
   random = Math.random,
   decide = bots,
+  now = () => 0, // horloge du calcul (Date.now dans le navigateur)
 }) {
   let G = null;
   let tour = null;
@@ -84,17 +85,6 @@ export function createHost({
 
   // Le bot décide sur sa propre vue (une copie : l'état reçu peut être figé) ;
   // sa mémoire d'enchère voyage avec son action.
-  function botSend(seat, decision) {
-    if (!playable(seat)) return;
-    const g = seatView(G, seat);
-    const action = decision(g, seat);
-    if (!action) return;
-    send(seat, {
-      ...action,
-      memo: { bidMemo: g.bidMemo[seat], forced: g.forced },
-    });
-  }
-
   const isBot = (s) => G.seats[s].type === "bot";
   // Décision prévue quand le siège était un bot : entre-temps un humain a
   // pu le reprendre, ou sa main n'est pas encore visible de l'hôte (en
@@ -120,19 +110,19 @@ export function createHost({
   // parole (thinkMs, plus la fenêtre de coinche d'un humain) s'appliquent donc
   // à la coinche aussi.
   function botTurn(seat) {
+    if (!playable(seat)) return null;
     const c = G.contract;
     if (
       G.phase === "ENCHERES" &&
       c &&
       !c.coinche &&
       teamOf(seat) !== c.equipePreneur &&
-      playable(seat) &&
       decide.wantsToCoinche(seatView(G, seat), seat)
-    ) {
-      send(seat, { type: "COINCHER" });
-      return;
-    }
-    botSend(seat, decide.turnAction);
+    )
+      return { type: "COINCHER" };
+    const g = seatView(G, seat);
+    const action = decide.turnAction(g, seat);
+    return action && { ...action, memo: { bidMemo: g.bidMemo[seat], forced: g.forced } };
   }
 
   function update(state) {
@@ -155,8 +145,19 @@ export function createHost({
       const seat = G.joueurActif;
       if (playable(seat) && decided[seat] !== t) {
         decided[seat] = t;
-        later(pause + coincheWindow() + thinkMs(G, seat, random()), () => {
-          if (G.tour === t) botTurn(seat);
+        // Le temps de réflexion sert au calcul : la décision est prise dès que
+        // le pli est ramassé, puis envoyée au bout du délai (pas plus tôt).
+        const wait = coincheWindow() + thinkMs(G, seat, random());
+        later(pause, () => {
+          if (G.tour !== t) return;
+          const key = [G.phase, G.bidLog.length, !!(G.contract && G.contract.coinche)].join();
+          const t0 = now();
+          const action = botTurn(seat);
+          if (!action) return;
+          later(Math.max(0, wait - (now() - t0)), () => {
+            const same = [G.phase, G.bidLog.length, !!(G.contract && G.contract.coinche)].join() === key;
+            if (G.tour === t && same && playable(seat)) send(seat, action);
+          });
         });
       }
     } else if (G.phase === "SURCOINCHE") {

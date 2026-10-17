@@ -49,7 +49,8 @@ const active = human.joueurActif;
 h2.update({ ...human, hote: 0 });
 const left = { ...human, hote: 0, seats: human.seats.map((s, i) => (i === active && i !== 0 ? { type: "bot", name: "Bob (bot)" } : s)) };
 h2.update(left);
-q2.filter(([ms]) => ms < 5000).forEach(([, fn]) => fn());
+// Minuteurs courts (calcul puis envoi au bout du délai), dans l'ordre où ils naissent.
+for (let i = 0; i < q2.length; i++) if (q2[i][0] < 5000) q2[i][1]();
 if (active !== 0) assert.strictEqual(played, active, "le bot qui remplace le joueur actif joue tout de suite");
 
 console.log("Hôte : chaque bot ne voit que sa main ; un siège repris en plein tour joue.");

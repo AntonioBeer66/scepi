@@ -1629,11 +1629,13 @@ function heuristicCard(seat) {
 // rapide, 96 mondes coûtent moins que 48 auparavant). Tous les mondes sont
 // joués, sans horloge : couper la réflexion au bout d'un temps donné faisait
 // changer 16 % des cartes sur un appareil 10 fois plus lent. Un appareil
-// extrême passe à 48 mondes pour toute la session (client/host-worker.js).
+// lent passe à 96 ou 48 mondes pour toute la session (client/host-worker.js).
+// 192 mondes pour la carte (contre 96 : +4,0 ± 1,8 pts/donne en duel) : le
+// calcul se fait pendant le temps de réflexion du bot (voir host.js).
 // Nombre de mondes imaginés (réglable par les tests et les duels A/B).
 // tuning.now n'est plus lu par les bots : gardé pour les outils qui le règlent.
 export const tuning = {
-  mcSamples: 96,
+  mcSamples: 192,
   bidWorlds: 96,
   bidSamples: 96, // coinche et surcoinche (48 : +1,4 pt/donne contre 24 ; 96 : 7 ms par décision sur PC)
   now: () => Date.now(),

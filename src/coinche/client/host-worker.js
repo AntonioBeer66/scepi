@@ -8,9 +8,10 @@
 import { actOn, bots, createGame, tuning } from "../engine.js";
 import { createHost } from "../host.js";
 
-// Garde-fou des appareils extrêmes : une entame de référence (donne fixe,
-// 96 mondes) chronométrée une fois au démarrage ; au-delà de 1,5 s, 48
-// mondes pour toute la session. Jamais d'horloge pendant une décision : la
+// Garde-fou des appareils lents : une entame de référence (donne fixe,
+// 192 mondes) chronométrée une fois au démarrage ; au-delà de 0,8 s (le
+// temps de réflexion d'un vrai choix), 96 mondes ; au-delà de 1,5 s, 48,
+// pour toute la session. Jamais d'horloge pendant une décision : la
 // même situation donne la même décision tout au long de la partie.
 {
   const g = createGame([0, 1, 2, 3].map(() => ({ type: "bot" })), () => 0.5);
@@ -18,13 +19,15 @@ import { createHost } from "../host.js";
   for (let i = 0; i < 3; i++) actOn(g, g.joueurActif, { type: "PASSER" });
   const t = Date.now();
   bots.chooseCard(g, g.joueurActif);
-  if (Date.now() - t > 1500)
-    tuning.mcSamples = tuning.bidWorlds = tuning.bidSamples = 48;
+  const ms = Date.now() - t;
+  if (ms > 1500) tuning.mcSamples = tuning.bidWorlds = tuning.bidSamples = 48;
+  else if (ms > 800) tuning.mcSamples = 96;
 }
 
 let tour = null;
 const host = createHost({
   send: (seat, action) => postMessage({ seat, action, tour }),
+  now: () => Date.now(),
 });
 
 onmessage = ({ data }) => {

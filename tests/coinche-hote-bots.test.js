@@ -206,14 +206,18 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   const h = createHost({
     send() {},
     random: () => 0.5,
-    timers: { setTimeout: (fn, ms) => delays.push(ms), clearTimeout() {} },
-    decide: { turnAction: () => null, wantsToCoinche: () => false, wantsToSurcoinche: () => false },
+    // Pause de pli nulle exécutée ensuite (run) : le bot calcule, puis attend son délai.
+    timers: { setTimeout: (fn, ms) => delays.push([ms, fn]), clearTimeout() {} },
+    decide: { turnAction: () => ({ type: "JOUER" }), wantsToCoinche: () => false, wantsToSurcoinche: () => false },
   });
   G.hands[2] = [card("8S"), card("7H"), card("9D")];
+  const run = () => { for (let i = 0; i < delays.length; i++) if (delays[i][0] === 0 && delays[i][1]) { const fn = delays[i][1]; delays[i][1] = null; fn(); } };
   h.update({ ...G, tour: 50 });
+  run();
   G.hands[2] = [card("8S"), card("9S"), card("7H")];
   h.update({ ...G, tour: 51 });
-  const [forced, choix] = delays.filter((ms) => ms < 20000);
+  run();
+  const [forced, choix] = delays.map(([ms]) => ms).filter((ms) => ms > 0 && ms < 20000);
   ok(forced <= 600 && choix >= 800, `HAS-4 : minuteur ${forced} ms (forcé) contre ${Math.round(choix)} ms (choix)`);
 }
 
