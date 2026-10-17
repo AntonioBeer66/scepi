@@ -45,8 +45,11 @@ export function OnlineClient({ api, matchID, playerID, credentials, name }) {
     sendEmote(emote) {
       if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "emote", emote }));
     },
+    // false : connexion en cours de reprise, rien n'est parti.
     sendChat(text) {
-      if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "chat", text }));
+      if (ws?.readyState !== WebSocket.OPEN) return false;
+      ws.send(JSON.stringify({ type: "chat", text }));
+      return true;
     },
     peek(seat) {
       peekSeat = seat;
@@ -106,8 +109,10 @@ export function OnlineClient({ api, matchID, playerID, credentials, name }) {
       }
       // Table fermée (abandonnée, effacée) : inutile d'insister.
       if (event.code === 4404) return goneFn?.();
-      // Pseudo de spectateur déjà pris à cette table.
-      if (event.code === 4409) return goneFn?.("PSEUDO_PRIS");
+      // Pseudo de spectateur déjà pris à cette table. Déjà entré une fois :
+      // c'est sa propre connexion d'avant (réseau changé), pas encore
+      // refermée côté serveur ; on réessaie plus tard.
+      if (event.code === 4409 && !state) return goneFn?.("PSEUDO_PRIS");
       timer = setTimeout(connect, Math.min(10000, 500 * 2 ** retry++));
     };
   }

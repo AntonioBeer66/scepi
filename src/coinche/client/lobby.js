@@ -6,7 +6,7 @@
 // donnant leur code (choisi par celui qui la crée).
 // La place occupée (identifiants) est gardée dans ce navigateur : recharger
 // la page ramène à la table.
-import { CODE_MIN, MAX_NAME, normCode } from "../../online/tables.js";
+import { CODE_MIN, MAX_NAME, cleanName, normCode } from "../../online/tables.js";
 
 const API = "/api";
 const SESSION_KEY = "scepi-coinche-session";
@@ -317,7 +317,8 @@ function init() {
     const form = event.target.closest('[data-action="join"], [data-action="watch"]');
     if (!form) return;
     event.preventDefault();
-    const name = new FormData(form).get("pseudo").toString().trim().slice(0, MAX_NAME);
+    // Nettoyé comme sur le serveur : un spectateur reconnaît ses messages.
+    const name = cleanName(new FormData(form).get("pseudo").toString());
     if (!name || session) return;
     // Spectateur : son pseudo signe ses messages à la table.
     if (form.dataset.action === "watch") {

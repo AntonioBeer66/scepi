@@ -34,4 +34,22 @@ assert.ok(seen, "le bot actif a décidé");
 for (const s of [0, 1, 2, 3])
   if (s !== seen.s) assert.ok(seen.g.hands[s].every((c) => c === null), `le bot ${seen.s} ne voit pas la main ${s}`);
 
-console.log("Hôte : chaque bot ne voit que sa main.");
+// Joueur actif parti en plein tour (devenirBot, même tour) : son bot joue.
+const human = createGame([0, 1, 2, 3].map((s) => ({ type: s === 0 ? "human" : "bot", name: "X" })), Math.random);
+human.seats[human.joueurActif] = { type: "human", name: "Bob" };
+human.seats[0] = { type: "human", name: "Alice" };
+const q2 = [];
+let played = null;
+const h2 = createHost({
+  send(seat, action) { if (action.type !== "TIMEOUT") played = seat; },
+  timers: { setTimeout: (fn, ms) => q2.push([ms, fn]), clearTimeout() {} },
+  decide: { turnAction: () => ({ type: "PASSER" }), wantsToCoinche: () => false, wantsToSurcoinche: () => false },
+});
+const active = human.joueurActif;
+h2.update({ ...human, hote: 0 });
+const left = { ...human, hote: 0, seats: human.seats.map((s, i) => (i === active && i !== 0 ? { type: "bot", name: "Bob (bot)" } : s)) };
+h2.update(left);
+q2.filter(([ms]) => ms < 5000).forEach(([, fn]) => fn());
+if (active !== 0) assert.strictEqual(played, active, "le bot qui remplace le joueur actif joue tout de suite");
+
+console.log("Hôte : chaque bot ne voit que sa main ; un siège repris en plein tour joue.");

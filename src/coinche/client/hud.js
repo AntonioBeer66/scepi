@@ -757,8 +757,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       event.preventDefault();
       const input = event.target.elements.text;
       const text = input.value.trim();
-      if (!text || send.disabled) return;
-      onChat(text);
+      // Pas parti (reconnexion en cours) : le texte reste, à renvoyer.
+      if (!text || send.disabled || onChat(text) === false) return;
       input.value = "";
       send.disabled = true;
       let left = Math.ceil(CHAT_GAP_MS / 1000);
@@ -857,7 +857,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     destroy() {
       clearInterval(countTimer);
       clearTimeout(ui.armTimer);
-      root.innerHTML = "";
+      // Copie vide à la place : ses écouteurs (G null) ne survivent pas à la
+      // partie suivante, qui relit #game-hud.
+      root.replaceWith(root.cloneNode(false));
       announcer.textContent = "";
       G = null;
     },

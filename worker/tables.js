@@ -30,17 +30,21 @@ import { DurableObject } from "cloudflare:workers";
 import {
   CHAT_GAP_MS,
   cleanChat,
+  cleanName,
   createTables,
   EMOTES,
   historyCSV,
   historyRow,
-  MAX_NAME,
   sameName,
   weekOf,
 } from "../src/online/tables.js";
 import { coinche as FICHE } from "../src/coinche/fiche.js";
 
 const MAX_MESSAGE = 8 * 1024; // un coup tient en quelques centaines d'octets
+// Anti-spam : le client attend CHAT_GAP_MS (et 1 s entre deux émoticônes) ;
+// le serveur laisse 20 % de marge, sinon un premier message retardé par le
+// réseau fait refuser le suivant, envoyé pile à l'heure.
+const SLACK = 0.8;
 const KEY = (id) => `m:${id}`;
 const HISTORY = "historique"; // { week, rows } : la semaine en cours seulement
 const ARTICLE_PREFIX = "article:";
@@ -123,9 +127,11 @@ export class Tables extends DurableObject {
   }
 
   // À toute la table (messages, liste des spectateurs) : rien n'est enregistré.
+  // Connexions qui n'ont pas dit bonjour : rien (comme send).
   relay(id, msg) {
     const out = JSON.stringify(msg);
     for (const ws of this.ctx.getWebSockets(id)) {
+      if (!ws.deserializeAttachment()?.ready) continue;
       try {
         ws.send(out);
       } catch {
@@ -309,7 +315,7 @@ export class Tables extends DurableObject {
       const seat = Number(body?.playerID);
       if (action === "join") {
         // Pseudo d'un spectateur en train de regarder : pris aussi.
-        if (this.nameTaken(id, String(body?.playerName ?? "").slice(0, MAX_NAME)))
+        if (this.nameTaken(id, cleanName(body?.playerName)))
           return json({ error: "PSEUDO_PRIS" }, 409);
         const r = this.tables.join(id, seat, body?.playerName);
         if (r.error)
@@ -344,13 +350,16 @@ export class Tables extends DurableObject {
     const { id } = att;
     if (!this.tables.get(id)) return ws.close(4404, "Table fermée");
 
+    // Un seul bonjour par connexion : le refaire remettrait à zéro l'anti-spam
+    // et changerait le pseudo d'un spectateur banni.
     if (msg?.type === "hello") {
+      if (att.ready) return;
       const seat = msg.playerID == null ? null : Number(msg.playerID);
       // Mauvais identifiants : spectateur, rien de plus.
       const ok = seat != null && this.tables.auth(id, seat, msg.credentials);
       // Pseudo d'un spectateur (ses messages, la liste des spectateurs) :
       // refusé s'il est déjà pris à cette table.
-      const name = ok ? null : cleanChat(msg.name).slice(0, MAX_NAME).trim() || null;
+      const name = ok ? null : cleanName(msg.name) || null;
       if (name && this.nameTaken(id, name)) return ws.close(4409, "Pseudo pris");
       ws.serializeAttachment({ id, seat: ok ? seat : null, name, ready: true });
       if (ok) this.broadcast(id); // les autres le voient connecté
@@ -360,7 +369,8 @@ export class Tables extends DurableObject {
     }
     // Spectateur : regarde la main d'un joueur (il peut en changer).
     if (msg?.type === "peek" && att.ready && att.seat == null) {
-      ws.serializeAttachment({ ...att, peek: msg.seat });
+      // Un siège ou rien : l'attache d'une WebSocket tient en 2 Ko.
+      ws.serializeAttachment({ ...att, peek: Number.isInteger(msg.seat) ? msg.seat : null });
       this.send(ws, id);
       return;
     }
@@ -376,13 +386,18 @@ export class Tables extends DurableObject {
       const tell = (t) => ws.send(JSON.stringify({ type: "chat", seat: null, name: null, text: t }));
       // Anti-spam : une émoticône par seconde, un message toutes les CHAT_GAP_MS.
       if (text) {
-        if (now - (att.lastChat || 0) < CHAT_GAP_MS) return tell("Pas si vite : attends un peu avant d'écrire.");
+        if (now - (att.lastChat || 0) < CHAT_GAP_MS * SLACK) return tell("Pas si vite : attends un peu avant d'écrire.");
         ws.serializeAttachment({ ...att, lastChat: now });
       } else {
-        if (now - (att.lastEmote || 0) < 1000) return;
+        if (now - (att.lastEmote || 0) < 1000 * SLACK) return;
         ws.serializeAttachment({ ...att, lastEmote: now });
       }
       const bans = m.chatBans || [];
+      // Banni : plus rien ne part, émoticônes et commandes comprises (un banni
+      // devenu hôte ne se débannit pas). ponytail: banni par pseudo ; un
+      // spectateur peut revenir sous un autre (bannir par empreinte d'IP, voir
+      // ownerOf, si ça arrive).
+      if (bans.some((b) => sameName(b, name))) return tell("Tu es banni du chat de cette table.");
       // « /ban pseudo », « /deban pseudo » : l'hôte de la partie (G.hote)
       // seulement ; la liste est enregistrée avec la table.
       const command = text.match(/^\/(ban|deban)\b\s*(.*)$/i);
@@ -398,14 +413,12 @@ export class Tables extends DurableObject {
         }
         if (sameName(target, name)) return tell("Tu ne peux pas te bannir toi-même.");
         if (!this.nameTaken(id, target)) return tell(`Personne ne s'appelle « ${target} » à cette table.`);
-        if (!bans.some((b) => sameName(b, target))) m.chatBans = [...bans, target];
-        await this.save(id);
+        if (!bans.some((b) => sameName(b, target))) {
+          m.chatBans = [...bans, target];
+          await this.save(id);
+        }
         return this.relay(id, { type: "chat", seat: null, name: null, text: `${target} est banni du chat par l'hôte.` });
       }
-      // Banni : plus rien ne part, émoticônes comprises. ponytail: banni par
-      // pseudo ; un spectateur peut revenir sous un autre (bannir par
-      // empreinte d'IP, voir ownerOf, si ça arrive).
-      if (bans.some((b) => sameName(b, name))) return tell("Tu es banni du chat de cette table.");
       return this.relay(
         id,
         text ? { type: "chat", seat: att.seat, name, text } : { type: "emote", seat: att.seat, emote: msg.emote },
@@ -413,7 +426,12 @@ export class Tables extends DurableObject {
     }
     if (msg?.type === "move" && att.ready && att.seat != null) {
       // Identifiants revérifiés : la place a pu être libérée entre-temps.
-      if (!this.tables.get(id).players[att.seat].credentials) return;
+      if (!m.players[att.seat].credentials) return;
+      // game.js ne voit pas les connexions : le serveur vérifie qu'on ne
+      // reprend le rôle d'hôte (et le /ban qui va avec) qu'à un hôte vraiment
+      // parti, et qu'on ne confie à l'ordinateur qu'une place libérée.
+      if (msg.name === "reprendreHote" && this.connected(id, m.G?.hote)) return;
+      if (msg.name === "devenirBot" && m.players[msg.args?.[0]]?.name) return;
       const was = FICHE.finished(this.tables.get(id).G);
       if (this.tables.move(id, att.seat, msg.name, msg.args)) {
         await this.save(id);

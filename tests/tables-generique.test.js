@@ -2,13 +2,19 @@
 // minimal à deux joueurs (le premier à 3 l'emporte) y tourne avec sa seule fiche.
 //   node tests/tables-generique.test.js
 import assert from "assert";
-import { cleanChat, createTables, historyCSV, historyRow, MAX_CHAT } from "../src/online/tables.js";
+import { cleanChat, cleanName, createTables, historyCSV, historyRow, MAX_CHAT, sameName } from "../src/online/tables.js";
 
 // Messages : une ligne nette, bornée, rien si vide ou pas du texte.
 assert.strictEqual(cleanChat("  Bien\n\tjoué\u0000 ! "), "Bien joué !");
 assert.strictEqual(cleanChat(" \n "), "");
 assert.strictEqual(cleanChat(42), "");
 assert.strictEqual([...cleanChat("😂".repeat(500))].length, MAX_CHAT, "coupé sans casser d'émoji");
+assert.strictEqual(cleanChat("👨‍👩‍👧 gg"), "👨‍👩‍👧 gg", "émoji composé entier");
+// Pseudos : un seul nettoyage, et les sosies (invisibles, espaces, accents décomposés) sont le même pseudo.
+assert.strictEqual(cleanName("abcdefghijklmnopq😀"), "abcdefghijklmnopq😀", "émoji jamais coupé en deux");
+assert.strictEqual(cleanName("  Bo  b\n"), "Bo b");
+assert.ok(sameName("Alice", "Alice​") && sameName("Zoé", "Zoé") && sameName("Bo  b", "bo b"), "sosies");
+assert.ok(!sameName("Alice", "Alicia"));
 
 const Course = {
   setup: () => ({ points: [0, 0], fini: false }),
@@ -37,6 +43,7 @@ assert.strictEqual(tables.get(id).players.length, 2, "deux places, pas quatre");
 assert.strictEqual(tables.join(id, 2, "Zoé").error, "INVALIDE", "pas de troisième place");
 const cred = tables.join(id, 0, "Ana").credentials;
 assert.strictEqual(tables.join(id, 1, " ana ").error, "PSEUDO_PRIS", "même pseudo refusé à la même table");
+assert.strictEqual(tables.join(id, 1, "Ana​").error, "PSEUDO_PRIS", "sosie invisible refusé");
 assert.ok(tables.auth(id, 0, cred));
 assert.ok(!tables.move(id, 0, "inconnu", []), "coup inconnu refusé");
 for (let i = 0; i < 3; i++) assert.ok(tables.move(id, 0, "avancer", []));
