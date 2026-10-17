@@ -687,13 +687,6 @@ a {
   font-size: 0.7812rem;
   line-height: 1.6;
 }
-/* Brouillon à valider (section « Comment jouent les bots ») */
-.rules-panel .rules-draft {
-  padding: 6px 10px;
-  border: 1px dashed var(--gold);
-  border-radius: 8px;
-  color: var(--gold);
-}
 @media (max-width: 760px) {
   .rules-btn {
     right: 14px;
