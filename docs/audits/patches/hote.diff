@@ -1,0 +1,645 @@
+diff --git a/package.json b/package.json
+index 7fd392d..8b098f2 100644
+--- a/package.json
++++ b/package.json
+@@ -8,7 +8,7 @@
+     "start": "npm run build && wrangler dev --port 8000",
+     "deploy": "npm run build && wrangler deploy",
+     "deploy:staging": "npm run build && wrangler deploy --env staging",
+-    "test": "node tests/coinche-strategies.test.js && node tests/coinche-bots.test.js && node tests/coinche-game.test.js && node tests/coinche-tables.test.js && node tests/coinche-rules.test.js && node tests/coinche-cas.test.js && node tests/coinche-belote.test.js && node tests/coinche-host.test.js && node tests/tables-generique.test.js",
++    "test": "node tests/coinche-strategies.test.js && node tests/coinche-bots.test.js && node tests/coinche-game.test.js && node tests/coinche-tables.test.js && node tests/coinche-rules.test.js && node tests/coinche-cas.test.js && node tests/coinche-belote.test.js && node tests/coinche-host.test.js && node tests/coinche-hote-bots.test.js && node tests/tables-generique.test.js",
+     "test:e2e": "npm run build && node tests/coinche-e2e.js"
+   },
+   "dependencies": {
+diff --git a/src/coinche/engine.js b/src/coinche/engine.js
+index 9f74fcc..b8ca894 100644
+--- a/src/coinche/engine.js
++++ b/src/coinche/engine.js
+@@ -283,6 +283,10 @@ function startNewDonne() {
+   // Journal complet des enchères (passes comprises) et cartes jouées par
+   // chacun : de quoi reconstituer la main de départ d'une main imaginée et
+   // vérifier qu'elle colle à ce que le siège a annoncé (voir bidFits).
++  // Chaque entrée garde le type de celui qui parle ("human" ou "bot", à ce
++  // moment-là : un siège repris ensuite par l'ordinateur ne change pas la
++  // façon de relire ce qu'il a dit) et auto: true pour une passe d'office
++  // (TIMEOUT), qui ne dit rien de sa main.
+   G.bidLog = [];
+   G.playedBy = [[], [], [], []];
+   // Ce que chaque bot a déjà dit (soutien, second tour, reprise pour la
+@@ -1537,9 +1541,11 @@ function bidReadings() {
+       .lastIndexOf(true);
+     const partnerBid = pIdx >= 0 ? earlier[pIdx] : null;
+     // A-t-il déjà répondu à cette enchère du partenaire (ou parlé dans cette couleur) ?
++    // Une passe d'office n'est pas une réponse : elle ne compte pas.
+     const acted = earlier.some(
+       (x, j) =>
+         x.seat === e.seat &&
++        !x.auto &&
+         (j > pIdx ||
+           (x.montant && partnerBid && x.atout === partnerBid.atout)),
+     );
+@@ -1678,11 +1684,17 @@ const SIM_FIT = 0.1;
+ const SIGNAL_MISFIT = 0.3; // appel sans l'As
+ 
+ // Plausibilité de la main actuelle d'un siège au vu de ce qu'il a dit.
++// La tolérance dépend de qui parlait quand il a parlé (e.type), pas de qui
++// occupe le siège maintenant ; une entrée sans type (partie sauvegardée avant
++// ce champ) retombe sur le type actuel. Une passe d'office ne pèse rien.
+ function seatWeight(s, hand, readings) {
+   const h = maskOf(hand) | maskOf(G.playedBy[s]);
+-  const misfit = MISFIT[G.seats[s].type === "bot" ? "bot" : "human"];
+   let w = 1;
+-  for (const r of readings) if (r.e.seat === s) w *= bidFits(r, h) || misfit;
++  for (const r of readings) {
++    if (r.e.seat !== s || r.e.auto) continue;
++    const misfit = MISFIT[(r.e.type ?? G.seats[s].type) === "bot" ? "bot" : "human"];
++    w *= bidFits(r, h) || misfit;
++  }
+   for (const suit of Object.keys(G.appel[s])) {
+     if (!G.seen["A" + suit] && !hand.some((c) => c.id === "A" + suit))
+       w *= SIGNAL_MISFIT;
+@@ -2239,6 +2251,8 @@ function computeScore() {
+ // Actions : PASSER, ENCHERIR { montant, atout }, COINCHER, SURCOINCHER,
+ // JOUER { carte }, TIMEOUT { tour } (fenêtre de temps écoulée, siège
+ // ignoré). action.memo : mémoire d'enchère d'un bot (voir G.bidMemo).
++// action.auto : posé par TIMEOUT pour la passe ou la carte jouée d'office ;
++// elle n'est lue ni comme un signal (appel, refus) ni comme une main faible.
+ function applyAction(seat, action) {
+   if (!G || G.phase === "TERMINEE") return "PARTIE_TERMINEE";
+   const error = act(seat, action);
+@@ -2252,13 +2266,15 @@ function applyAction(seat, action) {
+ function act(seat, action) {
+   if (action.type === "TIMEOUT") {
+     if (action.tour !== G.tour) return "DELAI_EXPIRE";
+-    if (G.phase === "ENCHERES") return act(G.joueurActif, { type: "PASSER" });
++    if (G.phase === "ENCHERES")
++      return act(G.joueurActif, { type: "PASSER", auto: true });
+     if (G.phase === "JEU") {
+       const s = G.joueurActif;
+       const legal = computeLegal(G.hands[s], G.pliCourant, G.contract.atout, s);
+       return act(s, {
+         type: "JOUER",
+         carte: legal[Math.floor(rand() * legal.length)],
++        auto: true,
+       });
+     }
+     if (G.phase === "SURCOINCHE") {
+@@ -2278,6 +2294,8 @@ function act(seat, action) {
+     if (seat !== G.joueurActif) return "HORS_TOUR";
+     G.bidLog.push({
+       seat,
++      type: G.seats?.[seat]?.type,
++      ...(action.auto && { auto: true }),
+       cur: G.contract && { ...G.contract },
+       passes: G.passesConsecutives,
+     });
+@@ -2309,6 +2327,7 @@ function act(seat, action) {
+     G.donneAnnonces.push({ seat, montant, atout: action.atout });
+     G.bidLog.push({
+       seat,
++      type: G.seats?.[seat]?.type,
+       montant,
+       atout: action.atout,
+       cur: G.contract && { ...G.contract },
+@@ -2372,7 +2391,8 @@ function act(seat, action) {
+     G.seen[carte.id] = true;
+     if (couleurDemandeeAvant && carte.suit !== couleurDemandeeAvant) {
+       G.void[seat][couleurDemandeeAvant] = true;
+-      readDiscardSignal(seat, carte);
++      // Une carte tirée au hasard par TIMEOUT n'est pas un message.
++      if (!action.auto) readDiscardSignal(seat, carte);
+     }
+     declareBeloteIfNeeded(seat, carte);
+ 
+@@ -2480,6 +2500,7 @@ export const bots = {
+   wantsToSurcoinche: withG(botWantsToSurcoinche),
+   heuristicCard: withG(heuristicCard),
+   mcWorlds: withG(mcWorlds),
++  seatWeight: withG((s, hand) => seatWeight(s, hand, bidReadings())),
+   noteTrumpObligations: withG(noteTrumpObligations),
+   contractHuitAtouts: withG(contractHuitAtouts),
+   exactEnd,
+diff --git a/src/coinche/game.js b/src/coinche/game.js
+index 77a6e88..c086781 100644
+--- a/src/coinche/game.js
++++ b/src/coinche/game.js
+@@ -142,12 +142,18 @@ export const Coinche = {
+ 
+   // Chacun ne reçoit que sa main (l'hôte : aussi celles des bots) ; une
+   // belote pas encore annoncée reste secrète (REGLES_COINCHE.md §3).
++  // La personnalité des bots et leur mémoire d'enchère (ce qu'ils ont déjà
++  // dit, voir G.bidMemo) ne servent qu'à l'hôte, qui les fait jouer : les
++  // autres n'en reçoivent pas (la mémoire de leur propre siège mise à part).
+   playerView: ({ G, playerID }) => {
+     if (!G.hands) return G;
+     const me = playerID == null ? -1 : seatOf(playerID);
+     const sees = (s) => s === me || (me === G.hote && G.seats[s].type === "bot");
++    const hote = me === G.hote;
++    const { personalities, ...pub } = G;
+     return {
+-      ...G,
++      ...(hote ? G : pub),
++      bidMemo: hote ? G.bidMemo : G.bidMemo.map((m, s) => (s === me ? m : null)),
+       hands: G.hands.map((h, s) => (sees(s) ? h : h.map(() => null))),
+       mainsInitiales: G.mainsInitiales.map((h, s) => (sees(s) ? h : [])),
+       belote: G.belote.beloteDeclared ? G.belote : { ...G.belote, holder: null },
+diff --git a/src/coinche/host.js b/src/coinche/host.js
+index 7e19656..eb11989 100644
+--- a/src/coinche/host.js
++++ b/src/coinche/host.js
+@@ -1,14 +1,14 @@
+ // Hôte d'une table : fait jouer les bots et envoie TIMEOUT quand une
+ // fenêtre de temps expire (tour de 20 s, surcoinche de 10 s, résultat
+-// affiché 5 s). Tourne dans le navigateur du joueur hôte (voir game.js,
++// affiché 4 s). Tourne dans le navigateur du joueur hôte (voir game.js,
+ // G.hote), ou dans le simulateur des tests avec une horloge virtuelle :
+ // c'est le même code, donc les bots testés sont ceux qu'on joue.
+-// Les délais des bots imitent un joueur vif (0,35 à 0,8 s pour jouer, 0,5 à 1,7 s
+-// pour réfléchir à une coinche) ; après un pli complet, tout attend que
+-// l'écran l'ait montré puis ramassé.
+-import { DURATION_MS, bots, teamOf } from "./engine.js";
++// Les délais des bots imitent un joueur vif (voir thinkMs : une carte
++// forcée part en 0,15 à 0,3 s, un vrai choix demande 0,35 à 1,9 s) ; après
++// un pli complet, tout attend que l'écran l'ait montré puis ramassé.
++import { DURATION_MS, bots, computeLegal, teamOf } from "./engine.js";
+ 
+-export const TRICK_SHOW_MS = 900; // pli complet affiché (0,6 s) puis ramassé
++export const TRICK_SHOW_MS = 900; // pli complet affiché (0,9 s) puis ramassé
+ export const LAST_TRICK_SHOW_MS = 2500; // dernier pli de la donne : on le regarde
+ // Attente avant la fenêtre qui s'ouvre : le pli qui vient de se fermer est
+ // montré puis ramassé (le dernier plus longtemps, avant le résultat).
+@@ -19,6 +19,30 @@ export const trickPause = (G) =>
+       ? LAST_TRICK_SHOW_MS
+       : TRICK_SHOW_MS;
+ const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une annonce
++
++// Temps que prend un bot pour parler ou jouer, hors pause de pli et fenêtre
++// de coinche. u : tirage uniforme dans [0, 1[.
++//   - carte forcée (une seule carte légale) : 150 à 300 ms, rien à réfléchir ;
++//   - sinon 350 ms plus une part en u² : la plupart des coups partent vite,
++//     quelques-uns hésitent longtemps. La part croît avec le choix (2 cartes
++//     légales : jusqu'à 950 ms en tout, 8 cartes : 1 670 ms) ; une enchère va
++//     jusqu'à 1 850 ms.
++// Mesuré sur 3 parties de bots (1 081 décisions, 29 % de coups forcés) : 542 ms
++// en moyenne, contre 575 ms avant (350 + 450 u, quel que soit le coup).
++// Un humain joue vite quand il n'a pas le choix et plus lentement quand il
++// en a un ; une loi uniforme unique ne le faisait pas.
++const BID_SPAN_MS = 1500;
++export function thinkMs(G, seat, u) {
++  let span = BID_SPAN_MS;
++  const hand = G.hands[seat];
++  if (G.phase === "JEU" && hand && !hand.includes(null)) {
++    const n = computeLegal(hand, G.pliCourant, G.contract.atout, seat).length;
++    if (n === 1) return 150 + 150 * u;
++    span = 600 + 120 * Math.min(n - 2, 6);
++  }
++  return 350 + span * u * u;
++}
++
+ // G n'est que du JSON. Pas de structuredClone ni de .at() ici : sur un
+ // navigateur ancien (Safari < 15.4, Chrome < 98), l'hôte plantait et les
+ // bots ne faisaient plus que « passer » à l'expiration de leur délai.
+@@ -47,7 +71,11 @@ export function createHost({
+ }) {
+   let G = null;
+   let tour = null;
+-  let contractId = null;
++  // Pour chaque siège, le tour dont la décision du bot est déjà programmée.
++  // Clé = tour ET siège bot : un humain qui part en plein tour (devenirBot ne
++  // touche pas à G.tour) rend le siège bot sans nouveau tour ; sans cela le
++  // bot restait muet jusqu'au TIMEOUT (passe, ou carte au hasard).
++  const decided = [null, null, null, null];
+   const pending = new Set();
+ 
+   function later(ms, fn) {
+@@ -78,68 +106,81 @@ export function createHost({
+   // jouerait alors avec des cartes nulles.
+   const playable = (s) => isBot(s) && !G.hands[s].includes(null);
+ 
++  // Annonce toute fraîche face à un humain en défense : le bot suivant
++  // laisse le temps de la coincher avant de la recouvrir.
++  function coincheWindow() {
++    const last = G.phase === "ENCHERES" ? G.bidLog[G.bidLog.length - 1] : null;
++    return last?.montant &&
++      [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
++      ? COINCHE_WINDOW_MS
++      : 0;
++  }
++
++  // Tour d'un bot en phase d'enchères ou de jeu. Défenseur d'un contrat pas
++  // encore coinché, il décide d'abord s'il coinche : à son tour de parole,
++  // comme un joueur (qui coinche au lieu de passer, jamais après avoir passé),
++  // avant la clôture des enchères (les trois passes qui la ferment refusent
++  // toute coinche) et après son partenaire s'il le précède. Les délais de
++  // parole (thinkMs, plus la fenêtre de coinche d'un humain) s'appliquent donc
++  // à la coinche aussi.
++  function botTurn(seat) {
++    const c = G.contract;
++    if (
++      G.phase === "ENCHERES" &&
++      c &&
++      !c.coinche &&
++      teamOf(seat) !== c.equipePreneur &&
++      playable(seat) &&
++      decide.wantsToCoinche(seatView(G, seat), seat)
++    ) {
++      send(seat, { type: "COINCHER" });
++      return;
++    }
++    botSend(seat, decide.turnAction);
++  }
++
+   function update(state) {
+     G = state;
+     if (!G.seats || G.phase === "TERMINEE") return;
++    // Un siège repris par un humain oublie sa décision : s'il redevient bot
++    // au même tour, elle sera reprogrammée.
++    for (const s of [0, 1, 2, 3]) if (!isBot(s)) decided[s] = null;
+ 
+-    if (G.tour !== tour) {
+-      tour = G.tour;
+-      const t = tour;
+-      const seat = G.joueurActif;
+-      const pause = trickPause(G);
++    const t = G.tour;
++    const pause = trickPause(G);
++    if (t !== tour) {
++      tour = t;
+       later(pause + DURATION_MS[G.phase], () => {
+         if (G.tour === t) send(null, { type: "TIMEOUT", tour: t });
+       });
+-      // Annonce toute fraîche face à un humain en défense : le bot suivant
+-      // laisse le temps de la coincher avant de la recouvrir.
+-      const last = G.phase === "ENCHERES" ? G.bidLog[G.bidLog.length - 1] : null;
+-      const coincheWindow =
+-        last?.montant &&
+-        [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
+-          ? COINCHE_WINDOW_MS
+-          : 0;
+-      if ((G.phase === "ENCHERES" || G.phase === "JEU") && isBot(seat)) {
+-        later(pause + coincheWindow + 350 + random() * 450, () => {
+-          if (G.tour === t) botSend(seat, decide.turnAction);
+-        });
+-      }
+-      if (G.phase === "SURCOINCHE") {
+-        const id = G.contract.id;
+-        for (const s of [0, 1, 2, 3]) {
+-          if (teamOf(s) !== G.contract.equipePreneur || !isBot(s)) continue;
+-          later(300 + random() * 1500, () => {
+-            if (
+-              G.phase === "SURCOINCHE" &&
+-              G.contract.id === id &&
+-              !G.contract.surcoinche &&
+-              playable(s) &&
+-              decide.wantsToSurcoinche(seatView(G, s), s)
+-            )
+-              send(s, { type: "SURCOINCHER" });
+-          });
+-        }
+-      }
+     }
+ 
+-    // Nouveau contrat : chaque bot en défense envisage de coincher.
+-    const c = G.phase === "ENCHERES" ? G.contract : null;
+-    if (c && c.id !== contractId) {
+-      const id = c.id;
++    if (G.phase === "ENCHERES" || G.phase === "JEU") {
++      const seat = G.joueurActif;
++      if (playable(seat) && decided[seat] !== t) {
++        decided[seat] = t;
++        later(pause + coincheWindow() + thinkMs(G, seat, random()), () => {
++          if (G.tour === t) botTurn(seat);
++        });
++      }
++    } else if (G.phase === "SURCOINCHE") {
++      const id = G.contract.id;
+       for (const s of [0, 1, 2, 3]) {
+-        if (teamOf(s) === c.equipePreneur || !isBot(s)) continue;
+-        later(500 + random() * 1200, () => {
++        if (teamOf(s) !== G.contract.equipePreneur || !isBot(s) || decided[s] === t)
++          continue;
++        decided[s] = t;
++        later(300 + random() * 1500, () => {
+           if (
+-            G.phase === "ENCHERES" &&
+-            G.contract?.id === id &&
+-            !G.contract.coinche &&
++            G.phase === "SURCOINCHE" &&
++            G.contract.id === id &&
++            !G.contract.surcoinche &&
+             playable(s) &&
+-            decide.wantsToCoinche(seatView(G, s), s)
++            decide.wantsToSurcoinche(seatView(G, s), s)
+           )
+-            send(s, { type: "COINCHER" });
++            send(s, { type: "SURCOINCHER" });
+         });
+       }
+     }
+-    contractId = G.contract?.id ?? null;
+   }
+ 
+   function stop() {
+@@ -147,7 +188,7 @@ export function createHost({
+     pending.clear();
+     G = null;
+     tour = null;
+-    contractId = null;
++    decided.fill(null);
+   }
+ 
+   return { update, stop };
+diff --git a/tests/coinche-hote-bots.test.js b/tests/coinche-hote-bots.test.js
+new file mode 100644
+index 0000000..f2e4d1a
+--- /dev/null
++++ b/tests/coinche-hote-bots.test.js
+@@ -0,0 +1,288 @@
++// L'hôte et le moteur face aux sièges qui changent de main et aux parties
++// en ligne : minuteurs factices (horloge virtuelle), bots remplacés par des
++// décisions fixes pour ne tester que le mécanisme.
++//   - HAS-1 / ZON-1 : un siège repris par l'ordinateur en plein tour joue.
++//   - ZON-2 : un siège repris après une annonce peut encore coincher.
++//   - COI-4 / COI-5 / HAS-6 : un bot coinche à son tour de parole, jamais
++//     après avoir passé, jamais après la clôture, jamais avant la fenêtre
++//     laissée à un humain ni avant son partenaire humain.
++//   - HAS-4 : une carte forcée part vite, un vrai choix prend plus de temps.
++//   - ZON-3 / ZON-4 : carte et passe jouées d'office ne disent rien.
++//   - MON-4 : on relit un joueur selon ce qu'il était quand il a parlé.
++//   - HAS-7 : les clients ne reçoivent ni personnalités ni mémoire des bots.
++//   node tests/coinche-hote-bots.test.js
++import assert from "assert";
++import { actOn, bots, createGame } from "../src/coinche/engine.js";
++import { Coinche } from "../src/coinche/game.js";
++import { createHost, thinkMs } from "../src/coinche/host.js";
++import { rng } from "./coinche-sim.js";
++
++const card = (id) => ({ id, rank: id.slice(0, -1), suit: id.slice(-1) });
++const seatsOf = (...types) => types.map((type) => ({ type, name: type }));
++let n = 0;
++const ok = (cond, label) => {
++  assert.ok(cond, label);
++  n++;
++};
++
++// Table à horloge virtuelle. Le siège 0 (bot) ouvre à 100 ♠ ; les autres
++// bots passent, sauf ceux de `coinchent`, qui coinchent si on le leur demande.
++// humains : [[ms, siège, action]] coups des humains. Rend { G, log, host,
++// schedule(ms, fn), run(ms) } ; log : chaque action envoyée, avec son instant.
++function table({ types, coinchent = [], seed = 1, random = rng(seed + 100), first = 0, humains = [] }) {
++  let now = 0;
++  let seq = 0;
++  const timers = new Map();
++  const log = [];
++  const clock = {
++    setTimeout: (fn, ms = 0) => (timers.set(++seq, { id: seq, at: now + ms, fn }), seq),
++    clearTimeout: (id) => timers.delete(id),
++  };
++  const G = createGame(seatsOf(...types), rng(seed));
++  G.hote = 0;
++  G.donneur = (first + 3) % 4;
++  G.joueurActif = first;
++  const deal = rng(seed + 200);
++  function apply(seat, action) {
++    const error = actOn(G, seat, action, deal);
++    log.push({ at: now, seat, type: action.type, error });
++    if (!error) host.update(G);
++  }
++  const decide = {
++    turnAction: (g, s) =>
++      g.contract ? { type: "PASSER" } : s === first ? { type: "ENCHERIR", montant: 100, atout: "S" } : { type: "PASSER" },
++    wantsToCoinche: (g, s) => coinchent.includes(s),
++    wantsToSurcoinche: () => false,
++  };
++  const host = createHost({ timers: clock, random, decide, send: apply });
++  for (const [ms, seat, action] of humains) clock.setTimeout(() => apply(seat, action), ms);
++  host.update(G);
++  return {
++    G,
++    log,
++    host,
++    at: () => now,
++    schedule: (ms, fn) => clock.setTimeout(fn, ms),
++    run(until) {
++      for (;;) {
++        let next = null;
++        for (const t of timers.values()) if (!next || t.at < next.at) next = t;
++        if (!next || next.at > until) return;
++        timers.delete(next.id);
++        now = next.at;
++        next.fn();
++      }
++    },
++  };
++}
++const sent = (t) => t.log.filter((e) => !e.error);
++const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
++
++// ---- HAS-1 / ZON-1 : le siège repris en plein tour joue --------------------
++// Siège 1 humain à parler (tour N), repris par l'ordinateur 0,3 s plus tard
++// (devenirBot ne change pas G.tour) : il ouvre à 100 ♠ en moins de 3 s.
++// Avant : aucun minuteur, TIMEOUT (passe) à 20 s.
++{
++  const t = table({ types: ["human", "human", "bot", "bot"], first: 1 });
++  const tour = t.G.tour;
++  t.schedule(300, () => {
++    Coinche.moves.devenirBot.move({ G: t.G, playerID: "0" }, 1);
++    t.host.update(t.G);
++  });
++  t.run(19000);
++  const e = sent(t).find((x) => x.seat === 1);
++  ok(e && e.at < 3000, "HAS-1 : le siège repris décide aussitôt (pas à l'expiration)");
++  ok(!t.log.some((x) => x.type === "TIMEOUT"), "HAS-1 : aucun TIMEOUT nécessaire");
++  ok(t.G.tour > tour, "HAS-1 : la partie a avancé");
++}
++// Un même état notifié deux fois ne programme pas deux décisions.
++{
++  const t = table({ types: ["bot", "bot", "bot", "bot"] });
++  const before = sent(t).length;
++  t.host.update(t.G);
++  t.host.update(t.G);
++  t.run(1e5);
++  ok(sent(t).filter((x) => x.seat === 0 && x.type === "ENCHERIR").length === 1, "une seule enchère du siège 0");
++  ok(before === 0, "rien n'est parti avant le premier minuteur");
++}
++
++// ---- ZON-2 : siège repris après l'annonce, il peut coincher ----------------
++// Siège 0 (humain) annonce, siège 1 (humain, défenseur) est repris 0,6 s plus
++// tard : à son tour il coinche. Avant : ni coinche, ni parole avant TIMEOUT.
++{
++  const t = table({
++    types: ["human", "human", "bot", "bot"],
++    coinchent: [1],
++    humains: [[100, 0, { type: "ENCHERIR", montant: 100, atout: "S" }]],
++  });
++  t.schedule(700, () => {
++    Coinche.moves.devenirBot.move({ G: t.G, playerID: "0" }, 1);
++    t.host.update(t.G);
++  });
++  t.run(19000);
++  const c = sent(t).find((x) => x.type === "COINCHER");
++  ok(c && c.seat === 1 && c.at < 5000, "ZON-2 : le siège repris coinche");
++  ok(t.G.contract.coincheur === 1, "ZON-2 : la coinche est enregistrée");
++}
++
++// ---- COI-4 / COI-5 : coinche à son tour, jamais « passe puis coinche » -------
++// 40 graines de hasard pour les délais. Siège 1 veut coincher (il parle juste
++// après l'annonce) ; siège 3 veut coincher (il parle en dernier, juste avant
++// la clôture des enchères).
++{
++  const pbs = { passeEtCoinche: [], perdue: [] };
++  for (const seat of [1, 3])
++    for (let seed = 1; seed <= 40; seed++) {
++      const t = table({ types: ["bot", "bot", "bot", "bot"], coinchent: [seat], seed });
++      t.run(30000);
++      const c = sent(t).find((x) => x.type === "COINCHER");
++      if (!c) pbs.perdue.push(`${seat}/${seed}`);
++      else if (sent(t).some((x) => x.seat === seat && x.type === "PASSER" && x.at < c.at))
++        pbs.passeEtCoinche.push(`${seat}/${seed}`);
++    }
++  assert.ok(
++    !pbs.perdue.length && !pbs.passeEtCoinche.length,
++    `COI-5 : coinche perdue (siège/graine) [${pbs.perdue}] ; COI-4 : passe puis coinche [${pbs.passeEtCoinche}]`,
++  );
++  n++;
++}
++
++// ---- COI-5 (2) : pas de coinche avant que le partenaire humain ait parlé ------
++// Siège 1 humain à parler après l'annonce (il passe à 5 s) ; le bot du siège 3,
++// son partenaire, veut coincher. Avant : coinche vers 1 s, le partenaire n'a
++// plus la parole.
++{
++  const bad = [];
++  for (let seed = 1; seed <= 20; seed++) {
++    const t = table({
++      types: ["bot", "human", "bot", "bot"],
++      coinchent: [3],
++      seed,
++      humains: [[5000, 1, { type: "PASSER" }]],
++    });
++    t.run(30000);
++    const c = sent(t).find((x) => x.type === "COINCHER");
++    const humain = sent(t).find((x) => x.seat === 1);
++    if (!c || c.seat !== 3 || !humain || c.at < humain.at) bad.push(seed);
++  }
++  assert.deepStrictEqual(bad, [], `COI-5 : le bot coinche avant son partenaire humain (graines ${bad})`);
++  n++;
++}
++
++// ---- HAS-6 : fenêtre laissée à un humain en défense -----------------------------
++// Le bot du siège 1 veut coincher, le siège 3 est humain et ne dit rien : la
++// coinche attend au moins COINCHE_WINDOW_MS (1,8 s) après l'annonce.
++{
++  const bad = [];
++  for (let seed = 1; seed <= 20; seed++) {
++    const t = table({ types: ["bot", "bot", "bot", "human"], coinchent: [1], seed });
++    t.run(30000);
++    const c = sent(t).find((x) => x.type === "COINCHER");
++    if (!c || c.at - bid(t).at < 1800) bad.push(seed);
++  }
++  assert.deepStrictEqual(bad, [], `HAS-6 : coinche avant la fenêtre de l'humain (graines ${bad})`);
++  n++;
++}
++
++// ---- HAS-4 : délai selon la difficulté ---------------------------------------
++{
++  const G = createGame(seatsOf("bot", "bot", "bot", "bot"), rng(3));
++  G.phase = "JEU";
++  G.contract = { id: 1, type: "NUMERIQUE", montant: 80, atout: "H", preneur: 0, equipePreneur: 0 };
++  G.pliCourant = [{ siege: 1, carte: card("AS") }];
++  G.joueurActif = 2;
++  G.hands[2] = [card("8S"), card("7H"), card("9D")]; // une seule pique : coup forcé
++  for (const u of [0, 0.5, 0.999]) {
++    const ms = thinkMs(G, 2, u);
++    ok(ms >= 150 && ms < 300, `HAS-4 : carte forcée entre 150 et 300 ms (${Math.round(ms)})`);
++  }
++  G.hands[2] = [card("8S"), card("9S"), card("7H")]; // deux piques : un choix
++  ok(thinkMs(G, 2, 0) === 350 && thinkMs(G, 2, 0.999) > 900, "HAS-4 : un choix demande plus de temps");
++  ok(thinkMs(G, 2, 0.5) < thinkMs(G, 2, 0.999) - 400, "HAS-4 : délais asymétriques (la plupart vifs, quelques-uns longs)");
++  // Dans l'hôte : le minuteur du bot dépend du nombre de cartes légales.
++  const delays = [];
++  const h = createHost({
++    send() {},
++    random: () => 0.5,
++    timers: { setTimeout: (fn, ms) => delays.push(ms), clearTimeout() {} },
++    decide: { turnAction: () => null, wantsToCoinche: () => false, wantsToSurcoinche: () => false },
++  });
++  G.hands[2] = [card("8S"), card("7H"), card("9D")];
++  h.update({ ...G, tour: 50 });
++  G.hands[2] = [card("8S"), card("9S"), card("7H")];
++  h.update({ ...G, tour: 51 });
++  const [forced, choix] = delays.filter((ms) => ms < 20000);
++  ok(forced <= 300 && choix > 350, `HAS-4 : minuteur ${forced} ms (forcé) contre ${Math.round(choix)} ms (choix)`);
++}
++
++// ---- ZON-3 : carte jouée d'office, aucun signal ------------------------------------
++// Siège 2 sans pique et sans atout défausse son seul trèfle (8♣, « appel » s'il
++// le joue volontairement). Témoin : le même coup joué par le joueur.
++{
++  const jeu = () => {
++    const G = createGame(seatsOf("human", "human", "human", "human"), rng(5));
++    const s0 = G.joueurActif;
++    actOn(G, s0, { type: "ENCHERIR", montant: 80, atout: "H" }, rng(1));
++    for (let i = 0; i < 3; i++) actOn(G, G.joueurActif, { type: "PASSER" }, rng(1));
++    assert.strictEqual(G.phase, "JEU");
++    G.pliCourant = [{ siege: 1, carte: card("AS") }];
++    G.joueurActif = 2;
++    G.hands[2] = [card("8C")];
++    return G;
++  };
++  const voulu = jeu();
++  assert.strictEqual(actOn(voulu, 2, { type: "JOUER", carte: card("8C") }, rng(1)), undefined);
++  ok(voulu.appel[2].C === true, "témoin : la défausse voulue est un appel");
++  const office = jeu();
++  assert.strictEqual(actOn(office, null, { type: "TIMEOUT", tour: office.tour }, rng(1)), undefined);
++  ok(office.playedBy[2].length === 1 && office.void[2].S === true, "ZON-3 : la carte est jouée et le manque noté");
++  ok(Object.keys(office.appel[2]).length === 0 && Object.keys(office.refus[2]).length === 0, "ZON-3 : carte d'office, pas de signal");
++}
++
++// ---- ZON-4 + MON-4 : relire un joueur selon ce qu'il était quand il a parlé ---
++{
++  const sansCoeur = [card("7S"), card("8S"), card("9S"), card("7D"), card("8D"), card("9D"), card("7C"), card("8C")];
++  const forte = ["JH", "9H", "AH", "10H", "KH", "AS", "7D", "8C"].map(card);
++  const donne = () => {
++    const G = createGame(seatsOf("human", "human", "human", "human"), rng(9));
++    return G;
++  };
++  // MON-4 : un humain ouvre 80 ♥ sans cœur (main qui ne colle pas), puis part.
++  const G = donne();
++  const s = G.joueurActif;
++  actOn(G, s, { type: "ENCHERIR", montant: 80, atout: "H" }, rng(1));
++  ok(G.bidLog[0].type === "human", "MON-4 : le type est enregistré avec l'enchère");
++  const avant = bots.seatWeight(G, s, sansCoeur);
++  G.seats[s] = { type: "bot", name: "Bob (bot)" }; // devenirBot
++  ok(bots.seatWeight(G, s, sansCoeur) === avant && avant === 0.15, "MON-4 : un humain devenu bot reste lu comme un humain");
++  delete G.bidLog[0].type; // partie sauvegardée avant ce champ
++  ok(bots.seatWeight(G, s, sansCoeur) === 0.0001, "MON-4 : sans type enregistré, on retombe sur le type actuel");
++  // ZON-4 : un siège qui passe à l'ouverture avec une main d'ouverture.
++  const P = donne();
++  const p = P.joueurActif;
++  actOn(P, p, { type: "PASSER" }, rng(1));
++  ok(bots.seatWeight(P, p, forte) < 1, "témoin : passe voulue avec une main d'ouverture = peu plausible");
++  const Q = donne();
++  const q = Q.joueurActif;
++  actOn(Q, null, { type: "TIMEOUT", tour: Q.tour }, rng(1));
++  ok(Q.bidLog[0].auto === true && Q.bidLog[0].seat === q, "ZON-4 : la passe d'office est marquée");
++  ok(bots.seatWeight(Q, q, forte) === 1, "ZON-4 : la passe d'office ne pèse rien");
++}
++
++// ---- HAS-7 : les clients ne reçoivent ni personnalités ni mémoire des bots ----------
++{
++  const G = { ...createGame(seatsOf("human", "human", "bot", "bot"), rng(2)), hote: 0 };
++  G.bidMemo[2] = { supported: true };
++  G.bidMemo[1] = {};
++  const vue = (playerID) => Coinche.playerView({ G, playerID });
++  const hote = vue("0");
++  ok(hote.personalities && hote.bidMemo[2].supported, "l'hôte garde personnalités et mémoire des bots");
++  for (const id of ["1", undefined]) {
++    const v = vue(id);
++    ok(!("personalities" in v), "HAS-7 : pas de personnalités");
++    ok(v.bidMemo.every((m, s) => (s === Number(id) ? m !== null : m === null)), "HAS-7 : seule la mémoire de son propre siège");
++  }
++  ok("personalities" in G, "l'état du serveur n'est pas modifié");
++}
++
++console.log(`Hôte et bots : ${n} vérifications passées.`);
