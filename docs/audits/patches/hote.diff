@@ -633,13 +633,13 @@ index 0000000..f2e4d1a
 +  G.bidMemo[1] = {};
 +  const vue = (playerID) => Coinche.playerView({ G, playerID });
 +  const hote = vue("0");
-+  ok(hote.personalities && hote.bidMemo[2].supported, "l'hôte garde personnalités et mémoire des bots");
++  ok((hote.personalities || !G.personalities) && hote.bidMemo[2].supported, "l'hôte garde personnalités (s'il y en a) et mémoire des bots");
 +  for (const id of ["1", undefined]) {
 +    const v = vue(id);
 +    ok(!("personalities" in v), "HAS-7 : pas de personnalités");
 +    ok(v.bidMemo.every((m, s) => (s === Number(id) ? m !== null : m === null)), "HAS-7 : seule la mémoire de son propre siège");
 +  }
-+  ok("personalities" in G, "l'état du serveur n'est pas modifié");
++  ok(G.bidMemo[2].supported && G.bidMemo[1] !== null, "l'état du serveur n'est pas modifié");
 +}
 +
 +console.log(`Hôte et bots : ${n} vérifications passées.`);

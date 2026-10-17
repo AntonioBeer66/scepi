@@ -1,0 +1,94 @@
+diff --git a/src/coinche/engine.js b/src/coinche/engine.js
+index 95130fe..6691279 100644
+--- a/src/coinche/engine.js
++++ b/src/coinche/engine.js
+@@ -511,21 +511,15 @@ function bestOpening(hand, light) {
+ 
+ // Points de soutien que j'apporte à l'atout de mon partenaire.
+ function supportPoints(hand, suit, partnerBid) {
++  // Table stricte : +20 Valet, +10 9 second, +10 par As à côté, +20 belote ;
++  // rien sans atout. Pas de palier de prudence : la relance vaut ces points.
+   const m = asMask(hand);
+   const n = countOf(m, suit);
+-  const V = has(m, suit, "J");
+-  const N = has(m, suit, "9");
+-  const aces = sideAces(m, suit);
+-  let pts = (V ? 20 : 0) + (N && n >= 2 ? 10 : 0);
+-  if (partnerBid <= 90) {
+-    if (n >= (partnerBid === 80 ? 2 : 1)) pts += 10 * aces;
+-    if (n === 0 || (partnerBid === 80 && n === 1)) pts -= 10;
+-    // 4 atouts sans maître + un As : l'atout adverse tombera au premier tour.
+-    if (partnerBid === 80 && n >= 4 && !V && !N && aces >= 1)
+-      pts = Math.max(pts, 20);
+-  } else {
+-    pts += 10 * aces;
+-  }
++  if (!n) return 0;
++  let pts =
++    (has(m, suit, "J") ? 20 : 0) +
++    (has(m, suit, "9") && n >= 2 ? 10 : 0) +
++    10 * sideAces(m, suit);
+   if (hasBelote(m, suit)) pts += 20;
+   return pts;
+ }
+@@ -769,7 +763,7 @@ function decideBid(seat) {
+     memo.supported = true;
+     const suit = partnerBid.atout;
+     const target =
+-      partnerBid.montant + supportPoints(hand, suit, partnerBid.montant) - 10; // palier de prudence
++      partnerBid.montant + supportPoints(hand, suit, partnerBid.montant);
+     const own = bestOpening(hand, false);
+     if (own && own.atout !== suit && own.montant > target) {
+       const o = offer(own.montant, own.atout);
+@@ -1224,7 +1218,7 @@ function partnerShowsJack(ctx) {
+   const jack = "J" + ctx.atout;
+   if (G.seen[jack] || ctx.hand.some((c) => c.id === jack)) return false;
+   const o = openingOf(ctx.partner, ctx.atout);
+-  return o === 90 || o >= 110 || raiseBy(ctx.partner, ctx.atout) >= 20;
++  return o === 90 || o >= 110;
+ }
+ 
+ // Couleur appelée par le partenaire, tant que son As n'est pas tombé.
+@@ -1708,10 +1702,10 @@ function baremeFits({ e, partnerBid, acted }, h) {
+     const forced = e.montant === min && honneurDeForce(h, e.atout);
+     if (partnerBid && partnerBid.atout === e.atout) {
+       if (e.montant >= 250) return 1;
+-      // Relance = soutien − 10 (palier de prudence), ou soutien au ras si forcée.
++      // Relance = soutien (plus de palier de prudence), ou soutien − 10 si forcée.
+       const pts = supportPoints(h, e.atout, partnerBid.montant);
+       const r = e.montant - partnerBid.montant;
+-      if (pts >= (forced ? r : r + 10) && (acted || e.montant >= 160 || pts < r + 20))
++      if (pts >= (forced ? r - 10 : r) && (acted || e.montant >= 160 || pts < r + 10))
+         return 1;
+       // L'étape 3 essaie la couleur du partenaire avec un honneur ou deux atouts.
+       return overOpp && peutAppuyer(h, e.atout) ? SIM_FIT : 0;
+@@ -1742,7 +1736,7 @@ function baremeFits({ e, partnerBid, acted }, h) {
+   if (!e.cur) return bestOpening(h, e.passes === 3) ? SIM_FIT : 1;
+   if (e.cur.montant >= 250) return 1;
+   if (teamOf(e.cur.preneur) === teamOf(e.seat))
+-    return acted || supportPoints(h, e.cur.atout, e.cur.montant) <= 10
++    return acted || supportPoints(h, e.cur.atout, e.cur.montant) <= 0
+       ? 1
+       : 0;
+   // Passe sur l'adversaire avec de quoi intervenir : l'étape 3 a jugé que
+@@ -2582,3 +2576,7 @@ export {
+   trickWinnerSeat,
+   contratReussi,
+ };
++
++export { supportPoints, bestOpening, openingBid, fausses, sideAces, hasBelote, maskOf };
++export const __read = { partnerShowsJack: (g, ctx) => { const p = G; G = g; try { return partnerShowsJack(ctx); } finally { G = p; } }, baremeFits: (g, r, h) => { const p = G; G = g; try { return baremeFits(r, h); } finally { G = p; } }, bidReadings: (g) => { const p = G; G = g; try { return bidReadings(); } finally { G = p; } } };
++export function __truth(g, seat, contract) { const p = G; G = g; const sc = G.contract; G.contract = contract; try { const { sim, bel } = playOut(seat, g.hands, null); return contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege); } finally { G.contract = sc; G = p; } }
+diff --git a/tests/coinche-strategies.test.js b/tests/coinche-strategies.test.js
+index 21e2cfa..1c3e909 100644
+--- a/tests/coinche-strategies.test.js
++++ b/tests/coinche-strategies.test.js
+@@ -68,7 +68,7 @@ check('Main faible : passe', bid(api.botDecideBid(0)), 'passe');
+ setup({ hands: hands('9H KH QH 7S 8S 7D 8D 7C') });
+ check('Jamais de 80 sur 9 + belote sans As', bid(api.botDecideBid(0)), 'passe');
+ setup({ hands: hands('JH 7H AS 8S 7D 8D 9C 7C'), contract: contract(2, 80, 'H'), donneAnnonces: [{ seat: 2, montant: 80, atout: 'H' }], passesConsecutives: 1 });
+-check('Soutien Valet + As sur 80, moins le palier de prudence', bid(api.botDecideBid(0)), '100H');
++check('Soutien Valet + As sur 80 : +20 et +10, sans palier de prudence', bid(api.botDecideBid(0)), '110H');
+ setup({ hands: hands('AS 8S 7S AD 8D 7D 9C 7C'), contract: contract(2, 80, 'H'), donneAnnonces: [{ seat: 2, montant: 80, atout: 'H' }], passesConsecutives: 1 });
+ check('Sec à l’atout du partenaire : pas de soutien', bid(api.botDecideBid(0)), 'passe');
+ setup({ hands: hands('JH 9H AH 7H AD 10D AC 8C'), contract: contract(1, 80, 'S'), donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
