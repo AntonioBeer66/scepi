@@ -7,6 +7,8 @@
 import { checkRecord, JOURNAL_MAX_BYTES } from "../src/coinche/journal.js";
 
 const MAX = 300000;
+// Table créée au premier envoi de chaque instance (sans effet si elle existe).
+let ready = null;
 
 export async function saveDonne(request, env) {
   if (request.method !== "POST") return new Response(null, { status: 405 });
@@ -21,6 +23,13 @@ export async function saveDonne(request, env) {
     return new Response(null, { status: 400 });
   }
   if (checkRecord(rec)) return new Response(null, { status: 400 });
+  ready ??= env.JOURNAL_DB.exec(
+    "CREATE TABLE IF NOT EXISTS donnes (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL)",
+  ).catch((e) => {
+    ready = null;
+    throw e;
+  });
+  await ready;
   const { id } = await env.JOURNAL_DB.prepare("INSERT INTO donnes (data) VALUES (?) RETURNING id")
     .bind(JSON.stringify(rec))
     .first();

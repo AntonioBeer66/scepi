@@ -32,8 +32,7 @@
   // Journal anonyme des donnes jouées par des humains (worker/journal.js) :
   // le site y écrit seulement ; on le lit avec son compte Cloudflare
   //   npx wrangler d1 execute scepi-journal --remote --json --command "SELECT …"
-  // (table créée une fois : CREATE TABLE donnes (id INTEGER PRIMARY KEY
-  // AUTOINCREMENT, data TEXT NOT NULL)). La version de test n'en a pas.
+  // (la table donnes est créée par le Worker). La version de test n'en a pas.
   "d1_databases": [
     {
       "binding": "JOURNAL_DB",
