@@ -24,7 +24,12 @@ async function load(file, mc) {
   return engine;
 }
 
-const empty = () => ({ games: 0, winsB: 0, pairs: 0, diff: 0, diff2: 0, stats: { A: {}, B: {} } });
+// Erreur-type par donne de départ : les donnes d'une même partie ne sont pas
+// indépendantes. Estimateur de ratio sur les grappes (une grappe = une donne
+// de départ et ses deux parties jumelles) : cl grappes ; css, cnn, csn :
+// sommes de s², n², s·n, où s et n sont l'écart total et le nombre de paires
+// de la grappe.
+const empty = () => ({ games: 0, winsB: 0, pairs: 0, diff: 0, diff2: 0, cl: 0, css: 0, cnn: 0, csn: 0, stats: { A: {}, B: {} } });
 
 // Une donne de départ g, jouée deux fois (A en équipe 0 puis en équipe 1).
 function duel(A, B, g) {
@@ -55,16 +60,19 @@ function duel(A, B, g) {
     if (w !== teamA) res.winsB++;
     runs.push(byDonne);
   }
+  let s = 0, n = 0;
   for (const [k, d] of runs[0]) {
     if (!runs[1].has(k)) continue;
     const x = (d + runs[1].get(k)) / 2;
     res.pairs++; res.diff += x; res.diff2 += x * x;
+    s += x; n++;
   }
+  Object.assign(res, { cl: 1, css: s * s, cnn: n * n, csn: s * n });
   return res;
 }
 
 function merge(x, y) {
-  for (const k of ['games', 'winsB', 'pairs', 'diff', 'diff2']) x[k] += y[k];
+  for (const k of ['games', 'winsB', 'pairs', 'diff', 'diff2', 'cl', 'css', 'cnn', 'csn']) x[k] += y[k];
   for (const v of ['A', 'B']) for (const [k, n] of Object.entries(y.stats[v])) x.stats[v][k] = (x.stats[v][k] || 0) + n;
   return x;
 }
@@ -72,7 +80,9 @@ function merge(x, y) {
 function summary(r) {
   const mean = r.diff / r.pairs;
   const sd = Math.sqrt(Math.max(0, r.diff2 / r.pairs - mean * mean));
-  return `B − A : ${mean >= 0 ? '+' : ''}${mean.toFixed(2)} pts/donne ± ${(2 * sd / Math.sqrt(r.pairs)).toFixed(2)} (2σ, ${r.pairs} paires)`;
+  const e2 = r.css - 2 * mean * r.csn + mean * mean * r.cnn; // Σ (s − mean·n)²
+  const se = r.cl > 1 ? Math.sqrt((r.cl / (r.cl - 1)) * Math.max(0, e2)) / r.pairs : Infinity;
+  return `B − A : ${mean >= 0 ? '+' : ''}${mean.toFixed(2)} pts/donne ± ${(2 * se).toFixed(2)} (2σ par partie, ${r.cl} donnes de départ ; ± ${(2 * sd / Math.sqrt(r.pairs)).toFixed(2)} si les donnes étaient indépendantes ; ${r.pairs} paires)`;
 }
 
 if (process.argv[2] === '--worker') {
