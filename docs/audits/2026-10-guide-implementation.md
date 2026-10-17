@@ -2,7 +2,7 @@
 
 Ce guide traduit le plan de correction de [`2026-10-bots-coinche.md`](2026-10-bots-coinche.md) en lots de commits. Chaque lot précise ce qu'il faut toucher, avec une esquisse du code de production, les tests à ajouter et la façon de vérifier le résultat.
 
-Les esquisses reprennent les prototypes de la vague 2, sans les drapeaux de mesure : [`detail/v2-stabilite-prototype.diff`](detail/v2-stabilite-prototype.diff) et [`detail/v2-conventions-prototype.diff`](detail/v2-conventions-prototype.diff). Les lots 5 à 8 et 10 proviennent des patchs préparés pour ce guide, rangés dans [`patches/`](patches/).
+Les esquisses reprennent les prototypes de la vague 2, sans les drapeaux de mesure : [`detail/v2-stabilite-prototype.diff`](detail/v2-stabilite-prototype.diff) et [`detail/v2-conventions-prototype.diff`](detail/v2-conventions-prototype.diff). Les lots 6, 7, 8 et 10 ont un patch prêt à appliquer, vérifié par `npm test`, rangé dans [`patches/`](patches/) ; voir « Patchs prêts à appliquer ».
 
 Numéros de ligne : `src/coinche/engine.js` au commit `b548853`.
 
@@ -262,17 +262,115 @@ if (best && !G.pliCourant.length) {
 
 ---
 
+## Patchs prêts à appliquer
+
+Les patchs de [`patches/`](patches/) se superposent dans cet ordre, depuis la racine du dépôt :
+
+```sh
+git apply docs/audits/patches/encheres.diff docs/audits/patches/encheres-tests.diff   # lot 6
+git apply docs/audits/patches/remontee-apres-encheres.diff                            # lot 8 (après le lot 6)
+git apply docs/audits/patches/hote.diff                                               # lot 7
+git apply docs/audits/patches/interface.diff                                          # lot 10
+npm ci && npm test && npm run build                                                   # bundle à commiter à part
+```
+
+Ce qui a été vérifié lors de la consolidation :
+- Les cinq patchs s'appliquent ensemble, dans cet ordre, et `npm test` passe en entier : 50 scénarios de stratégie, 200 + 10 parties de bots, partie boardgame.io, salons en ligne, règles, hôte, et les 31 vérifications du nouveau test d'hôte.
+- Chacun s'applique aussi seul.
+  - `remontee.diff` est la version autonome du lot 8, sans le lot 6.
+  - `remontee-apres-encheres.diff` est la version à appliquer après `encheres.diff`. Les deux patchs ajoutent la même règle « deux atouts ou un honneur » (ENC-3) : `peutAppuyer` côté enchères, `partnerFit` côté remontée, retiré dans cette version.
+- Les lots 1 à 5 et 9 n'ont pas de patch prêt : ils se codent à partir des esquisses de ce guide et des diffs de prototype.
+- Chaque patch est un seul bloc. Pour en faire des commits séparés, suivre l'ordre conseillé dans chaque lot, avec `git add -p`.
+
 ## Lot 6 : enchères et coinche
 
-*Ce lot sera complété avec le patch préparé par l'agent « enchères », dans `patches/encheres.diff`.*
+Patchs [`patches/encheres.diff`](patches/encheres.diff) (`engine.js`) et [`patches/encheres-tests.diff`](patches/encheres-tests.diff) (scénarios et outil de mesure). Effets mesurés sur le corpus, 20 graines :
+
+| Correction | Ce que fait le patch | Avant → après |
+|---|---|---|
+| **OUV-1** repli après veto | Après un veto, l'ouverture redescend les paliers du barème dans la même couleur (160 → 80), puis essaie les autres couleurs du barème, puis le 80 hors barème. Seulement pour une ouverture. `baremeFits` lit un palier plus bas comme `SIM_FIT`, sinon le partenaire le croirait impossible. | passe ×2 → 130♥ ×2 |
+| **OUV-4** ouverture légère | `LIGHT_MIN_ATOUTS = 2` (3 se change par cette constante, à trancher en duel) | Valet sec + As : 80♥ ×19 → passe ×20 |
+| **ENC-3** couleur du partenaire | `peutAppuyer` (honneur V, 9 ou A, ou deux atouts) à l'étape 3 et dans la lecture. `honneurDeForce` pour le forçage, qui exige un honneur à l'atout forcé. | 7♥ sec + A♦ A♣ : 100♥ ×10 → passe ×20 |
+| **ENC-4** palier annoncé | Le palier du barème est annoncé s'il passe le veto à 0,6. | 90♥ ×12 / 100♥ ×8 → 100♥ ×20 (à horloge figée ; reste dépendant de l'horloge tant que le lot 1 n'est pas fait) |
+| **ENC-6** capot ou Générale | `pc >= best.pm && best.pm < 1` : à égalité, capot ; la Générale sûre (pm = 1) est gardée. | 250♠ ×16 / 500♠ ×4 → 250♠ ×20 |
+| **ZON-7** surcoinche d'un capot | Passe par la simulation, sur au moins `CAPOT_WORLDS` mondes. | capot solide : non ×25 → oui 18 fois sur 20 ; capot douteux : non (inchangé) |
+| **COI-1** surcoinche déterministe | Plus de `Math.random`. Seuil = 160/(160+M) + 0,35, plafonné à 0,95, soit 0,90 à 130 et 0,74 à 250. Les personnalités sont supprimées. | 130♠ : oui 13 à 20 fois sur 20 → non ×19 |
+
+**Mesures et tests**
+
+- **Surcoinche.** La marge de 0,35 est mesurée, pas choisie. Le coincheur sait ce que les mondes ignorent (COI-8). Sur 152 contrats coinchés, ceux que le preneur voyait à 0,6 ou plus n'ont réussi que 8 fois sur 36. Baisser la marge suppose de traiter COI-8 d'abord.
+- **Duel.** +3,6 ± 5,5 pts/donne (2σ, 925 paires, 32 mondes) : pas de différence détectée.
+- **Tests.**
+  - 5 scénarios de stratégie ajoutés, 50 en tout.
+  - `coinche-lisibilite.js` tolère l'absence de `personalities`, avec 6 cas de corpus ajoutés.
+- **Risques.**
+  - Le modèle des interventions (`INTERVENTION_W`) a été appris sur l'ancien comportement : il est à ré-apprendre.
+  - Sans personnalités, `createGame` consomme 4 tirages de moins, donc les donnes tirées d'une même graine changent.
+- **Ordre conseillé des commits.**
+  1. OUV-4.
+  2. ENC-6.
+  3. OUV-1, avec la modification de la lecture.
+  4. ENC-3, puis ENC-4 : leurs modifications se chevauchent à l'étape 3.
+  5. ZON-7, COI-1 et la suppression des personnalités.
 
 ## Lot 7 : hôte, jeu en ligne et rythme
 
-*Ce lot sera complété avec le patch préparé par l'agent « hôte », dans `patches/hote.diff`.*
+Patch [`patches/hote.diff`](patches/hote.diff), qui touche `host.js`, `engine.js` et `game.js`, et ajoute `tests/coinche-hote-bots.test.js` à `npm test`. Le nouveau test compte 31 vérifications : il échoue en 9 sections sur 9 avant le patch et passe après.
+
+| Correction | Ce que fait le patch |
+|---|---|
+| **HAS-1 / ZON-1** siège repris en plein tour | La décision du bot est programmée une fois par couple (tour, siège bot), dans le tableau `decided`. Un siège qui devient bot pendant son tour décide donc tout de suite : en 0,7 s, au lieu de rester muet 20 s. |
+| **ZON-2, COI-4, COI-5, HAS-6** coinche | Les minuteurs de coinche lancés à l'apparition du contrat sont supprimés. Le défenseur bot décide de coincher **à son tour de parole** (`decide.wantsToCoinche` avant `turnAction`) et envoie `COINCHER` à la place de la passe. Conséquences : plus de « passe puis coinche », plus de coinche perdue, plus de coinche avant le partenaire humain, et la fenêtre de 1,8 s face à un humain est respectée. |
+| **ZON-3 / ZON-4** coups d'office | `TIMEOUT` joue avec `auto: true`. La carte jouée d'office n'est pas lue comme un signal ; la passe d'office est notée `auto` dans `bidLog` et ignorée par `seatWeight` et `bidReadings`. `game.js` retire ce champ des coups envoyés par les clients. |
+| **MON-4** type de joueur | Chaque entrée de `bidLog` porte `type` (`human` ou `bot`) au moment de l'annonce. Une partie sauvegardée sans ce champ retombe sur le type actuel du siège. |
+| **HAS-7** fuite d'état | `playerView` n'envoie plus `personalities` aux non-hôtes, et `bidMemo` ne contient que l'entrée de leur propre siège. |
+| **HAS-4** rythme | `thinkMs` (exporté) : un coup forcé prend 150 à 300 ms ; sinon 350 ms + largeur × u², avec une largeur qui croît avec le nombre de cartes légales (1 500 ms pour une enchère). Délai moyen 542 ms au lieu de 575 ; maximum 1,85 s au lieu de 0,8 s. |
+| **HAS-8** commentaires | Commentaires corrigés : 4 s au lieu de 5 s, 0,9 s au lieu de 0,6 s. |
+
+**Mesures et tests**
+
+- **Compatibilité.** L'état `G` ne gagne que deux champs dans `bidLog`, `type` et `auto`, et ils sont additifs : les parties en cours et sauvegardées continuent sans migration. Un ancien client hôte reste compatible.
+- **À mesurer avant fusion.** La coinche est maintenant décidée sur l'état courant, et sa fréquence monte de 26,8 % à 30,1 % des donnes (comparaison indicative). Un duel `coinche-ab.js` est nécessaire avant de fusionner.
+- **Ordre conseillé des commits.**
+  1. `thinkMs` et HAS-8 (`host.js` seul).
+  2. MON-4, ZON-3 et ZON-4, avec les tests.
+  3. HAS-7.
+  4. HAS-1, ZON-1, ZON-2, COI-4, COI-5 et HAS-6, après le duel.
 
 ## Lot 8 : remontée du partenaire
 
-*Ce lot sera complété avec la table et le prototype de l'agent « remontée », dans [`detail/v2-remontee-partenaire.md`](detail/v2-remontee-partenaire.md).*
+Patchs [`patches/remontee.diff`](patches/remontee.diff) (autonome) et [`patches/remontee-apres-encheres.diff`](patches/remontee-apres-encheres.diff) (après le lot 6). Détails et mesures : [`detail/v2-remontee-partenaire.md`](detail/v2-remontee-partenaire.md).
+
+**La table, identique à l'émission et à la lecture**
+
+- La relance vaut le soutien, **sans palier de prudence** :
+
+  | Élément | Points de soutien |
+  |---|---|
+  | Chaque As à côté | +10 |
+  | Valet d'atout | +20 |
+  | 9 d'atout second | +10 |
+  | Belote | +20 |
+  | Aucun atout | pas de remontée |
+
+- En lecture, `baremeFits` lit une relance de r comme « r points ».
+- Le Valet ne se lit plus que sur l'ouverture.
+
+**Les trois exceptions**
+
+1. **Capot par les clefs** : les As du répondant dépassent les fausses cartes de l'ouvreur, et la simulation le valide.
+2. **Barrage** : un palier au-dessus d'une intervention adverse.
+3. **Hors table** : la simulation décide, et la couleur du partenaire exige deux atouts ou un honneur.
+
+**Mesures et tests**
+
+- **Effets.**
+  - Accord avec la référence de club : 15-54 % → 60-95 %.
+  - Mains à réponse déterministe en compétition : 85-95 % → 95-99 %.
+  - Duel : le moteur actuel fait +1,7 ± 3,9 pts/donne de plus, une différence non significative.
+- **Test modifié.** Le scénario « Soutien Valet + As sur 80 » attend maintenant 110♥ et non 100♥ : l'ancien test encodait le palier de prudence.
+- **À faire avant fusion** : un duel plus long, d'environ 4 000 paires.
+- **À faire dans tous les cas** : interdire le forçage sans atout. C'est déjà fait par `honneurDeForce` dans le lot 6.
 
 ---
 
@@ -309,7 +407,28 @@ if (best) {
 
 ## Lot 10 : interface
 
-*Ce lot sera complété avec le patch préparé par l'agent « interface », dans `patches/interface.diff`.*
+Patch [`patches/interface.diff`](patches/interface.diff). Il touche `hud.js`, `table-scene.js`, le nouveau `client/signaux.js`, `styles.css` et la page de règles, mais pas le moteur. Build vérifié. Captures : [`patches/captures-interface/`](patches/captures-interface/).
+
+| Amélioration | Ce que fait le patch |
+|---|---|
+| **P2** historique des enchères | Le bouton « Historique » ouvre trois onglets : Enchères, Cartes, Donnes. L'onglet Enchères affiche le tableau des annonces de la donne à partir de `G.bidLog` : 4 colonnes, passes comprises, contrat en or, coinche et surcoinche en note. |
+| **P5** cartes tombées | Onglet Cartes : 32 cartes, atout en premier ; les cartes tombées sont barrées et celles de ta main cerclées. Le nombre d'atouts encore dehors est indiqué. |
+| **P4** appel et refus | `signaux.js` lit `G.appel` et `G.refus` quelle que soit leur forme. L'affichage suit donc ce que lit le moteur, avant comme après le lot 3. Une pastille « Appel ♦ » s'affiche près du siège pendant 3 s, avec une annonce au lecteur d'écran. Sur ta propre défausse, une note discrète : « Les bots lisent ton R♠ comme un refus ». |
+| **P6** coinche et surcoinche | Le bouton « Coincher » montre son armement : 600 ms, jauge, secousse si on clique trop tôt. La barre de surcoinche affiche un décompte de 10 s. |
+| **P1** conventions des bots | Brouillon masqué (`hidden`) dans la page de règles, décrivant les conventions telles qu'elles seront **après** les lots 3, 4, 6 et 8. À rendre visible seulement une fois ces lots fusionnés (LIS-10). |
+
+**Limites et ordre**
+
+- **Données affichées.**
+  - L'historique ne couvre que la donne en cours : `G.history` ne garde pas les enchères des donnes passées.
+  - L'onglet Cartes ne dit pas qui a joué chaque carte.
+- **Bundle.** Le bundle commité dans `site/assets/js/coinche/` n'est pas reproductible à l'identique. Il faut lancer `npm run build` et commiter le bundle à part.
+- **Ordre conseillé des commits.**
+  1. P6.
+  2. P2 et P5.
+  3. P4.
+  4. P1 (masqué).
+  5. Bundle.
 
 ---
 
