@@ -2,6 +2,24 @@
 
 Octobre 2026, moteur `src/coinche/engine.js` au commit `b548853`. Audit en lecture seule : aucun code de jeu modifié.
 
+L'audit s'est fait en deux vagues de sous-agents :
+- **Vague 1** : diagnostic, fonction par fonction.
+- **Vague 2** : corrections prototypées et chiffrées, partenaire humain simulé, zones restantes, interface, re-vérification des cas de la vague 1, remontée du partenaire. Ses résultats sont résumés dans la section [Vague 2](#vague-2--ce-que-les-mesures-ajoutent) et corrigent plusieurs chiffres de la vague 1.
+
+Rapports détaillés, dans [`detail/`](detail/) :
+
+| Sujet | Vague 1 | Vague 2 |
+|---|---|---|
+| Enchères | [ouverture](detail/v1-ouverture.md), [compétition](detail/v1-competition.md) | [remontée du partenaire](detail/v2-remontee-partenaire.md) |
+| Coinche | [coinche](detail/v1-coinche.md) | — |
+| Jeu de la carte | [entame](detail/v1-entame.md), [suite de pli](detail/v1-suite.md) | [conventions et signaux](detail/v2-conventions.md) |
+| Monte-Carlo | [mondes](detail/v1-mondes.md), [choix de la carte](detail/v1-choix-mc.md) | [stabilité](detail/v2-stabilite.md) |
+| Hasard, rythme, mesures globales | [hasard et rythme](detail/v1-hasard-rythme.md), [empirique](detail/v1-empirique.md) | [zones restantes](detail/v2-zones-restantes.md) |
+| Joueur humain | — | [partenaire humain](detail/v2-partenaire-humain.md), [lisibilité côté humain](detail/v2-lisibilite-humain.md) |
+| Re-vérification des cas | — | [corpus](detail/v2-corpus.md) |
+
+Outil de mesure : [`tests/coinche-lisibilite.js`](../../tests/coinche-lisibilite.js). Il est décrit dans le rapport « corpus » et sert à comparer deux `engine.js` avant et après une correction.
+
 - **Non humain** : un joueur de club ne jouerait pas ainsi, ou trouverait le coup bizarre.
 - **Non prédictible** : le partenaire humain ne peut pas lire la main ou l'intention du bot. Soit le même état donne des décisions différentes, soit une annonce ou un signal ne veut pas dire ce que la convention dit.
 
@@ -29,6 +47,83 @@ Les réflexes et le barème sont, pour l'essentiel, ceux d'un joueur de club. Il
    - Un siège repris par un bot en plein tour reste muet 20 s, puis joue une carte au hasard.
 
 **Angle mort des tests.** `tests/coinche-strategies.test.js` vérifie les réflexes (`heuristicCard`), pas la carte réellement jouée. Exemple : le scénario « tirer l'atout maître » (`JH 9H 7H AS 8S KD 7D 8C` à 100♥) passe au test. Pourtant, le bot réel n'a joué le Valet sur **aucune** des 20 graines essayées.
+
+## Vague 2 : ce que les mesures ajoutent
+
+### Ce qui corrige la vague 1
+
+- **Chiffres nuancés par la re-vérification** ([corpus](detail/v2-corpus.md)). Chaque cas a été rejoué sur 20 graines, horloge figée, 96 mondes.
+
+  | Cas | Vague 1 | Re-vérifié | Verdict |
+  |---|---|---|---|
+  | OUV-1 : passe avec 160 au barème | 1 fois sur 3 | 10-20 % | défaut confirmé, fréquence plus basse |
+  | OUV-2 : Générale sur appareil lent | 75 % | 15-20 % | sens confirmé, ampleur plus faible |
+  | COI-1 : surcoinche tirée au hasard | — | seulement à partir de 130♠ | confirmé sur ce périmètre |
+  | COI-3 : coinche sans raison sur appareil lent | — | 0 sur 20 sur le cas cité | infirmé pour ce cas |
+  | ENT-1 : entames différentes sur une même position | 6 | 2 à 4 | nuancé |
+  | ENT-2 : exemple du 7♠ sec entamé | — | 0 à 5 % des tirages | exemple faible |
+  | SUI-4 : charge refusée par le réflexe | — | le Monte-Carlo corrige, il joue le 10♣ dans 90 % des cas | nuancé |
+
+  Le preneur avec Valet-9 ne tire pas atout au premier pli dans 26 à 60 % des cas, selon l'échantillon et la marge. Le défaut se concentre sur les mains à **3 atouts** : il tire atout dans 27 % des cas, contre 63 % avec 4 atouts ou plus.
+
+  Quelques cas du rapport étaient mal décrits : main incomplète, séquence d'enchères sans les passes, plis précédents absents. La liste est dans le rapport « corpus ».
+- **Hypothèse d'ENT-3 infirmée** ([conventions](detail/v2-conventions.md), partie A). L'idée était que le preneur ne tire pas atout parce que la défense simulée n'entame jamais atout. Faire entamer atout à cette défense ne change rien : 45 % → 42 % d'entames d'atout. La vraie cause est encore inconnue ; elle tient à la longueur d'atout, comme l'indique la différence entre 3 et 4 atouts.
+- **MON-2 : l'inversion `fit || misfit` ne joue presque pas** ([partenaire humain](detail/v2-partenaire-humain.md)). Ce qui fausse la lecture d'un humain, c'est la tolérance `MISFIT.human` de 0,15.
+  - `Math.max` ne change presque rien : 0,46 → 0,47.
+  - Une tolérance de 0,05 améliore la justesse de 6 à 10 points.
+- **MON-5 : les mondes ne sont pas si corrélés** ([stabilité](detail/v2-stabilite.md), S5). Le bruit de la décision correspond à environ 96 mondes indépendants, et non à 25-45. Multiplier les chaînes indépendantes n'apporte rien.
+- **Les barres d'erreur de `tests/coinche-ab.js` sont optimistes** ([stabilité](detail/v2-stabilite.md), section 5). Deux duels voisins donnent des signes opposés, à environ 3 erreurs-types d'écart. Tout coût en force inférieur à environ 5 pts/donne reste invisible avec des duels de 15 à 25 minutes.
+
+### Corrections prototypées et chiffrées
+
+Chaque correction a été prototypée sur une copie du moteur ; aucune n'est appliquée dans `src/`.
+
+| Correction | Effet mesuré | Coût en force (duel, ±2σ) |
+|---|---|---|
+| **S4** : budget en nombre de mondes, sans lecture d'horloge, `minWorlds` pour la Générale, la coinche et la surcoinche | Décisions qui changent avec un appareil 10 fois plus lent : **16 % → 0 %** des cartes, 15 % → 0 % des enchères, 16 % → 0 % des coinches | nul par construction (à horloge figée, mêmes décisions) |
+| **S1 + tri de la main** : graine dérivée de l'état | Même situation, même décision : **0 %** de changement d'une graine à l'autre. L'ordre des cartes en main ne joue plus que sur 1,4 % des cas. | −1,5 ± 5,0 |
+| **S2** : test apparié z = 2 + 0,5 pt dans `mcChooseCard` | Bruit réel : cartes instables 34 % → **11 %**, entames 44 % → 16 %, écart au réflexe 34 % → 7,5 % | non établi (+7,9 ± 6,9 et −6,6 ± 5,6 selon le réglage) |
+| **Marges de convention** (32 / 32 / 16 / 32 pts par monde) | Couleur annoncée abandonnée 63 % → 10 % ; couleur appelée abandonnée 45 % → 12 % ; preneur Valet-9 qui ne tire pas atout 57 % → 26 % ; défense qui n'entame pas son As 55 % → 27 % ; défense qui entame atout 8 % → 3 % | +0,2 ± 4,6 (avec les signaux) |
+| **Signaux** : appel = 7 ou 8 sur défausse volontaire avant le pli 4, As non tombé ; refus = Roi ou Dame ; dernier signal valable ; défausse neutre ; Monte-Carlo qui garde les vrais appels ; `SIGNAL_MISFIT` 0,1 | Faux appels lus **85 % → 23 %** (17 → 0,8 par partie) ; vrais appels gardés par le Monte-Carlo 36 % → 86 % ; réflexe dépendant de l'ordre de la main 6 % → 0 % | −0,6 ± 4,6 |
+| **`MISFIT.human` 0,15 → 0,05** | Lecture du partenaire humain : +6 à +10 points de justesse (Valet annoncé placé chez lui dans 0,46 des mondes environ, contre 0,84 quand le même siège est un bot) | non détecté (±10 à 13) |
+
+### Nouveaux constats
+
+**Zones restantes** ([zones](detail/v2-zones-restantes.md)) :
+- **ZON-7. Un capot coinché n'est jamais surcoinché.** Résultat : 0 surcoinche sur 25, alors que 20 de ces capots réussissent. Cause : `botWantsToSurcoinche` ne considère que les contrats chiffrés et la Générale.
+- **ZON-1 et ZON-2. Siège repris par un bot en cours de donne.**
+  - Pendant son tour, il reste muet, puis passe ou joue au hasard.
+  - Après une annonce, il ne coinche jamais : 0 sur 23, contre 12 sur 23 pour un bot présent depuis le début.
+- **ZON-3. Carte jouée d'office au TIMEOUT.** Elle coûte 10 pts par décision. Elle est en plus lue comme un signal (appel ou refus), et une passe d'office comme une main faible.
+- **ZON-5, ZON-6 et ZON-10. Fin de partie.**
+  - Le score ne change rien aux enchères.
+  - En revanche, contre un preneur à 940 points, les bots coinchent 100 % des contrats, sans aucun atout dans 15 % des cas.
+  - Avec la défense à 700 points, ils surcoinchent 100 % des contrats.
+  - Ces choix sont justes pour gagner la partie, mais un partenaire ne peut pas les lire.
+- **Ce qui va bien :**
+  - Générale : 40 réussies sur 40.
+  - Huit atouts : 15 sur 15.
+  - Derniers plis à information complète : aucun coup « clairvoyant » détecté, et un regret moyen de 0,1 pt.
+
+**Lisibilité côté humain** ([lisibilité](detail/v2-lisibilite-humain.md)) :
+- **LIS-1. Les conventions des bots ne sont expliquées nulle part au joueur.** Ni dans les règles du site, ni dans `REGLES_COINCHE.md`, ni dans le lobby. Elles ne sont écrites que dans les commentaires d'`engine.js`.
+- **LIS-2. Les montants d'ouverture sont des codes**, mesurés sur 400 000 mains :
+  - 90 = toujours Valet + 9 (43 669 sur 43 669) ;
+  - 100 = jamais Valet + 9 (0 sur 31 564) : c'est une annonce de longueur.
+
+  Un humain qui lit « 100 plus fort que 90 » se trompe.
+- **LIS-3. Une relance de +10 ne contient pas plus d'As qu'une absence de relance** (0,7 en moyenne). Elle signale surtout le Valet et la longueur.
+- **LIS-6, LIS-5 et LIS-7. L'interface cache ce qu'il faut pour lire un bot.**
+  - Les enchères ne montrent qu'un mot par siège, effacé au début du jeu, alors que `G.bidLog` est disponible côté client.
+  - Les appels et refus ne sont jamais affichés.
+  - Aucune carte tombée n'est visible ; seul le dernier pli est consultable.
+
+**Partenaire humain simulé** ([partenaire humain](detail/v2-partenaire-humain.md)) :
+- Les bots coinchent 10 % des contrats d'un humain « de club », contre 3 % pour un bot au même siège. La cause est surtout le barème de club lui-même, plus que `MISFIT`.
+- 65 % des appels lus chez l'humain sont faux.
+- Un vrai appel de l'humain n'est suivi que dans 44 à 53 % des cas.
+
+**Remontée du partenaire** : voir [remontée du partenaire](detail/v2-remontee-partenaire.md) et la section [Remontée du partenaire](#remontée-du-partenaire-vague-2) plus bas.
 
 ## Méthode
 
@@ -103,7 +198,7 @@ Dans les mondes imaginés, les quatre joueurs suivent les réflexes des bots (`p
 - **Le preneur ne tire pas atout** (EMP-3, ENT-3).
   - Avec Valet + 9 + au moins 3 atouts, il n'entame atout au premier pli que dans 33 % des cas. Avec le Valet sans le 9, c'est 67 % : la relation est inversée.
   - Quand le réflexe tire atout, le Monte-Carlo le refuse 39 % du temps, malgré `TRUMP_LEAD_MARGIN = 8`.
-  - Cause probable : la défense simulée n'entame jamais atout (aucune branche de défense de `leadCard` ne le fait), donc le Monte-Carlo ne craint pas qu'on lui retire ses coupes.
+  - Cause : inconnue. L'hypothèse « la défense simulée n'entame jamais atout » est **infirmée en vague 2** : la corriger ne change rien. Le défaut tient à la longueur d'atout (27 % de tirage avec 3 atouts, 63 % avec 4). Les marges de convention le réduisent : 57 % → 26 % de non-tirage.
   - Exemple : `7D AH JC 9C QC 10S 9D AD` à 110♣ entame le 7♦ sur les 3 tirages, avec Valet-9-Dame de trèfle.
 - **La défense entame atout** (ENT-2, EMP-4).
   - 15 % des premières entames de défense, alors que le réflexe ne le fait jamais.
@@ -168,6 +263,7 @@ Lignes 1666-1689, `seatWeight` et `MISFIT = { bot: 0.0001, human: 0.15 }` :
 - **Inversion** (MON-2). `bidFits(r, h) || misfit` garde les petites valeurs non nulles de `bidFits` : 0,07 (`BLUFF`) ou 0,1 (`SIM_FIT`).
   - Elles sont plus faibles que le 0,15 accordé à une main qui ne colle à rien.
   - Après un 80♥ humain, « V♥ 9♥ 7♥ + A♠ » pèse donc 0,1, et « aucun cœur » pèse 0,15.
+  - *Vague 2* : en pratique, cette inversion pèse peu, car `Math.max` ne change presque rien. C'est la tolérance de 0,15 qui fausse la lecture ; 0,05 est recommandé.
 - **Passes crues à la lettre** (MON-3). Les passes d'un humain sont lues aussi strictement que celles d'un bot : le plancher de 0,002 n'est jamais nul, donc la tolérance humaine ne s'applique pas.
   - Le modèle des passes a été appris sur 36 587 décisions de bots seulement.
 - **Type de siège lu au moment de la décision** (MON-4). Si un humain quitte la table, ses enchères passées sont relues comme celles d'un bot, avec une tolérance de 0,0001 : les mondes deviennent sûrs mais faux.
@@ -223,7 +319,52 @@ Lignes 1666-1689, `seatWeight` et `MISFIT = { bot: 0.0001, human: 0.15 }` :
 - **Fin de donne.** `exactEnd` la stabilise : 2 à 9 % d'instabilité aux plis 6 et 7.
 - **Belote.** Elle est annoncée de façon humaine.
 
-## Plan de correction proposé
+## Plan de correction mis à jour (après la vague 2)
+
+Les effets sont mesurés sur des prototypes (voir [Vague 2](#vague-2--ce-que-les-mesures-ajoutent)). Les coûts en force sont non détectés à ±5 pts/donne, mais pas exclus en dessous.
+
+1. **Faire jouer les bots pareil sur tous les appareils.**
+   - S4 : budget en nombre de mondes, plus de lecture d'horloge, `minWorlds` pour la Générale, la coinche et la surcoinche.
+   - Ajouter un garde-fou très large pour les appareils extrêmes, et mesurer le temps de calcul sur un vrai téléphone.
+   - Effet : 0 % de décisions dépendant de l'appareil. Coût en force : nul.
+2. **Même situation, même décision.**
+   - S1 : graine dérivée de l'état.
+   - Tri canonique de la main et de `legal`.
+   - Ajouter un test de reproductibilité.
+   - Coût en force : nul.
+3. **Un seul langage de signaux.**
+   - Nouvelle lecture et nouvelle émission des appels et des refus.
+   - Le Monte-Carlo garde les vrais appels.
+   - `SIGNAL_MISFIT` passe à 0,1, mais seulement avec la nouvelle lecture.
+   - Effet : 85 % → 23 % de faux appels.
+4. **Protéger les conventions.**
+   - Marges de 32 / 32 / 16 / 32 dans `mcChooseCard`.
+   - Passer la règle « la couleur appelée ou annoncée revient » en règle dure une fois l'étape 3 faite.
+5. **Lire correctement les humains.**
+   - `MISFIT.human` à 0,05.
+   - Type de joueur enregistré dans `bidLog` au moment où il parle.
+   - Ne pas lire comme un signal une carte jouée d'office (ZON-3).
+6. **Corriger les bugs d'hôte et de règles.**
+   - Relancer la décision quand un siège devient bot (HAS-1, ZON-1).
+   - Laisser ce siège envisager la coinche (ZON-2).
+   - Permettre la surcoinche d'un capot (ZON-7).
+   - Supprimer la surcoinche tirée au hasard (COI-1).
+7. **Enchères et remontée du partenaire.**
+   - Repli après un veto (OUV-1).
+   - Ouverture légère en 4e avec au moins 2 ou 3 atouts (OUV-4).
+   - Annoncer le palier du barème quand il passe le veto (ENC-4).
+   - Table de remontée stricte : voir [Remontée du partenaire](#remontée-du-partenaire-vague-2).
+8. **Interface et documentation**, sans toucher au moteur :
+   - historique complet des enchères ;
+   - bulle « appel » ou « refus » ;
+   - cartes tombées ;
+   - page « comment jouent les bots », à écrire une fois les étapes 3, 4 et 7 faites, pour ne pas documenter un système que les bots ne respectent pas (LIS-10).
+9. **Arbitrer S2 (test apparié).** C'est un choix de produit : il fait passer le bruit réel de 34 % à 11 %, pour un coût en force non établi.
+   - Le trancher avec un duel environ 10 fois plus long (2 h 30 de calcul sur 4 cœurs libres).
+   - Corriger d'abord l'estimation d'erreur de `coinche-ab.js`.
+10. **Suivre l'avancement** avec `node tests/coinche-lisibilite.js` : ligne de base dans le rapport [corpus](detail/v2-corpus.md), puis une mesure après chaque étape.
+
+## Plan de correction initial (vague 1)
 
 Ordre suggéré : gain de lisibilité le plus fort pour le moins de code. Chaque étape doit passer par un duel `tests/coinche-ab.js`, pour connaître son coût en points.
 
@@ -278,3 +419,5 @@ Ordre suggéré : gain de lisibilité le plus fort pour le moins de code. Chaque
 - **Appareil lent.** Il est simulé par une horloge accélérée, pas mesuré sur un téléphone.
 - **Statistiques d'enchères empiriques.** Elles sont faites à 32 mondes, pas 96. Les références « club » (80/90 majoritaires, etc.) sont des attentes, pas des données.
 - **Sources.** Les scripts et sorties des agents sont restés dans le dossier temporaire de la session d'audit. Ils ne sont pas versionnés.
+  - Exceptions : les diffs des prototypes de la vague 2 ([stabilité](detail/v2-stabilite-prototype.diff), [conventions](detail/v2-conventions-prototype.diff)) et l'outil `tests/coinche-lisibilite.js`.
+- **Puissance des duels de la vague 2.** Environ ±5 pts/donne à 2σ, et ces barres sont probablement optimistes. Un coût de 1 à 3 pts/donne reste possible pour S2 et pour les marges de convention.
