@@ -48,8 +48,8 @@ export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, 
   let donne = 0;
   const dealRand = rng(dealSeed);
   const saved = [Math.random, tuning.now];
-  Math.random = rand; // les bots tirent leurs mondes avec Math.random
-  tuning.now = () => 0; // réflexion jamais interrompue : reproductible
+  Math.random = rand; // anciens moteurs : mondes tirés avec Math.random (les récents tirent leur graine de l'état)
+  tuning.now = () => 0; // anciens moteurs : réflexion jamais interrompue (les récents ignorent l'horloge)
   try {
     const G = createGame([0, 1, 2, 3].map(() => ({ type: 'bot', name: 'Ordinateur' })), dealRand, deal);
     const newDonne = () => {

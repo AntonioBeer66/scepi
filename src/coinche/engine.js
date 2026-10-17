@@ -1748,14 +1748,16 @@ function bidReadings() {
 
 // Au-dessus de l'adversaire (palier ≤ 160), c'est l'étape 3 qui parle : une
 // décision à l'espérance, qu'aucun barème ne relit. On la lit avec un modèle
-// appris sur 36 587 décisions des bots (régression logistique) : la chance
-// d'intervenir dans la couleur s selon la main. Traits : biais, longueur,
+// appris sur les décisions des bots (régression logistique) : la chance
+// d'annoncer dans la couleur s selon la main. Traits : biais, longueur,
 // Valet, 9, As, 10, belote, As à côté, As-10 à côté, chicanes, couleur du
-// partenaire, palier ((min − 80) / 10). Perte log 0,31 contre 0,49 pour
-// un taux constant ; en duel +3,5 ± 1,6 pt/donne (deux séries).
+// partenaire, palier ((min − 80) / 10). Réappris le 17 octobre 2026 sur le
+// moteur actuel (39 390 décisions, 950 parties) : perte log 0,335 contre
+// 0,375 avec les poids d'avant et 0,53 pour un taux constant (validation
+// croisée par partie). Le premier modèle valait +3,5 ± 1,6 pt/donne en duel.
 const INTERVENTION_W = [
-  -7.1698, 1.4845, 2.5608, 1.3118, 0.0304, 0.0779, 1.7192, 0.7587, 0.6295,
-  0.018, 3.0833, -0.8344,
+  -4.9753, 0.8697, 2.2975, 1.1433, 0.2804, 0.0615, 1.6513, 0.7927, 0.5673,
+  0.256, 3.9686, -0.815,
 ];
 function interventionP(h, s, partnerSuit, min) {
   const side = SUITS.filter((x) => x !== s);
@@ -1807,8 +1809,9 @@ function bidFits(r, h) {
     const p = e.montant === min || e.montant === sys ? pOf(s) : 0;
     return Math.max(support, p);
   }
+  // Une seule couleur annoncée : passer, c'est n'en avoir choisi aucune.
   let q = 1;
-  for (const s of SUITS) q *= 1 - pOf(s);
+  for (const s of SUITS) q -= pOf(s);
   return Math.max(q, 0.002);
 }
 
