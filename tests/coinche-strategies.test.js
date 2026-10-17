@@ -68,7 +68,7 @@ check('Main faible : passe', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('9H KH QH 7S 8S 7D 8D 7C') });
 check('Jamais de 80 sur 9 + belote sans As', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('JH 7H AS 8S 7D 8D 9C 7C'), contract: contract(2, 80, 'H'), donneAnnonces: [{ seat: 2, montant: 80, atout: 'H' }], passesConsecutives: 1 });
-check('Soutien Valet + As sur 80, moins le palier de prudence', bid(api.botDecideBid(0)), '100H');
+check('Soutien Valet + As sur 80 : +20 et +10, sans palier de prudence', bid(api.botDecideBid(0)), '110H');
 setup({ hands: hands('AS 8S 7S AD 8D 7D 9C 7C'), contract: contract(2, 80, 'H'), donneAnnonces: [{ seat: 2, montant: 80, atout: 'H' }], passesConsecutives: 1 });
 check('Sec à l’atout du partenaire : pas de soutien', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('JH 9H AH 7H AD 10D AC 8C'), contract: contract(1, 80, 'S'), donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
