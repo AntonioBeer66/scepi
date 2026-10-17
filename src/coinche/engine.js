@@ -221,11 +221,6 @@ function newGame(seats) {
     // jeu, surcoinche, affichage du score) : un TIMEOUT ne vaut que pour
     // la fenêtre qu'il vise, jamais pour la suivante.
     tour: 0,
-    // Personnalité tirée une fois par siège : agressivité (relève les
-    // enchères plus tôt). La coinche, elle, suit la même règle pour tous.
-    personalities: [0, 1, 2, 3].map(() => ({
-      aggr: 0.75 + rand() * 0.6,
-    })),
   };
   startNewDonne();
   return G;
@@ -351,10 +346,6 @@ function botTurnAction(seat) {
 
 const FAUSSES_PROMISES = { 90: 4, 110: 3, 120: 2, 130: 1 };
 
-function personality(seat) {
-  return G.personalities[seat];
-}
-
 function partnerOf(seat) {
   return (seat + 2) % 4;
 }
@@ -419,6 +410,21 @@ function tenue(hand, s) {
     (suitCards(hand, s).length >= 4 && sideAces(hand, s) >= 2)
   );
 }
+// Couleur du partenaire, au-dessus de l'adversaire (étape 3) : on l'appuie
+// avec un honneur (Valet, 9, As) ou au moins deux cartes. Un 7 sec ne dit
+// rien, et le partenaire y lit un soutien (ENC-3).
+function peutAppuyer(hand, s) {
+  const m = asMask(hand);
+  return (
+    countOf(m, s) >= 2 || has(m, s, "J") || has(m, s, "9") || has(m, s, "A")
+  );
+}
+// Forcer (annoncer le minimum quand la main vaut dix de moins) : seulement
+// avec le Valet ou l'As de l'atout (ENC-3).
+function honneurDeForce(hand, s) {
+  const m = asMask(hand);
+  return has(m, s, "J") || has(m, s, "A");
+}
 function round10(n) {
   return Math.floor(n / 10) * 10;
 }
@@ -478,9 +484,13 @@ function openingBid(hand, suit, light) {
   // 1,0 pt/donne (MC 48 et 96), 6 % de contrats en moins, autant de réussis.
   if (tenue && (light || aces >= 1 || (V && bel) || ((V || N) && n >= 4)))
     return 80;
-  if (light && (V || (N && n >= 2)) && aces >= 1) return 80;
+  // Un Valet sec + un As ouvrait 80 avec un seul atout, 17 fois sur 20 : un
+  // bluff que le commentaire de l'étape 4 dit supprimé (OUV-4).
+  if (light && n >= LIGHT_MIN_ATOUTS && (V || N) && aces >= 1) return 80;
   return 0;
 }
+// Atouts exigés pour l'ouverture légère en quatrième (un honneur, V ou 9, et un As).
+const LIGHT_MIN_ATOUTS = 2;
 
 function bestOpening(hand, light) {
   const m = asMask(hand);
@@ -558,6 +568,9 @@ function raiseBy(seat, suit) {
 const BID_DECISION_MS = 400;
 const COMPETE_MARGIN = 60; // voir l'étape 3
 const OPEN_VETO = 0.6; // voir l'étape 4
+// Paliers d'ouverture du barème (openingBid), du plus haut au plus bas : le
+// repli après un veto les redescend un à un (OUV-1).
+const PALIERS_OUVERTURE = [160, 130, 120, 110, 100, 90, 80];
 // Capot : seulement si la simulation le réussit assez souvent. Le barème
 // seul (clefs, ouverture sans fausse carte) en réussissait moins d'un sur
 // trois : les relances de compétition se lisaient comme des As.
@@ -627,7 +640,11 @@ function generaleBid(seat, hand, cur, team) {
       coinche: false,
       surcoinche: false,
     }, CAPOT_WORLDS);
-    if (pc !== null && pc > best.pm) return { type: "ENCHERIR", montant: capot, atout: best.atout };
+    // À égalité, le capot : même valeur (250), plus facile qu'une Générale
+    // (ENC-6). Sauf si la Générale est sûre, aucun monde perdu (huit atouts,
+    // main monstrueuse) : même gain sans risque, et aucun capot ne la passe.
+    if (pc !== null && pc >= best.pm && best.pm < 1)
+      return { type: "ENCHERIR", montant: capot, atout: best.atout };
   }
   return { type: "ENCHERIR", montant: best.montant, atout: best.atout };
 }
@@ -657,8 +674,10 @@ function decideBid(seat) {
   }
   // Forcer : 10 de plus que ce que la main vaut, deux fois par ligne —
   // systématiquement : laisser l'adversaire jouer tranquille coûte plus.
+  // Seulement avec le Valet ou l'As de l'atout : un forçage doit dire
+  // quelque chose au partenaire (ENC-3).
   function force(atout) {
-    if (G.forced[team] >= 2) return null;
+    if (G.forced[team] >= 2 || !honneurDeForce(hand, atout)) return null;
     const o = offer(min, atout);
     if (o) G.forced[team]++;
     return o;
@@ -778,9 +797,9 @@ function decideBid(seat) {
   // (prédit 7 % → 41 % réels, 93 % → 85 %). Mesuré en duel contre le
   // barème : marge 0 → +3,8 pts/donne, 30 → +9,8, 60 → +14,3, 90 → +10,7 ;
   // les interventions du barème non retenues ici coûtaient des points.
-  // La couleur annoncée par le partenaire est candidate dès un atout en
-  // main (il en tient la longueur) ; les autres, à partir de trois cartes
-  // et avec une tenue d'atout (voir tenue).
+  // La couleur annoncée par le partenaire est candidate avec un honneur
+  // (Valet, 9, As) ou deux atouts (voir peutAppuyer) ; les autres, à partir
+  // de trois cartes et avec une tenue d'atout (voir tenue).
   if (cur && !ours && !capotOnTable && min <= 160) {
     const pOpp = makeProbability(seat, cur);
     if (pOpp !== null) {
@@ -788,20 +807,29 @@ function decideBid(seat) {
       let best = null;
       for (const s of SUITS) {
         const partnerSuit = !!partnerBid && partnerBid.atout === s;
-        if (suitCards(hand, s).length < (partnerSuit ? 1 : 3)) continue;
+        if (partnerSuit ? !peutAppuyer(hand, s) : suitCards(hand, s).length < 3)
+          continue;
         if (!partnerSuit && !tenue(hand, s)) continue;
         // Main forte : le palier du barème est candidat aussi (130 plutôt
         // que 90, +1,9 pt/donne), il renseigne le partenaire.
         const sys = Math.min(160, openingBid(hand, s, false));
+        const palierSys = { sys, pSys: null }; // réussite simulée du palier du barème
         for (const palier of sys > min ? [min, sys] : [min]) {
           const pm = pMake(palier, s);
           if (pm === null) continue; // plus le temps d'y réfléchir
+          if (palier === sys && sys > min) palierSys.pSys = pm;
           const ev = pm * palier - (1 - pm) * 160;
-          if (!best || ev > best.ev) best = { ev, s, palier };
+          if (!best || ev > best.ev) best = { ev, s, palier, palierSys };
         }
       }
-      if (best && best.ev > evPass + COMPETE_MARGIN)
-        return offer(best.palier, best.s);
+      if (best && best.ev > evPass + COMPETE_MARGIN) {
+        // Intervention décidée : si le palier du barème passe le veto, c'est
+        // lui qu'on annonce, pas le minimum, dont l'espérance ne s'en écarte
+        // que du bruit (90 à 0,98 et 100 à 0,96 : tiré au sort 70/30, ENC-4).
+        const { sys, pSys } = best.palierSys;
+        const auBareme = pSys !== null && pSys >= OPEN_VETO && sys > best.palier;
+        return offer(auBareme ? sys : best.palier, best.s);
+      }
       return PASS;
     }
   }
@@ -818,6 +846,7 @@ function decideBid(seat) {
   if (!ours && !capotOnTable) {
     const light = !cur && G.passesConsecutives === 3;
     const own = bestOpening(hand, light);
+    let refus = 0; // palier du barème que la simulation a refusé
     if (own) {
       const plain = offer(own.montant, own.atout);
       const o =
@@ -827,16 +856,53 @@ function decideBid(seat) {
         // Capot refusé par la simulation : la main vaut tout de même 160.
         const o160 = offer(160, o.atout);
         const p160 = o160 ? pMake(160, o.atout) : null;
-        return o160 && (p160 === null || p160 >= 0.5) ? o160 : PASS;
+        if (o160 && (p160 === null || p160 >= 0.5)) return o160;
+        if (cur) return PASS;
+        refus = 160;
+      } else if (o) {
+        const pm = pMake(o.montant, o.atout);
+        if (pm === null || pm >= OPEN_VETO) return o;
+        if (!plain) G.forced[team]--; // veto : ce forçage n'a pas servi
+        refus = o.montant;
       }
-      const pm = o ? pMake(o.montant, o.atout) : null;
-      if (o && (pm === null || pm >= OPEN_VETO)) return o;
-      if (o && !plain) G.forced[team]--; // veto : ce forçage n'a pas servi
-    } else if (!cur) {
+    }
+    if (!cur) {
+      // Repli après un veto (OUV-1) : on ne passe pas avec V-9 et deux As-10
+      // parce que le 160 est douteux. On redescend les paliers du barème dans
+      // la même couleur jusqu'à 80, puis les autres couleurs du barème (la
+      // plus haute d'abord), puis le 80 hors barème ci-dessous. Faute de temps
+      // dans la couleur d'origine, le palier à l'essai est pris (le barème
+      // décide) ; dans les autres couleurs, sans mesure on n'ouvre pas.
+      const essayees = new Set();
+      const descendre = (atout, depuis, sansTemps) => {
+        essayees.add(atout);
+        for (const palier of PALIERS_OUVERTURE) {
+          if (palier > depuis) continue;
+          const pm = pMake(palier, atout);
+          if (pm === null ? sansTemps : pm >= OPEN_VETO)
+            return offer(palier, atout);
+        }
+        return null;
+      };
+      if (refus) {
+        const bas = descendre(own.atout, refus - 1, true);
+        if (bas) return bas;
+        const autres = SUITS.filter((s) => s !== own.atout)
+          .map((s) => ({ s, v: Math.min(160, openingBid(hand, s, light)) }))
+          .filter((x) => x.v)
+          .sort(
+            (a, b) =>
+              b.v - a.v || suitCards(hand, b.s).length - suitCards(hand, a.s).length,
+          );
+        for (const { s, v } of autres) {
+          const autre = descendre(s, v, false);
+          if (autre) return autre;
+        }
+      }
       let best = null;
       for (const s of SUITS) {
         const n = suitCards(hand, s).length;
-        if (n < 3 || !tenue(hand, s)) continue;
+        if (essayees.has(s) || n < 3 || !tenue(hand, s)) continue;
         // Toujours un As à côté (9 ou As-10 quatrièmes sans As : −35 et −24
         // pts par donne ; en duel +0,2 ± 0,5), et à trois atouts le Valet ou
         // As-9 / As-10 (9 troisième seul : −15).
@@ -935,17 +1001,31 @@ function botWantsToSurcoinche(seat) {
   // Le preneur qui tient les 8 atouts (sa propre main, rien d'autre) gagne à coup sûr.
   if (seat === contract.preneur && suitCards(hand, atout).length === 8)
     return true;
-  if (contract.type !== "NUMERIQUE" && !isGenerale(contract)) return false;
-  // Réussite simulée quasi certaine (+0,8 pt/donne en duel).
-  const pm = makeProbability(seat, contract);
-  if (pm !== null && pm >= 0.9) return true;
-  return (
-    holds(hand, atout, "J") &&
-    holds(hand, atout, "9") &&
-    suitCards(hand, atout).length >= 4 &&
-    sideAces(hand, atout) >= 2 &&
-    Math.random() < 0.8 * personality(seat).aggr
+  // Réussite simulée, capots et Générales compris (ZON-7 : un capot coinché
+  // n'était jamais surcoinché, +336 pts par donne laissés sur la table dans
+  // le cas mesuré) ; comme pour les annoncer, sur au moins CAPOT_WORLDS mondes.
+  // Aucun tirage au sort : la même main, la même décision (COI-1).
+  const pm = makeProbability(
+    seat,
+    contract,
+    contract.type === "NUMERIQUE" ? 1 : CAPOT_WORLDS,
   );
+  return pm !== null && pm >= surcoincheSeuil(contractValue(contract));
+}
+// Surcoincher (×4 au lieu de ×2) rapporte dès que p·M > (1 − p)·160, soit
+// p > 160/(160+M) : le même équilibre que la coinche (67 % à 80, 39 % à
+// 250). On y ajoute la marge de COINCHE_MARGIN, et elle ne peut pas être
+// plus basse : le coincheur sait ce que les mondes ignorent (COI-8). Mesuré
+// sur 152 contrats coinchés (200 parties de bots, 32 mondes), ceux que la
+// simulation du preneur voit à 0,6 ou plus n'en réussissent que 8 sur 36, et
+// 0 sur 4 à 0,9 ou plus ; avec une marge de 0,25 on perdait encore (6
+// surcoinches, 0 réussie), à 0,35 on n'en fait presque plus (2). À 130 le
+// seuil vaut 0,90, comme l'ancien plancher ; à 250 (capot), 0,74.
+// Plafonné : à 80 ou 100, 160/(160+M) + marge dépasserait 0,95.
+const SURCOINCHE_MARGIN = 0.35;
+const SURCOINCHE_MAX = 0.95;
+function surcoincheSeuil(montant) {
+  return Math.min(SURCOINCHE_MAX, 160 / (160 + montant) + SURCOINCHE_MARGIN);
 }
 
 // ---- IA : jeu de la carte ----------------------------------------------
@@ -1596,7 +1676,9 @@ function bidFits(r, h) {
     return baremeFits(r, h);
   const pOf = (s) => {
     const ps = !!partnerBid && partnerBid.atout === s;
-    return countOf(h, s) < (ps ? 1 : 3) ? 0 : interventionP(h, s, ps, min);
+    return (ps ? !peutAppuyer(h, s) : countOf(h, s) < 3)
+      ? 0
+      : interventionP(h, s, ps, min);
   };
   if (e.montant) {
     const s = e.atout;
@@ -1622,7 +1704,8 @@ function baremeFits({ e, partnerBid, acted }, h) {
     !!e.cur && teamOf(e.cur.preneur) !== teamOf(e.seat) && e.montant <= 160;
   if (e.montant) {
     const min = e.cur ? e.cur.montant + 10 : 80;
-    const forced = e.montant === min; // forcer ne se fait qu'au minimum
+    // forcer ne se fait qu'au minimum, avec le Valet ou l'As de l'atout
+    const forced = e.montant === min && honneurDeForce(h, e.atout);
     if (partnerBid && partnerBid.atout === e.atout) {
       if (e.montant >= 250) return 1;
       // Relance = soutien − 10 (palier de prudence), ou soutien au ras si forcée.
@@ -1630,8 +1713,8 @@ function baremeFits({ e, partnerBid, acted }, h) {
       const r = e.montant - partnerBid.montant;
       if (pts >= (forced ? r : r + 10) && (acted || e.montant >= 160 || pts < r + 20))
         return 1;
-      // L'étape 3 essaie la couleur du partenaire dès un atout.
-      return overOpp && countOf(h, e.atout) >= 1 ? SIM_FIT : 0;
+      // L'étape 3 essaie la couleur du partenaire avec un honneur ou deux atouts.
+      return overOpp && peutAppuyer(h, e.atout) ? SIM_FIT : 0;
     }
     const fitsAt = (light) => {
       const v = openingBid(h, e.atout, light);
@@ -1647,7 +1730,13 @@ function baremeFits({ e, partnerBid, acted }, h) {
     // Intervention à l'espérance (dès trois cartes), ou 80 hors barème
     // ouvert par la simulation (dès trois cartes).
     const len = countOf(h, e.atout);
-    return (overOpp || (!e.cur && e.montant === 80)) && len >= 3 ? SIM_FIT : 0;
+    // Repli après un veto (OUV-1) : un palier plus bas que le barème de cette
+    // couleur, ou le barème d'une autre couleur que la meilleure.
+    const repli =
+      !e.cur && e.montant <= Math.min(160, openingBid(h, e.atout, fourth));
+    return ((overOpp || (!e.cur && e.montant === 80)) && len >= 3) || repli
+      ? SIM_FIT
+      : 0;
   }
   // Passe avec une ouverture au barème : la simulation a pu la refuser (veto).
   if (!e.cur) return bestOpening(h, e.passes === 3) ? SIM_FIT : 1;

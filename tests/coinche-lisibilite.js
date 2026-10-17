@@ -330,6 +330,12 @@ const CAS = [
   { id: 'OUV-3', ref: 'OUV-3', titre: 'premier, 9-10-8-7♥ ; J-9-7♠ ; AD', annonce: '100♥ plutôt que 90♠ (couleur au montant)', mains: { 0: '9H 10H 8H 7H JS 9S 7S AD' }, suivi: ['100♥', (k) => k === '100H'] },
   { id: 'OUV-4', ref: 'OUV-4', titre: '4e après 3 passes, Valet sec + As', annonce: '80♥ dans 17 cas sur 20', mains: { 3: 'JH AS 8S 7S AD 8D 7D 7C' }, enc: 'P P P', suivi: ['80♥', (k) => k === '80H'] },
   { id: 'OUV-5', ref: 'OUV-5', titre: 'premier, A-Q-8-7♥ + As (80 hors barème)', annonce: 'ouvre 9 fois sur 16, passe sinon', mains: { 0: 'AH QH 8H 7H AS 8S 7D 8C' }, suivi: ['ouvre', (k) => k !== 'P'] },
+  { id: 'OUV-1b', ref: 'OUV-1', titre: 'premier, J-9-7♥ + A-10♠ + A♦ (barème 120♥)', annonce: 'V-9 avec A-10 : passe 2 fois sur 20', mains: { 0: 'JH 9H 7H AS 10S AD 8D 7C' }, suivi: ['passe', (k) => k === 'P'] },
+  { id: 'OUV-1c', ref: 'OUV-1', titre: 'premier, J-9-8-7♥ + A-10♠ + A♦ (barème 160/130)', annonce: 'idem', mains: { 0: 'JH 9H 8H 7H AS 10S AD 8C' }, suivi: ['passe', (k) => k === 'P'] },
+  { id: 'OUV-4b', ref: 'OUV-4', titre: '4e après 3 passes, Valet second + As', annonce: 'variante : 2 atouts', mains: { 3: 'JH 8H AS 8S 7S AD 8D 7C' }, enc: 'P P P', suivi: ['80♥', (k) => k === '80H'] },
+  { id: 'OUV-4c', ref: 'OUV-4', titre: '4e après 3 passes, Valet troisième + As', annonce: 'variante : 3 atouts', mains: { 3: 'JH 8H 7H AS 8S AD 8D 7C' }, enc: 'P P P', suivi: ['80♥', (k) => k === '80H'] },
+  { id: 'ZON-7a', ref: 'ZON-7', titre: 'capot 250♠ coinché, preneur V-A-10-R-D-7♠ + 2 As', annonce: 'jamais surcoinché (25/25)', mains: { 0: 'JS AS 10S KS QS 7S AH AD', 1: '9S 8S KH 7H 8H 9D 7D 7C' }, enc: '250S 1:COINCHE', seat: 0, decision: 'surcoinche', suivi: ['surcoinche', (k) => k === 'oui'] },
+  { id: 'ZON-7b', ref: 'ZON-7', titre: 'capot 250♠ coinché, preneur V-9-7♠ + 2 As (douteux)', annonce: 'témoin : ne doit pas surcoincher', mains: { 0: 'JS 9S 7S AH AD 8D 7C 8C', 1: 'AS 10S KS 8S KH 7H 8H 9D' }, enc: '250S 1:COINCHE', seat: 0, decision: 'surcoinche', suivi: ['surcoinche', (k) => k === 'oui'] },
   { id: 'ENC-2', ref: 'ENC-2 / ENC-3', titre: 'J-A-8-7♥ + As♠ sur 80♠ adverse (P 80♠ P P)', annonce: '90♥ 14/20 ; 20/20 à 2 ms/monde ; passe 20/20 à 25 ms/monde ; 90 ou 100 tiré au sort (70/30)', mains: { 0: 'JH AH 8H 7H AS 9S 8D 7C' }, enc: 'P 80S P P', lent: true, suivi: ['90♥', (k) => k === '90H'] },
   { id: 'ENC-4', ref: 'ENC-4', titre: 'relance dans ♥ du partenaire, 7♥ sec + A-10♦ + A♣, sur 90♠ adverse', annonce: '100♥ dans 10 cas sur 16', mains: { 0: '7H AD 10D 9D AC KC 8S 7S' }, enc: 'P P 80H 90S', suivi: ['100♥', (k) => k === '100H'] },
   { id: 'ENC-5a', ref: 'ENC-5', titre: 'ouvreur 120♥ (2 fausses), partenaire 140♥ (« 3 As »)', annonce: 'l’ouvreur passe 10 fois sur 10', mains: { 0: 'JH 9H AH 7H 10H AS 8S 9D' }, enc: '120H P 140H P', suivi: ['passe', (k) => k === 'P'] },
@@ -390,7 +396,7 @@ function situation(engine, c) {
   let n = 0;
   const r = () => (n++ === 0 ? ((c.donneur ?? 3) + 0.5) / 4 : 0.5);
   const G = createGame([0, 1, 2, 3].map(() => ({ type: 'bot', name: 'Ordinateur' })), r, dealFn);
-  if (c.aggr) for (const p of G.personalities) p.aggr = c.aggr;
+  if (c.aggr) for (const p of G.personalities ?? []) p.aggr = c.aggr;
   for (const h of c.humains ?? []) G.seats[h].type = 'human';
   for (const t of `${c.enc ?? ''} ${c.jeu ?? ''}`.split(/\s+/).filter(Boolean)) {
     let seat = G.joueurActif;

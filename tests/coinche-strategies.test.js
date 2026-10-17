@@ -33,7 +33,7 @@ const bid = (b) => (b.type === 'PASSER' ? 'passe' : `${b.montant}${b.atout}`);
 function setup(over = {}) {
   const g = {
     hands: [[], [], [], []], contract: null, donneAnnonces: [], bidMemo: [{}, {}, {}, {}], forced: [0, 0],
-    scores: [0, 0], passesConsecutives: 0, personalities: [0, 1, 2, 3].map(() => ({ aggr: 1 })),
+    scores: [0, 0], passesConsecutives: 0, 
     seen: {}, void: [{}, {}, {}, {}], trumpMax: [8, 8, 8, 8], appel: [{}, {}, {}, {}], refus: [{}, {}, {}, {}], pliCourant: [], plisJoues: 0,
     pointsPlis: [0, 0], plisGagnes: [0, 0], playedBy: [[], [], [], []], seats: [0, 1, 2, 3].map(() => ({ type: 'bot' })), donneur: 3,
     belote: { beloteDeclared: false, rebeloteDeclared: false, kingPlayed: false, queenPlayed: false }, ...over,
@@ -94,12 +94,24 @@ check('Coinche gratuite : le preneur sort de toute façon s’il réussit', api.
 setup({ hands: hands('JS 9S AH 10H AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [900, 300], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
 check('Pas de coinche quand une simple chute nous fait gagner', api.botWantsToCoinche(0), false);
 
+// Enchères : repli, ouverture légère, capot coinché, capot ou Générale.
+setup({ hands: hands('JH AS 8S 7S AD 8D 7D 7C'), passesConsecutives: 3 });
+check('Ouverture légère en 4e : pas de Valet sec', bid(api.botDecideBid(0)), 'passe');
+setup({ hands: hands('JH 8H 7H AS 8S AD 8D 7C'), passesConsecutives: 3 });
+check('Ouverture légère en 4e : Valet troisième + As', bid(api.botDecideBid(0)), '80H');
+setup({ hands: hands('JS AS 10S KS QS 7S AH AD'), contract: contract(0, 250, 'S', { coinche: true }) });
+check('Surcoinche d’un capot : Valet-As-10-Roi-Dame d’atout + 2 As', api.botWantsToSurcoinche(0), true);
+setup({ hands: hands('JS 9S 7S AH AD 8D 7C 8C'), contract: contract(0, 250, 'S', { coinche: true }) });
+check('Pas de surcoinche d’un capot douteux', api.botWantsToSurcoinche(0), false);
+setup({ hands: hands('JS 9S QS 8S 7S AH AD AC') });
+check('Capot plutôt que Générale quand la Générale n’est pas sûre', bid(api.botDecideBid(0)), '250S');
+
 // ---- Huit atouts : les 8 cartes de l'atout en main initiale
 const huitPiques = 'JS 9S AS 10S KS QS 8S 7S';
 setup({ hands: hands(huitPiques) });
 check('Huit atouts : ouvrir directement en Générale belotée', bid(api.botDecideBid(0)), '520S');
 setup({ hands: hands('AH AD AC 10H 10D 10C KH KD', huitPiques), mainsInitiales: hands('', huitPiques), contract: contract(1, 270, 'S'),
-  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }], personalities: [0, 1, 2, 3].map(() => ({ aggr: 1 })) });
+  donneAnnonces: [{ seat: 1, montant: 270, atout: 'S' }] });
 check('Huit atouts : la défense ne coinche jamais, même bourrée d’As', api.botWantsToCoinche(0), false);
 setup({ hands: hands(huitPiques), mainsInitiales: hands(huitPiques), contract: contract(0, 270, 'S', { coinche: true }) });
 check('Huit atouts coinchés : surcoincher d’office', api.botWantsToSurcoinche(0), true);
