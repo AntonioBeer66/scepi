@@ -1,0 +1,328 @@
+--- base/engine.js	2026-10-17 07:37:38.158796381 +0000
++++ proto/engine.js	2026-10-17 08:07:01.900788492 +0000
+@@ -574,7 +574,7 @@
+   bidDeadline = tuning.now() + BID_DECISION_MS;
+   bidWorlds = null;
+   try {
+-    return decideBid(seat);
++    return withSeed(seat, "bid", () => decideBid(seat));
+   } finally {
+     bidDeadline = Infinity;
+     bidWorlds = null;
+@@ -611,7 +611,7 @@
+       equipePreneur: team,
+       coinche: false,
+       surcoinche: false,
+-    });
++    }, tuning.s4 ? CAPOT_WORLDS : 1);
+     if (pm !== null && (!best || pm > best.pm)) best = { pm, atout, montant };
+   }
+   if (!best || best.pm < (oppCapot ? GENERALE_OVER : GENERALE_SURE)) return null;
+@@ -912,7 +912,7 @@
+   // +0,4 contre l'ancienne formule ; puis, la même pour tous les bots (plus
+   // d'appétit à coincher tiré au hasard) et sur 96 mondes, 0,35 → +2,0
+   // contre 0,5 (0,25 : −0,8 ; 0,15 : −2,1).
+-  const pMake = makeProbability(seat, contract);
++  const pMake = makeProbability(seat, contract, tuning.s4 ? CAPOT_WORLDS : 1);
+   return (
+     pMake !== null &&
+     pMake < 160 / (160 + contract.montant) - COINCHE_MARGIN
+@@ -937,14 +937,14 @@
+     return true;
+   if (contract.type !== "NUMERIQUE" && !isGenerale(contract)) return false;
+   // Réussite simulée quasi certaine (+0,8 pt/donne en duel).
+-  const pm = makeProbability(seat, contract);
++  const pm = makeProbability(seat, contract, tuning.s4 ? CAPOT_WORLDS : 1);
+   if (pm !== null && pm >= 0.9) return true;
+   return (
+     holds(hand, atout, "J") &&
+     holds(hand, atout, "9") &&
+     suitCards(hand, atout).length >= 4 &&
+     sideAces(hand, atout) >= 2 &&
+-    Math.random() < 0.8 * personality(seat).aggr
++    mcRand() < 0.8 * personality(seat).aggr
+   );
+ }
+ 
+@@ -1488,9 +1488,72 @@
+   bidWorlds: 96,
+   bidSamples: 96, // coinche et surcoinche (48 : +1,4 pt/donne contre 24 ; 96 : 7 ms par décision sur PC)
+   now: () => Date.now(),
++  // Prototypes de stabilité (audit vague 2). Tout à l'arrêt = moteur d'origine.
++  s1: false, // graine dérivée de l'état (nombre = sel, pour les mesures)
++  s1sort: false, // S1 : main triée pendant la décision
++  s2: null, // test apparié { z, extra } dans mcChooseCard
++  s3: false, // plus de départage aux points de plis dans donneValue
++  s4: null, // budget en mondes { floor, clock }
++  s5: 1, // nombre de chaînes indépendantes dans mcWorlds
++  trace: false,
+ };
+ const MC_BUDGET_MS = 250;
+ 
++export const mcTrace = { last: null, nulls: 0, mp: [] };
++let mcRand = () => Math.random();
++function prng(seed) {
++  let s = seed | 0;
++  return () => {
++    s = (s + 0x6d2b79f5) | 0;
++    let t = Math.imul(s ^ (s >>> 15), 1 | s);
++    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
++    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
++  };
++}
++// S1 : graine = hachage (FNV-1a) de ce que le siège sait — sa main TRIÉE,
++// les enchères, les cartes jouées, le contrat, en sièges RELATIFS — et rien
++// d'autre (ni numéro de donne, ni identifiants, ni ordre de la main).
++function stateSeed(seat, tag) {
++  let h = 2166136261;
++  const mix = (str) => {
++    for (let i = 0; i < str.length; i++) {
++      h ^= str.charCodeAt(i);
++      h = Math.imul(h, 16777619);
++    }
++    h ^= 124;
++    h = Math.imul(h, 16777619);
++  };
++  const rel = (s) => (s - seat + 4) % 4;
++  mix(tag + ":" + G.phase + ":" + G.plisJoues + ":" + rel(G.donneur));
++  mix(G.hands[seat].map((c) => c.id).sort().join(","));
++  for (const e of G.bidLog) mix(rel(e.seat) + ":" + (e.montant || "P") + (e.atout || ""));
++  const c = G.contract;
++  if (c) mix([c.montant, c.atout, rel(c.preneur), c.coinche ? 1 : 0, c.surcoinche ? 1 : 0].join(","));
++  for (let r = 0; r < 4; r++) mix(G.playedBy[(seat + r) % 4].map((k) => k.id).join(","));
++  mix(G.pliCourant.map((e) => rel(e.siege) + e.carte.id).join(","));
++  mix(JSON.stringify(G.bidMemo[seat] || null));
++  return h >>> 0;
++}
++function withSeed(seat, tag, fn) {
++  if (tuning.s1 === false) return fn();
++  const prev = mcRand;
++  const hand = G.hands[seat];
++  mcRand = prng(stateSeed(seat, tag) ^ (Number(tuning.s1) | 0));
++  // Main triée une fois pour toutes : égalités de réflexes et ordre des coups
++  // ne dépendent plus de l'ordre de la donne.
++  if (tuning.s1sort) G.hands[seat] = hand.slice().sort((a, b) => (a.id < b.id ? -1 : 1));
++  try {
++    return fn();
++  } finally {
++    mcRand = prev;
++    G.hands[seat] = hand;
++  }
++}
++const nullProb = () => {
++  mcTrace.nulls++;
++  return null;
++};
++
+ // Ce siège peut-il tenir cette carte ? Manques et obligations de couper.
+ function canHold(s, c) {
+   return (
+@@ -1506,7 +1569,7 @@
+   const room = { ...size };
+   const hands = {};
+   for (const s of others) hands[s] = [];
+-  const cards = shuffle(unknown)
++  const cards = shuffle(unknown, mcRand)
+     .map((c) => ({
+       c,
+       e:
+@@ -1518,7 +1581,7 @@
+   for (const { c, e } of cards) {
+     const open = e.filter((s) => room[s] > 0);
+     if (!open.length) return null;
+-    let r = Math.random() * open.reduce((t, s) => t + room[s], 0);
++    let r = mcRand() * open.reduce((t, s) => t + room[s], 0);
+     const s = open.find((x) => (r -= room[x]) < 0) ?? open[open.length - 1];
+     hands[s].push(c);
+     room[s]--;
+@@ -1711,10 +1774,19 @@
+     const id = (G.belote.kingPlayed ? "Q" : "K") + atout;
+     if (!G.seen[id] && !mine.has(id)) pinned[id] = G.belote.holder;
+   }
++  const readings = bidReadings();
++  const seats = others.filter((s) => size[s] > 0);
++  const chains = seats.length > 1 ? Math.max(1, tuning.s5 | 0) : 1;
++  const perChain = [];
+   let w = null;
++  for (let ch = 0; ch < chains; ch++) {
++  w = null;
+   for (let tries = 0; !w && tries < 20; tries++)
+     w = dealUnknown(unknown, others, size, pinned);
+-  if (!w) return [];
++  if (!w) {
++    if (!ch) return [];
++    break;
++  }
+   // Chaîne de Metropolis : on échange une carte entre deux mains (en
+   // respectant manques, obligations et belote), l'échange est gardé selon
+   // le rapport des plausibilités ; un monde est relevé tous les THIN pas.
+@@ -1725,19 +1797,19 @@
+   // (prédit 85 % → 69 % réels, mesuré contre les vraies mains). Tous les
+   // 32 pas : 85 % → 77 %, 99 % → 95 % ; +3,7 ± 1,6 pts/donne en duel,
+   // pour 3 ms de plus par carte sur PC.
+-  const readings = bidReadings();
+   const weight = {};
+   for (const s of others) weight[s] = seatWeight(s, w[s], readings);
+-  const seats = others.filter((s) => size[s] > 0);
+   const worlds = [];
++  const per = Math.ceil(n / chains);
++  const target = Math.min(per, n - ch * per);
+   const BURN = 400;
+   const THIN = 32;
+-  for (let step = 0; worlds.length < n && seats.length > 1; step++) {
+-    const a = seats[Math.floor(Math.random() * seats.length)];
+-    let b = seats[Math.floor(Math.random() * (seats.length - 1))];
++  for (let step = 0; worlds.length < target && seats.length > 1; step++) {
++    const a = seats[Math.floor(mcRand() * seats.length)];
++    let b = seats[Math.floor(mcRand() * (seats.length - 1))];
+     if (b === a) b = seats[seats.length - 1];
+-    const ia = Math.floor(Math.random() * w[a].length);
+-    const ib = Math.floor(Math.random() * w[b].length);
++    const ia = Math.floor(mcRand() * w[a].length);
++    const ib = Math.floor(mcRand() * w[b].length);
+     const ca = w[a][ia];
+     const cb = w[b][ib];
+     if (
+@@ -1750,7 +1822,7 @@
+       w[b][ib] = ca;
+       const wa = seatWeight(a, w[a], readings);
+       const wb = seatWeight(b, w[b], readings);
+-      if (Math.random() * weight[a] * weight[b] < wa * wb) {
++      if (mcRand() * weight[a] * weight[b] < wa * wb) {
+         weight[a] = wa;
+         weight[b] = wb;
+       } else {
+@@ -1764,10 +1836,16 @@
+       worlds.push(copy);
+     }
+   }
++  perChain.push(worlds);
++  }
++  // Mondes des chaînes entrelacés : une coupure d'horloge garde toutes les chaînes.
++  const out = [];
++  for (let k = 0; out.length < n && perChain.some((c) => k < c.length); k++)
++    for (const c of perChain) if (k < c.length && out.length < n) out.push(c[k]);
+   if (seats.length <= 1)
+-    while (worlds.length < n)
+-      worlds.push(dealUnknown(unknown, others, size, pinned) || w);
+-  return worlds;
++    while (out.length < n)
++      out.push(dealUnknown(unknown, others, size, pinned) || w);
++  return out;
+ }
+ 
+ // La belote comptera-t-elle dans ce monde ? Annoncée : oui. Roi ou Dame
+@@ -1868,7 +1946,7 @@
+     ((reussi ? c.equipePreneur : 1 - c.equipePreneur) === team
+       ? gain
+       : -gain) +
+-    (pointsPlis[team] - pointsPlis[1 - team]) * 0.01
++    (pointsPlis[team] - pointsPlis[1 - team]) * (tuning.s3 ? 0 : 0.01)
+   );
+ }
+ 
+@@ -2064,19 +2142,39 @@
+   if (!worlds.length) return reflex;
+   const cards = [reflex, ...legal.filter((c) => c.id !== reflex.id)];
+   const totals = cards.map(() => 0);
++  const vals = tuning.s2 || tuning.trace ? cards.map(() => []) : null;
+   const stop = tuning.now() + MC_BUDGET_MS;
++  const s4 = tuning.s4;
+   let n = 0;
+   for (const w of worlds) {
+     cards.forEach((c, i) => {
+-      totals[i] += mcValue(seat, c, w);
++      const v = mcValue(seat, c, w);
++      totals[i] += v;
++      if (vals) vals[i].push(v);
+     });
+     n++;
+-    if (tuning.now() > stop) break;
++    // S4 : plancher de mondes avant toute lecture de l'horloge (ou aucune).
++    if ((!s4 || (n >= s4.floor && s4.clock)) && tuning.now() > stop) break;
+   }
+   let best = 0;
+   totals.forEach((t, i) => {
+     if (t > totals[best] + 1e-9) best = i;
+   });
++  const best0 = best;
++  // S2 : test apparié sur les mêmes mondes. On ne quitte le réflexe que si le
++  // gain moyen dépasse z erreurs-types (+ extra points).
++  if (best && tuning.s2) {
++    let mu = 0;
++    let m2 = 0;
++    for (let k = 0; k < n; k++) {
++      const d = vals[best][k] - vals[0][k];
++      mu += d;
++      m2 += d * d;
++    }
++    mu /= n;
++    const sd = n > 1 ? Math.sqrt(Math.max(0, (m2 - n * mu * mu) / (n - 1))) : Infinity;
++    if (mu <= (tuning.s2.z * sd) / Math.sqrt(n) + (tuning.s2.extra || 0)) best = 0;
++  }
+   const atout = G.contract.atout;
+   if (
+     best &&
+@@ -2085,6 +2183,8 @@
+     totals[0] >= totals[best] - TRUMP_LEAD_MARGIN * n
+   )
+     best = 0;
++  if (tuning.trace)
++    mcTrace.last = { n, totals: totals.slice(), ids: cards.map((c) => c.id), best, best0, vals };
+   return cards[best];
+ }
+ 
+@@ -2093,11 +2193,12 @@
+ const BID_BUDGET_MS = 150;
+ // minWorlds : en dessous, la réponse est « je ne sais pas » (null).
+ function makeProbability(seat, contract, minWorlds = 1) {
+-  if (tuning.now() >= bidDeadline) return null;
++  const s4 = tuning.s4;
++  if (!s4 && tuning.now() >= bidDeadline) return nullProb();
+   const saved = G.contract;
+   G.contract = contract;
+   try {
+-    const stop = Math.min(tuning.now() + BID_BUDGET_MS, bidDeadline);
++    let stop = s4 ? 0 : Math.min(tuning.now() + BID_BUDGET_MS, bidDeadline);
+     let ok = 0;
+     let n = 0;
+     // Pendant une enchère, les mondes de la décision (voir bidWorlds) ;
+@@ -2106,13 +2207,16 @@
+       bidDeadline === Infinity
+         ? mcWorlds(seat, tuning.bidSamples)
+         : bidWorlds || (bidWorlds = mcWorlds(seat, tuning.bidWorlds));
++    // S4 : chronomètre démarré après la génération des mondes.
++    if (s4) stop = Math.min(tuning.now() + BID_BUDGET_MS, bidDeadline);
+     for (const w of worlds) {
+       const { sim, bel } = playOut(seat, w, null);
+       n++;
+       if (contratReussi(contract, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege)) ok++;
+-      if (tuning.now() > stop) break;
++      if ((!s4 || (n >= s4.floor && s4.clock)) && tuning.now() > stop) break;
+     }
+-    return n >= minWorlds ? ok / n : null;
++    if (tuning.trace) mcTrace.mp.push(n);
++    return n >= minWorlds ? ok / n : nullProb();
+   } finally {
+     G.contract = saved;
+   }
+@@ -2127,7 +2231,7 @@
+     seat,
+   );
+   if (legal.length === 1) return legal[0];
+-  return mcChooseCard(seat, legal, heuristicCard(seat));
++  return withSeed(seat, "card", () => mcChooseCard(seat, legal, heuristicCard(seat)));
+ }
+ 
+ // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
+@@ -2476,8 +2580,8 @@
+   turnAction: withG(botTurnAction),
+   decideBid: withG(botDecideBid),
+   chooseCard: withG(botChooseCard),
+-  wantsToCoinche: withG(botWantsToCoinche),
+-  wantsToSurcoinche: withG(botWantsToSurcoinche),
++  wantsToCoinche: withG((s) => withSeed(s, "coinche", () => botWantsToCoinche(s))),
++  wantsToSurcoinche: withG((s) => withSeed(s, "surcoinche", () => botWantsToSurcoinche(s))),
+   heuristicCard: withG(heuristicCard),
+   mcWorlds: withG(mcWorlds),
+   noteTrumpObligations: withG(noteTrumpObligations),
