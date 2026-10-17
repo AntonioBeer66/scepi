@@ -319,6 +319,65 @@ Lignes 1666-1689, `seatWeight` et `MISFIT = { bot: 0.0001, human: 0.15 }` :
 - **Fin de donne.** `exactEnd` la stabilise : 2 à 9 % d'instabilité aux plis 6 et 7.
 - **Belote.** Elle est annoncée de façon humaine.
 
+## Remontée du partenaire (vague 2)
+
+Détails dans le rapport [remontée du partenaire](detail/v2-remontee-partenaire.md) ; le patch est dans [`patches/remontee.diff`](patches/remontee.diff).
+
+Un humain remonte son partenaire selon des règles strictes, fondées sur la valeur de ses cartes, avec quelques exceptions connues. C'est ce qui le rend prévisible. Le bot, lui, s'en écarte de trois façons.
+
+### Ce que fait le bot
+
+- **Le barème est décalé d'un palier.**
+  - Sans adversaire, la remontée est bien un barème déterministe : 96 à 100 % des mains donnent toujours la même réponse.
+  - Mais la relance vaut `supportPoints − 10` (engine.js:752-753) : le bot montre toujours **un As de moins** que la convention « +10 par As ».
+  - Avec un Valet sec, il ne remonte jamais un 80, même avec 3 As.
+  - Un +10 sur 80 peut donc signifier le Valet, la belote, le 9 avec un As, ou deux As.
+- **Il suit rarement la convention de club.** Sur 320 mains par ouverture, il ne suit la convention « +10 par As, +20 Valet, +10 9 second, +20 belote » que dans 15 à 28 % des cas sans adversaire, et 33 à 54 % en compétition. Le palier de prudence explique 32 à 91 % des désaccords.
+- **En compétition, sa réponse dépend du hasard.**
+  - 5 à 15 % des mains changent de décision selon la graine.
+  - La simulation relance la couleur du partenaire avec 3 petits atouts seuls, dans 45 % des décisions sur 110♥ face à 120♠.
+  - Le forçage annonce 130♥ sans aucun cœur, 4 fois sur 4.
+
+### Ce que le bot comprend quand un humain remonte « +10 par As »
+
+- **Il ne trouve presque jamais le capot.** L'ouvreur bot annonce capot une fois sur 800 décisions, alors que le capot passe en jeu réel dans 31 donnes sur 400.
+- **Il voit un Valet qui n'existe pas.** Sur une relance de 20 ou plus, il place le Valet chez l'humain qui ne l'a pas dans 16 % des cas.
+- **Il sous-compte les As.** Sur les relances de 30 ou 40, il en lit 0,8, alors qu'il y en a 1,4 à 2.
+
+### Table stricte proposée et prototypée
+
+Émission et lecture suivent la même table, sans palier de prudence :
+
+| Élément | Remontée |
+|---|---|
+| Chaque As à côté | +10 |
+| Valet d'atout | +20 |
+| 9 d'atout second | +10 |
+| Belote | +20 |
+| Aucun atout | pas de remontée |
+
+Le Valet ne se lit plus que sur l'ouverture (90 ou 110 et plus).
+
+Trois exceptions sont écrites dans la table :
+1. **Capot par les clefs** : quand les As du répondant dépassent les fausses cartes de l'ouvreur, validé par la simulation.
+2. **Barrage** : un palier au-dessus d'une intervention adverse.
+3. **Hors table** : la simulation décide, mais la couleur du partenaire exige deux atouts ou un honneur.
+
+Résultats du prototype :
+
+| Mesure | Moteur actuel | Table stricte |
+|---|---|---|
+| Accord avec la référence de club, sans adversaire | 15 à 28 % | 60 à 95 % |
+| Accord avec la référence de club, en compétition | 33 à 54 % | 75 à 81 % |
+| Mains à réponse déterministe, en compétition | 85 à 95 % | 95 à 99 % |
+
+L'accord avec la référence est en partie acquis par construction, puisque la table reprend cette référence.
+
+- **Force.** Duel à 48 mondes sur 1 771 paires : le moteur actuel fait +1,7 ± 3,9 pts/donne de plus. L'écart n'est pas significatif.
+- **Recommandation.**
+  - Adopter la table, en émission et en lecture, après un duel plus long (environ 4 000 paires).
+  - Dans tous les cas, interdire le forçage sans atout et la candidature de la couleur du partenaire « dès un atout ».
+
 ## Plan de correction mis à jour (après la vague 2)
 
 Les effets sont mesurés sur des prototypes (voir [Vague 2](#vague-2--ce-que-les-mesures-ajoutent)). Les coûts en force sont non détectés à ±5 pts/donne, mais pas exclus en dessous.
