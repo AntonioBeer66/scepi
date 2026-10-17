@@ -2,6 +2,42 @@
 
 Octobre 2026, moteur `src/coinche/engine.js` au commit `b548853`. Audit en lecture seule : aucun code de jeu modifié.
 
+## Mise en œuvre (17 octobre 2026)
+
+Les lots du [guide](2026-10-guide-implementation.md) ont été codés et fusionnés, sauf le lot 9. Duels `tests/coinche-ab.js`, MC 48, 540 donnes de départ, ± 2σ par partie (positif : le nouveau moteur gagne des points) :
+
+| Lots | Fait | Duel |
+|---|---|---|
+| 6 enchères et coinche, 8 remontée stricte, 7 hôte et rythme | patchs appliqués (`package.json` ajusté à la main) | +0,9 ± 2,5 |
+| 1 mondes comptés, 2 graine dérivée de l'état et tri canonique | oui, avec garde-fou (48 mondes pour la session si l'entame de référence dépasse 1,5 s) | +2,8 ± 2,4 |
+| 3 signaux, 4 marges de convention, 5 lecture des humains | oui | +0,6 ± 2,1 |
+| 9 test apparié | essayé puis **retiré** | −6,6 ± 2,3 |
+| 10 interface, section « Comment jouent les bots » | oui, section visible et réécrite d'après le code | — |
+| 11 erreur-type par partie, carte réellement jouée, reproductibilité | oui (`tests/coinche-determinisme.test.js` dans `npm test`) ; pas de CI pour l'outil de lisibilité | — |
+| **Moteur d'origine contre moteur final** | | **+1,2 ± 2,5** |
+
+Lisibilité (`tests/coinche-lisibilite.js`, 10 parties, 5 graines, 96 mondes), avant → après :
+
+| Mesure | Avant | Après |
+|---|---|---|
+| Cartes qui changent d'une graine à l'autre | 39 % | 0 % |
+| Enchères qui changent d'une graine à l'autre | 12 % | 0 % |
+| Cartes qui changent avec un appareil 10 fois plus lent | 13 % | 0 % |
+| Défense qui entame atout | 21,5 % | 8,5 % |
+| Défense, 1re entame avec un As : n'entame pas un As | 76 % | 34 % |
+| Vrai appel du réflexe écrasé par le Monte-Carlo | 50 % | 18 % |
+| Appels lus faux | 84,5 % | 20,6 % |
+| Appels lus sur une couleur dont l'As est tombé | 37 % | 0 % |
+| Refus lus sur un Valet | 31 % | 0 % |
+| Relance dans la couleur du partenaire, sans honneur, au-dessus de l'adversaire | 23 % | 6 % |
+| Preneur Valet-9, 3 atouts ou plus, qui ne tire pas atout | 43 % (n = 21) | 36 % (n = 22) |
+
+Ce qui reste :
+- **Preneur Valet-9 troisième.** Le scénario « tirer l'atout maître » (`JH 9H 7H AS 8S KD 7D 8C` à 100♥) ne joue toujours pas le Valet : la simulation préfère une autre carte d'environ 50 pts par monde, plus que la marge de 32. Le guide se trompait en annonçant qu'il passerait après le lot 4. La variante à quatre atouts est testée et passe.
+- **Lot 9.** Le test apparié rend le jeu plus régulier mais coûte 6,6 pts/donne : les petits écarts du Monte-Carlo sont réels, comme pour les marges fixes essayées avant lui.
+- **Non fait** : règle dure « la couleur appelée revient », exception B1 (défenseur qui tient le Valet), barème de club pour lire les enchères humaines, ré-apprentissage d'`INTERVENTION_W` (appris sur l'ancien comportement), mesure du garde-fou sur un vrai téléphone.
+- **Erreur-type des duels.** Calculée par partie, elle ne dépasse l'erreur naïve que de 5 à 15 %, et non de 1,5 à 3 fois comme estimé en vague 2.
+
 L'audit s'est fait en deux vagues de sous-agents :
 - **Vague 1** : diagnostic, fonction par fonction.
 - **Vague 2** : corrections prototypées et chiffrées, partenaire humain simulé, zones restantes, interface, re-vérification des cas de la vague 1, remontée du partenaire. Ses résultats sont résumés dans la section [Vague 2](#vague-2--ce-que-les-mesures-ajoutent) et corrigent plusieurs chiffres de la vague 1.
