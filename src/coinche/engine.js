@@ -278,6 +278,10 @@ function startNewDonne() {
   // Journal complet des enchères (passes comprises) et cartes jouées par
   // chacun : de quoi reconstituer la main de départ d'une main imaginée et
   // vérifier qu'elle colle à ce que le siège a annoncé (voir bidFits).
+  // Chaque entrée garde le type de celui qui parle ("human" ou "bot", à ce
+  // moment-là : un siège repris ensuite par l'ordinateur ne change pas la
+  // façon de relire ce qu'il a dit) et auto: true pour une passe d'office
+  // (TIMEOUT), qui ne dit rien de sa main.
   G.bidLog = [];
   G.playedBy = [[], [], [], []];
   // Ce que chaque bot a déjà dit (soutien, second tour, reprise pour la
@@ -1611,9 +1615,11 @@ function bidReadings() {
       .lastIndexOf(true);
     const partnerBid = pIdx >= 0 ? earlier[pIdx] : null;
     // A-t-il déjà répondu à cette enchère du partenaire (ou parlé dans cette couleur) ?
+    // Une passe d'office n'est pas une réponse : elle ne compte pas.
     const acted = earlier.some(
       (x, j) =>
         x.seat === e.seat &&
+        !x.auto &&
         (j > pIdx ||
           (x.montant && partnerBid && x.atout === partnerBid.atout)),
     );
@@ -1761,11 +1767,17 @@ const SIM_FIT = 0.1;
 const SIGNAL_MISFIT = 0.3; // appel sans l'As
 
 // Plausibilité de la main actuelle d'un siège au vu de ce qu'il a dit.
+// La tolérance dépend de qui parlait quand il a parlé (e.type), pas de qui
+// occupe le siège maintenant ; une entrée sans type (partie sauvegardée avant
+// ce champ) retombe sur le type actuel. Une passe d'office ne pèse rien.
 function seatWeight(s, hand, readings) {
   const h = maskOf(hand) | maskOf(G.playedBy[s]);
-  const misfit = MISFIT[G.seats[s].type === "bot" ? "bot" : "human"];
   let w = 1;
-  for (const r of readings) if (r.e.seat === s) w *= bidFits(r, h) || misfit;
+  for (const r of readings) {
+    if (r.e.seat !== s || r.e.auto) continue;
+    const misfit = MISFIT[(r.e.type ?? G.seats[s].type) === "bot" ? "bot" : "human"];
+    w *= bidFits(r, h) || misfit;
+  }
   for (const suit of Object.keys(G.appel[s])) {
     if (!G.seen["A" + suit] && !hand.some((c) => c.id === "A" + suit))
       w *= SIGNAL_MISFIT;
@@ -2322,6 +2334,8 @@ function computeScore() {
 // Actions : PASSER, ENCHERIR { montant, atout }, COINCHER, SURCOINCHER,
 // JOUER { carte }, TIMEOUT { tour } (fenêtre de temps écoulée, siège
 // ignoré). action.memo : mémoire d'enchère d'un bot (voir G.bidMemo).
+// action.auto : posé par TIMEOUT pour la passe ou la carte jouée d'office ;
+// elle n'est lue ni comme un signal (appel, refus) ni comme une main faible.
 function applyAction(seat, action) {
   if (!G || G.phase === "TERMINEE") return "PARTIE_TERMINEE";
   const error = act(seat, action);
@@ -2335,13 +2349,15 @@ function applyAction(seat, action) {
 function act(seat, action) {
   if (action.type === "TIMEOUT") {
     if (action.tour !== G.tour) return "DELAI_EXPIRE";
-    if (G.phase === "ENCHERES") return act(G.joueurActif, { type: "PASSER" });
+    if (G.phase === "ENCHERES")
+      return act(G.joueurActif, { type: "PASSER", auto: true });
     if (G.phase === "JEU") {
       const s = G.joueurActif;
       const legal = computeLegal(G.hands[s], G.pliCourant, G.contract.atout, s);
       return act(s, {
         type: "JOUER",
         carte: legal[Math.floor(rand() * legal.length)],
+        auto: true,
       });
     }
     if (G.phase === "SURCOINCHE") {
@@ -2361,6 +2377,8 @@ function act(seat, action) {
     if (seat !== G.joueurActif) return "HORS_TOUR";
     G.bidLog.push({
       seat,
+      type: G.seats?.[seat]?.type,
+      ...(action.auto && { auto: true }),
       cur: G.contract && { ...G.contract },
       passes: G.passesConsecutives,
     });
@@ -2392,6 +2410,7 @@ function act(seat, action) {
     G.donneAnnonces.push({ seat, montant, atout: action.atout });
     G.bidLog.push({
       seat,
+      type: G.seats?.[seat]?.type,
       montant,
       atout: action.atout,
       cur: G.contract && { ...G.contract },
@@ -2455,7 +2474,8 @@ function act(seat, action) {
     G.seen[carte.id] = true;
     if (couleurDemandeeAvant && carte.suit !== couleurDemandeeAvant) {
       G.void[seat][couleurDemandeeAvant] = true;
-      readDiscardSignal(seat, carte);
+      // Une carte tirée au hasard par TIMEOUT n'est pas un message.
+      if (!action.auto) readDiscardSignal(seat, carte);
     }
     declareBeloteIfNeeded(seat, carte);
 
@@ -2563,6 +2583,7 @@ export const bots = {
   wantsToSurcoinche: withG(botWantsToSurcoinche),
   heuristicCard: withG(heuristicCard),
   mcWorlds: withG(mcWorlds),
+  seatWeight: withG((s, hand) => seatWeight(s, hand, bidReadings())),
   noteTrumpObligations: withG(noteTrumpObligations),
   contractHuitAtouts: withG(contractHuitAtouts),
   exactEnd,

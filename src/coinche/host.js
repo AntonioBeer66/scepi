@@ -1,14 +1,14 @@
 // Hôte d'une table : fait jouer les bots et envoie TIMEOUT quand une
 // fenêtre de temps expire (tour de 20 s, surcoinche de 10 s, résultat
-// affiché 5 s). Tourne dans le navigateur du joueur hôte (voir game.js,
+// affiché 4 s). Tourne dans le navigateur du joueur hôte (voir game.js,
 // G.hote), ou dans le simulateur des tests avec une horloge virtuelle :
 // c'est le même code, donc les bots testés sont ceux qu'on joue.
-// Les délais des bots imitent un joueur vif (0,35 à 0,8 s pour jouer, 0,5 à 1,7 s
-// pour réfléchir à une coinche) ; après un pli complet, tout attend que
-// l'écran l'ait montré puis ramassé.
-import { DURATION_MS, bots, teamOf } from "./engine.js";
+// Les délais des bots imitent un joueur vif (voir thinkMs : une carte
+// forcée part en 0,15 à 0,3 s, un vrai choix demande 0,35 à 1,9 s) ; après
+// un pli complet, tout attend que l'écran l'ait montré puis ramassé.
+import { DURATION_MS, bots, computeLegal, teamOf } from "./engine.js";
 
-export const TRICK_SHOW_MS = 900; // pli complet affiché (0,6 s) puis ramassé
+export const TRICK_SHOW_MS = 900; // pli complet affiché (0,9 s) puis ramassé
 export const LAST_TRICK_SHOW_MS = 2500; // dernier pli de la donne : on le regarde
 // Attente avant la fenêtre qui s'ouvre : le pli qui vient de se fermer est
 // montré puis ramassé (le dernier plus longtemps, avant le résultat).
@@ -19,6 +19,30 @@ export const trickPause = (G) =>
       ? LAST_TRICK_SHOW_MS
       : TRICK_SHOW_MS;
 const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une annonce
+
+// Temps que prend un bot pour parler ou jouer, hors pause de pli et fenêtre
+// de coinche. u : tirage uniforme dans [0, 1[.
+//   - carte forcée (une seule carte légale) : 150 à 300 ms, rien à réfléchir ;
+//   - sinon 350 ms plus une part en u² : la plupart des coups partent vite,
+//     quelques-uns hésitent longtemps. La part croît avec le choix (2 cartes
+//     légales : jusqu'à 950 ms en tout, 8 cartes : 1 670 ms) ; une enchère va
+//     jusqu'à 1 850 ms.
+// Mesuré sur 3 parties de bots (1 081 décisions, 29 % de coups forcés) : 542 ms
+// en moyenne, contre 575 ms avant (350 + 450 u, quel que soit le coup).
+// Un humain joue vite quand il n'a pas le choix et plus lentement quand il
+// en a un ; une loi uniforme unique ne le faisait pas.
+const BID_SPAN_MS = 1500;
+export function thinkMs(G, seat, u) {
+  let span = BID_SPAN_MS;
+  const hand = G.hands[seat];
+  if (G.phase === "JEU" && hand && !hand.includes(null)) {
+    const n = computeLegal(hand, G.pliCourant, G.contract.atout, seat).length;
+    if (n === 1) return 150 + 150 * u;
+    span = 600 + 120 * Math.min(n - 2, 6);
+  }
+  return 350 + span * u * u;
+}
+
 // G n'est que du JSON. Pas de structuredClone ni de .at() ici : sur un
 // navigateur ancien (Safari < 15.4, Chrome < 98), l'hôte plantait et les
 // bots ne faisaient plus que « passer » à l'expiration de leur délai.
@@ -47,7 +71,11 @@ export function createHost({
 }) {
   let G = null;
   let tour = null;
-  let contractId = null;
+  // Pour chaque siège, le tour dont la décision du bot est déjà programmée.
+  // Clé = tour ET siège bot : un humain qui part en plein tour (devenirBot ne
+  // touche pas à G.tour) rend le siège bot sans nouveau tour ; sans cela le
+  // bot restait muet jusqu'au TIMEOUT (passe, ou carte au hasard).
+  const decided = [null, null, null, null];
   const pending = new Set();
 
   function later(ms, fn) {
@@ -78,68 +106,81 @@ export function createHost({
   // jouerait alors avec des cartes nulles.
   const playable = (s) => isBot(s) && !G.hands[s].includes(null);
 
+  // Annonce toute fraîche face à un humain en défense : le bot suivant
+  // laisse le temps de la coincher avant de la recouvrir.
+  function coincheWindow() {
+    const last = G.phase === "ENCHERES" ? G.bidLog[G.bidLog.length - 1] : null;
+    return last?.montant &&
+      [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
+      ? COINCHE_WINDOW_MS
+      : 0;
+  }
+
+  // Tour d'un bot en phase d'enchères ou de jeu. Défenseur d'un contrat pas
+  // encore coinché, il décide d'abord s'il coinche : à son tour de parole,
+  // comme un joueur (qui coinche au lieu de passer, jamais après avoir passé),
+  // avant la clôture des enchères (les trois passes qui la ferment refusent
+  // toute coinche) et après son partenaire s'il le précède. Les délais de
+  // parole (thinkMs, plus la fenêtre de coinche d'un humain) s'appliquent donc
+  // à la coinche aussi.
+  function botTurn(seat) {
+    const c = G.contract;
+    if (
+      G.phase === "ENCHERES" &&
+      c &&
+      !c.coinche &&
+      teamOf(seat) !== c.equipePreneur &&
+      playable(seat) &&
+      decide.wantsToCoinche(seatView(G, seat), seat)
+    ) {
+      send(seat, { type: "COINCHER" });
+      return;
+    }
+    botSend(seat, decide.turnAction);
+  }
+
   function update(state) {
     G = state;
     if (!G.seats || G.phase === "TERMINEE") return;
+    // Un siège repris par un humain oublie sa décision : s'il redevient bot
+    // au même tour, elle sera reprogrammée.
+    for (const s of [0, 1, 2, 3]) if (!isBot(s)) decided[s] = null;
 
-    if (G.tour !== tour) {
-      tour = G.tour;
-      const t = tour;
-      const seat = G.joueurActif;
-      const pause = trickPause(G);
+    const t = G.tour;
+    const pause = trickPause(G);
+    if (t !== tour) {
+      tour = t;
       later(pause + DURATION_MS[G.phase], () => {
         if (G.tour === t) send(null, { type: "TIMEOUT", tour: t });
       });
-      // Annonce toute fraîche face à un humain en défense : le bot suivant
-      // laisse le temps de la coincher avant de la recouvrir.
-      const last = G.phase === "ENCHERES" ? G.bidLog[G.bidLog.length - 1] : null;
-      const coincheWindow =
-        last?.montant &&
-        [0, 1, 2, 3].some((s) => teamOf(s) !== G.contract.equipePreneur && !isBot(s))
-          ? COINCHE_WINDOW_MS
-          : 0;
-      if ((G.phase === "ENCHERES" || G.phase === "JEU") && isBot(seat)) {
-        later(pause + coincheWindow + 350 + random() * 450, () => {
-          if (G.tour === t) botSend(seat, decide.turnAction);
-        });
-      }
-      if (G.phase === "SURCOINCHE") {
-        const id = G.contract.id;
-        for (const s of [0, 1, 2, 3]) {
-          if (teamOf(s) !== G.contract.equipePreneur || !isBot(s)) continue;
-          later(300 + random() * 1500, () => {
-            if (
-              G.phase === "SURCOINCHE" &&
-              G.contract.id === id &&
-              !G.contract.surcoinche &&
-              playable(s) &&
-              decide.wantsToSurcoinche(seatView(G, s), s)
-            )
-              send(s, { type: "SURCOINCHER" });
-          });
-        }
-      }
     }
 
-    // Nouveau contrat : chaque bot en défense envisage de coincher.
-    const c = G.phase === "ENCHERES" ? G.contract : null;
-    if (c && c.id !== contractId) {
-      const id = c.id;
+    if (G.phase === "ENCHERES" || G.phase === "JEU") {
+      const seat = G.joueurActif;
+      if (playable(seat) && decided[seat] !== t) {
+        decided[seat] = t;
+        later(pause + coincheWindow() + thinkMs(G, seat, random()), () => {
+          if (G.tour === t) botTurn(seat);
+        });
+      }
+    } else if (G.phase === "SURCOINCHE") {
+      const id = G.contract.id;
       for (const s of [0, 1, 2, 3]) {
-        if (teamOf(s) === c.equipePreneur || !isBot(s)) continue;
-        later(500 + random() * 1200, () => {
+        if (teamOf(s) !== G.contract.equipePreneur || !isBot(s) || decided[s] === t)
+          continue;
+        decided[s] = t;
+        later(300 + random() * 1500, () => {
           if (
-            G.phase === "ENCHERES" &&
-            G.contract?.id === id &&
-            !G.contract.coinche &&
+            G.phase === "SURCOINCHE" &&
+            G.contract.id === id &&
+            !G.contract.surcoinche &&
             playable(s) &&
-            decide.wantsToCoinche(seatView(G, s), s)
+            decide.wantsToSurcoinche(seatView(G, s), s)
           )
-            send(s, { type: "COINCHER" });
+            send(s, { type: "SURCOINCHER" });
         });
       }
     }
-    contractId = G.contract?.id ?? null;
   }
 
   function stop() {
@@ -147,7 +188,7 @@ export function createHost({
     pending.clear();
     G = null;
     tour = null;
-    contractId = null;
+    decided.fill(null);
   }
 
   return { update, stop };

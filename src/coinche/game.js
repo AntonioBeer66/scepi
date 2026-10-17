@@ -142,12 +142,18 @@ export const Coinche = {
 
   // Chacun ne reçoit que sa main (l'hôte : aussi celles des bots) ; une
   // belote pas encore annoncée reste secrète (REGLES_COINCHE.md §3).
+  // La personnalité des bots et leur mémoire d'enchère (ce qu'ils ont déjà
+  // dit, voir G.bidMemo) ne servent qu'à l'hôte, qui les fait jouer : les
+  // autres n'en reçoivent pas (la mémoire de leur propre siège mise à part).
   playerView: ({ G, playerID }) => {
     if (!G.hands) return G;
     const me = playerID == null ? -1 : seatOf(playerID);
     const sees = (s) => s === me || (me === G.hote && G.seats[s].type === "bot");
+    const hote = me === G.hote;
+    const { personalities, ...pub } = G;
     return {
-      ...G,
+      ...(hote ? G : pub),
+      bidMemo: hote ? G.bidMemo : G.bidMemo.map((m, s) => (s === me ? m : null)),
       hands: G.hands.map((h, s) => (sees(s) ? h : h.map(() => null))),
       mainsInitiales: G.mainsInitiales.map((h, s) => (sees(s) ? h : [])),
       belote: G.belote.beloteDeclared ? G.belote : { ...G.belote, holder: null },
