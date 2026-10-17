@@ -27,6 +27,7 @@ import {
 } from "../engine.js";
 import { trickPause } from "../host.js";
 import { EMOTES } from "../../online/tables.js";
+import { newSignals } from "./signaux.js";
 
 const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
 const CARD_RATIO = CARD_PX.h / CARD_PX.w;
@@ -46,6 +47,7 @@ const COLORS = {
   avatar: 0x3c3489,
   avatarMe: 0x26215c,
   bubble: 0xf7f4fc,
+  signal: 0xa98bff, // appel, refus : violet clair
 };
 const FONT = 'system-ui, "Segoe UI", sans-serif';
 
@@ -868,6 +870,9 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     }
     placeHand(newDonne);
     drawSeats(false);
+    // Appel, refus lus dans une défausse : pastille près du siège (la tienne
+    // est dite par le HUD, en note sous la barre de jeu).
+    for (const s of newSignals(G, prev)) if (s.seat !== me) showSignal(s);
     if (!prev || reduced) return;
     // Coinche, surcoinche : la table tremble.
     const c = G.contract;
@@ -882,6 +887,39 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       const winners = r.reussi ? r.preneurs : 1 - r.preneurs;
       if (winners === teamOf(me)) burst(L.cx, L.cy, 60, 1.6);
     }
+  }
+
+  // Pastille « Appel ♠ » / « Refus ♦ » près d'un siège, le temps de la lire.
+  // Discrète : petite, violet clair, sans rebond ; en mouvement réduit elle
+  // apparaît d'un coup mais reste aussi longtemps.
+  function showSignal({ seat, kind, suit }) {
+    if (!scene || !L) return;
+    const { x, y } = L.seat[posOf(seat)];
+    const label = txt(0, 0, `${kind === "appel" ? "Appel" : "Refus"} ${SUIT_SYMBOL[suit]}`, {
+      fontSize: "13px",
+      fontStyle: "bold",
+      color: COLORS.ink,
+    }).setOrigin(0.5);
+    const w = label.width + 16;
+    const h = label.height + 8;
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x000000, 0.3)
+      .fillRoundedRect(-w / 2, -h / 2 + 3, w, h, h / 2)
+      .fillStyle(COLORS.signal, 1)
+      .fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
+    // Sous le nom pour les sièges du haut, au-dessus de l'avatar sinon.
+    const below = y < L.cy;
+    const bx = Phaser.Math.Clamp(x, w / 2 + 8, parent.clientWidth - w / 2 - 8);
+    const by = below ? y + L.r + h / 2 + 22 : y - L.r - h / 2 - 8;
+    const box = scene.add.container(bx, by, [bg, label]).setDepth(84).setAlpha(0);
+    scene.tweens.chain({
+      targets: box,
+      tweens: [
+        { alpha: 1, duration: dur(150), ease: "Quad.easeOut" },
+        { alpha: 0, delay: 2600, duration: dur(300) },
+      ],
+      onComplete: () => box.destroy(),
+    });
   }
 
   // Gerbe d'étincelles dorées et vertes (système de particules de Phaser).

@@ -681,6 +681,19 @@ a {
   line-height: 1.6;
   margin-bottom: 0;
 }
+.rules-panel ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 0.7812rem;
+  line-height: 1.6;
+}
+/* Brouillon à valider (section « Comment jouent les bots ») */
+.rules-panel .rules-draft {
+  padding: 6px 10px;
+  border: 1px dashed var(--gold);
+  border-radius: 8px;
+  color: var(--gold);
+}
 @media (max-width: 760px) {
   .rules-btn {
     right: 14px;
@@ -2639,6 +2652,178 @@ body.is-playing .header {
   color: var(--gold);
 }
 
+/* Historique à onglets (hud.js) : enchères, cartes tombées, donnes. */
+.cg-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.cg-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+.cg-tab[aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.cg-tab:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+.cg-tab:active {
+  transform: scale(0.97);
+  transition-duration: 80ms;
+}
+@media (hover: hover) {
+  .cg-tab:hover {
+    border-color: #ffffff66;
+  }
+}
+.cg-panel h4 {
+  margin: 14px 0 6px;
+  color: var(--muted);
+  font: 700 11px Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* Enchères : une colonne par siège, une ligne par tour. */
+.cg-bids {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.cg-bids th {
+  padding: 4px 4px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.cg-bids th.is-us {
+  color: var(--green);
+}
+.cg-bids th small {
+  display: block;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cg-bids td {
+  padding: 7px 4px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+.cg-bids td.is-pass {
+  color: var(--muted);
+}
+.cg-bids td.is-lead,
+.cg-bids td.is-wait {
+  color: var(--gold);
+  font-weight: 800;
+}
+.cg-bids-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+/* Cartes tombées : 4 couleurs de 8 cartes, de la plus forte à la plus faible. */
+.cg-fallen {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cg-fallen-row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.cg-fallen-suit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 20px;
+  line-height: 1;
+}
+.cg-fallen-suit small {
+  margin-top: 3px;
+  color: var(--gold);
+  font: 700 10px Consolas, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.cg-fallen-row ol {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cg-fallen-row ol li {
+  padding: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+.cg-fallen-row.is-trump ol li {
+  background: #f4c60014;
+}
+.cg-fallen-row ol li.is-fallen,
+.cg-legend .is-fallen {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.cg-fallen-row ol li.is-fallen {
+  border-style: dashed;
+  opacity: 0.65;
+}
+.cg-fallen-row ol li.is-mine,
+.cg-legend .is-mine {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.cg-fallen-sum {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.cg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.cg-signals {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
 /* Résultat de la donne, au centre de la table */
 .cg-banner {
   position: absolute;
@@ -2808,6 +2993,91 @@ body.is-playing .header {
 .cg-btn.is-danger {
   border-color: #ff8a8a;
   color: #ff8a8a;
+}
+/* « Coincher » pendant son armement (COINCHE_ARM_MS, hud.js) : grisé, une
+   jauge se remplit ; un clic trop tôt le secoue. */
+.cg-btn.is-arming {
+  position: relative;
+  overflow: hidden;
+  border-color: #ff8a8a66;
+  color: #ff8a8a99;
+  cursor: not-allowed;
+}
+.cg-btn.is-arming::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #ff8a8a33;
+  transform-origin: left;
+  animation: cg-arm var(--arm-ms, 600ms) linear var(--arm-at, 0ms) both;
+}
+@keyframes cg-arm {
+  from {
+    transform: scaleX(0);
+  }
+}
+.cg-btn.is-nope {
+  animation: cg-nope 0.3s var(--ease-out);
+}
+@keyframes cg-nope {
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+/* Mouvement réduit : pas de jauge animée (elle s'afficherait pleine d'un
+   coup), le bouton reste grisé ; le clic trop tôt teinte le fond. */
+@media (prefers-reduced-motion: reduce) {
+  .cg-btn.is-arming::after {
+    display: none;
+  }
+  .cg-btn.is-nope {
+    animation: none;
+    background: #ff8a8a40;
+  }
+}
+/* Décompte de la fenêtre de surcoinche (DURATION_MS.SURCOINCHE). */
+.cg-count {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 10px;
+}
+.cg-count-bar {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #ffffff1f;
+}
+.cg-count-bar i {
+  display: block;
+  height: 100%;
+  background: var(--gold);
+  transform-origin: left;
+  transition: transform 0.2s linear;
+}
+.cg-count b {
+  min-width: 3ch;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cg-count.is-low .cg-count-bar i {
+  background: #ff8a8a;
+}
+.cg-count.is-low b {
+  color: #ff8a8a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-count-bar i {
+    transition: none;
+  }
 }
 .cg-hint {
   flex-basis: 100%;
@@ -3010,6 +3280,20 @@ body.is-playing .header {
   box-shadow: 0 10px 30px #000a;
   pointer-events: none;
   animation: cg-toast 2.4s ease both;
+}
+/* Remarque discrète (signal lu dans ta défausse) : plus bas, plus petite, plus longue. */
+.cg-toast.is-note {
+  top: 14%;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 8px 16px;
+  border: 1px solid #a98bff;
+  background: #120d20f2;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  animation-duration: 3.6s;
 }
 @keyframes cg-toast {
   0% { opacity: 0; transform: scale(0.8); }

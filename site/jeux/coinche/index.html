@@ -146,6 +146,123 @@
         Une place quittée en cours de partie est reprise par l’ordinateur, et
         l’on peut revenir s’y asseoir.
       </p>
+      <!-- BROUILLON À VALIDER (audit des bots, proposition P1). Décrit les bots
+           tels qu'ils seront APRÈS les corrections du plan : signaux (appel
+           et refus), conventions d'entame protégées, remontée stricte,
+           barème d'ouverture (palier du barème annoncé tel quel). Ne retirer
+           « hidden » qu'une fois ces corrections fusionnées et les passages
+           « [à confirmer] » tranchés, sinon la page décrit un système que
+           les bots ne respectent pas (LIS-10). -->
+      <div class="rules-bots" hidden>
+        <h3>Comment jouent les bots</h3>
+        <p class="rules-draft">
+          Brouillon à valider : à publier seulement quand les bots jouent
+          comme ceci.
+        </p>
+        <p>
+          Les bots jouent tous avec le même système d’annonces et relisent les
+          tiennes avec la même grille. Ils ne voient jamais ta main : tout ce
+          qu’ils savent de toi vient de tes annonces et de tes cartes jouées.
+        </p>
+        <h3>Ouvrir : le chiffre est un code</h3>
+        <ul>
+          <li>
+            <b>80</b> : une tenue d’atout correcte (le Valet troisième, ou le 9
+            et l’As troisièmes, ou l’As et le 10 quatrièmes), en général avec un
+            As à côté. Ce n’est pas une promesse de 80 points. En 4e position,
+            après trois passes, un 80 peut être léger [à confirmer : au moins
+            deux ou trois atouts].
+          </li>
+          <li>
+            <b>90</b> : le Valet et le 9 d’atout, à trois atouts au moins. La
+            tenue est garantie.
+          </li>
+          <li>
+            <b>100</b> : une longueur. Quatre atouts avec le Valet ou le 9, plus
+            l’As ou le 10, ou cinq atouts avec la belote et un As. Un 100 n’a
+            jamais le Valet et le 9 ensemble : il n’est pas « plus fort » que le
+            90.
+          </li>
+          <li>
+            <b>110, 120, 130</b> : le Valet et le 9 d’atout, avec 3, 2 ou 1
+            « fausses cartes » (perdantes hors atout). Plus le chiffre monte,
+            moins il en reste.
+          </li>
+          <li><b>160 et capot</b> : une main presque imbattable.</li>
+        </ul>
+        <h3>Soutenir : la remontée</h3>
+        <p>
+          Quand ton partenaire a ouvert, le bot compte ce que sa main ajoute et
+          annonce l’ouverture plus ce total (160 au plus), une seule fois par
+          donne.
+        </p>
+        <ul>
+          <li>
+            +10 par As hors atout, +20 le Valet d’atout, +10 le 9 d’atout (avec
+            au moins deux atouts), +20 la belote. Sans atout, il ne remonte pas.
+          </li>
+          <li>
+            Sa relance se lit à la lettre : « +20 » veut dire 20 points, qui
+            peuvent être le Valet, deux As ou la belote.
+          </li>
+          <li>
+            Capot : si ses As dépassent les fausses cartes de ton ouverture
+            (110 : 3, 120 : 2, 130 : 1), il annonce le capot.
+          </li>
+          <li>
+            Face à une intervention adverse, il peut monter au minimum quand sa
+            main vaut ce minimum moins 10 (deux fois par camp et par donne au
+            plus).
+          </li>
+          <li>
+            Il lit ton 90 ou ton 110 et plus comme « j’ai le Valet » ; une
+            simple relance ne le dit pas.
+          </li>
+        </ul>
+        <h3>Coincher</h3>
+        <p>
+          Un bot coinche quand ses calculs, faits sur des mains possibles
+          compatibles avec les annonces, donnent un contrat qui chute presque
+          toujours [à confirmer : seuil exact]. Une coinche ne promet donc pas
+          de tenue d’atout. Sa surcoinche suit le même calcul, sans hasard : la
+          même main donne la même décision.
+        </p>
+        <h3>Appel et refus</h3>
+        <ul>
+          <li>
+            <b>Appel</b> : un 7 ou un 8 défaussé volontairement (quand il avait
+            le choix entre plusieurs couleurs), avant le 4e pli, dans une
+            couleur dont l’As n’est pas tombé. Il veut dire « j’ai l’As, rejoue
+            cette couleur ».
+          </li>
+          <li>
+            <b>Refus</b> : un Roi ou une Dame défaussé de la même façon : « ne
+            joue pas cette couleur ».
+          </li>
+          <li>
+            Le dernier signal remplace le précédent. Le 9, le 10, le Valet et
+            l’As ne disent rien.
+          </li>
+          <li>
+            Les bots lisent tes défausses de la même façon. Une pastille
+            « Appel ♠ » ou « Refus ♦ » s’affiche près du joueur qui vient de
+            signaler ; l’onglet « Cartes » de l’historique les garde.
+          </li>
+        </ul>
+        <h3>Entamer</h3>
+        <ul>
+          <li>
+            Quand son camp a pris : avec le Valet et le 9, il tire d’abord les
+            atouts, puis rejoue la couleur que son partenaire a appelée.
+          </li>
+          <li>
+            En défense : il n’entame pas à l’atout, encaisse ses As (sauf un As
+            dont le 10 est encore dehors, à la première entame), rejoue la
+            couleur appelée ou annoncée par son partenaire, et entame un
+            singleton pour couper ensuite.
+          </li>
+        </ul>
+      </div>
     </div>
     <header class="header">
       <div class="header-inner">

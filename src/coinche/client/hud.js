@@ -8,20 +8,26 @@
 import {
   ALLOWED_BIDS,
   BELOTE_BONUS,
+  DURATION_MS,
   GENERALE,
   GENERALE_BELOTE,
+  PLAIN_FORCE,
+  RANKS,
   SUITS,
   SUIT_NAME,
   SUIT_SYMBOL,
+  TRUMP_FORCE,
   cardLabel,
   computeLegal,
   teamOf,
 } from "../engine.js";
 import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
+import { newSignals, readSignals } from "./signaux.js";
 
 const RED_SUITS = new Set(["H", "D"]);
 const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
 const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
+const RANK_SHORT = { J: "V", Q: "D", K: "R" }; // Valet, Dame, Roi (les autres : tels quels)
 const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
 const FLASH = {
   coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1100 },
@@ -77,6 +83,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     bidMin: undefined,
     hint: "",
     panel: null, // "history" | "trick" | null
+    tab: null, // onglet de l'historique : "bids" | "cards" | "donnes" (null : enchères)
   };
   let G = null;
   const flashBlobs = {};
@@ -98,6 +105,23 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ? seatName(s)
       : `${G.seats[s].name} (${compass(s)})`;
 
+  // Signal lu dans une défausse (voir signaux.js), dit comme les bots le lisent.
+  const signalWord = ({ kind, suit }) =>
+    `${kind === "appel" ? "appel" : "refus"} ${SUIT_NAME[suit]}`;
+  const signalSpeech = (s) =>
+    s.seat === me
+      ? `Les bots lisent ta défausse comme un ${signalWord(s)}.`
+      : `${who(s.seat)} : ${signalWord(s)}.`;
+  function signalNote(s) {
+    const played = G.playedBy[s.seat];
+    const card = played[played.length - 1];
+    const what =
+      card?.suit === s.suit
+        ? `ton ${RANK_SHORT[card.rank] ?? card.rank}${SUIT_SYMBOL[s.suit]}`
+        : "ta défausse";
+    return `Les bots lisent ${what} comme un ${s.kind === "appel" ? "appel" : "refus"}`;
+  }
+
   // ---- Annonces pour lecteur d'écran --------------------------------------
 
   function announce(prev) {
@@ -113,13 +137,19 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
             : `${who(e.seat)} : passe`,
         );
     }
-    if (G.contract?.coinche && !prev?.contract?.coinche) out.push("Coinché !");
+    if (G.contract?.coinche && !prev?.contract?.coinche)
+      out.push(
+        !spectator && teamOf(me) === G.contract.equipePreneur
+          ? `Coinché ! Tu as ${DURATION_MS.SURCOINCHE / 1000} secondes pour surcoincher.`
+          : "Coinché !",
+      );
     if (G.contract?.surcoinche && !prev?.contract?.surcoinche)
       out.push("Surcoinché !");
     if (same)
       for (const s of [0, 1, 2, 3])
         for (const c of G.playedBy[s].slice(prev.playedBy[s].length))
           out.push(`${who(s)} : ${cardLabel(c)}`);
+    for (const s of newSignals(G, prev)) out.push(signalSpeech(s));
     if (G.belote.beloteDeclared && !(same && prev.belote.beloteDeclared))
       out.push("Belote !");
     if (G.belote.rebeloteDeclared && !(same && prev.belote.rebeloteDeclared))
@@ -176,14 +206,15 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   }
 
   // Bandeau bref en haut de la table (belote, rebelote) ; le lecteur d'écran
-  // a déjà l'annonce (announce).
-  function toast(text) {
+  // a déjà l'annonce (announce). `note` : remarque plus discrète et plus
+  // longue à lire (signal lu dans ta défausse).
+  function toast(text, note = false) {
     const el = document.createElement("div");
-    el.className = "cg-toast";
+    el.className = note ? "cg-toast is-note" : "cg-toast";
     el.setAttribute("aria-hidden", "true");
     el.textContent = text;
     root.append(el);
-    setTimeout(() => el.remove(), 2400);
+    setTimeout(() => el.remove(), note ? 3600 : 2400);
   }
 
   // ---- Barre de jeu ------------------------------------------------------------
@@ -234,25 +265,141 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     </div>`;
   }
 
+  // Historique à trois onglets : les enchères de la donne (G.bidLog), les
+  // cartes tombées (G.playedBy) et les donnes terminées (G.history).
+  const TABS = [
+    ["bids", "Enchères"],
+    ["cards", "Cartes"],
+    ["donnes", "Donnes"],
+  ];
+
+  // Une colonne par siège (toi en premier), une ligne par tour de table,
+  // passes comprises ; la dernière annonce, celle du contrat, est en or.
+  // Le coinche et la surcoinche ne sont pas dans bidLog : ils suivent en note.
+  function renderBids() {
+    const cols = [0, 1, 2, 3].map((p) => (anchor + p) % 4);
+    const waiting = G.phase === "ENCHERES" ? { seat: G.joueurActif, wait: true } : null;
+    if (!G.bidLog.length && !waiting) return `<p class="cg-empty">Personne n’a encore parlé.</p>`;
+    let lead = null;
+    for (const e of G.bidLog) if (e.montant) lead = e;
+    const rows = [];
+    let prevCol = 4;
+    for (const e of waiting ? [...G.bidLog, waiting] : G.bidLog) {
+      const c = cols.indexOf(e.seat);
+      if (c <= prevCol) rows.push([null, null, null, null]);
+      rows[rows.length - 1][c] = e;
+      prevCol = c;
+    }
+    const cell = (e) =>
+      !e
+        ? "<td></td>"
+        : e.wait
+          ? '<td class="is-wait" aria-hidden="true">…</td>'
+          : !e.montant
+            ? '<td class="is-pass">Passe</td>'
+            : `<td${e === lead ? ' class="is-lead"' : ""}>${bidReadout(e.montant)} ${suitSpan(e.atout)}</td>`;
+    const head = cols
+      .map((s) => {
+        const note = [
+          s === me
+            ? "toi"
+            : !spectator && s === (me + 2) % 4
+              ? "partenaire"
+              : G.seats[s].type === "human"
+                ? G.seats[s].name
+                : "",
+          s === G.donneur ? "donneur" : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        return `<th scope="col"${teamOf(s) === ours ? ' class="is-us"' : ""}>${compass(s)}${note ? `<small>${esc(note)}</small>` : ""}</th>`;
+      })
+      .join("");
+    const c = G.contract;
+    const verb = (s, v) => (s === me ? `Tu ${v}s` : `${esc(seatName(s))} ${v}`);
+    const calls = [];
+    if (c?.coinche && c.coincheur != null) calls.push(verb(c.coincheur, "coinche"));
+    if (c?.surcoinche && c.surcoincheur != null) calls.push(verb(c.surcoincheur, "surcoinche"));
+    return `<table class="cg-bids" aria-label="Enchères de la donne">
+      <thead><tr>${head}</tr></thead>
+      <tbody>${rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody>
+    </table>${calls.length ? `<p class="cg-bids-note">${calls.join(" · ")}</p>` : ""}`;
+  }
+
+  // Les 32 cartes par couleur, l'atout en premier, de la plus forte à la
+  // plus faible : barrées une fois tombées, cerclées d'or si elles sont dans
+  // ta main. Dessous, ce que les bots ont lu dans les défausses (appel,
+  // refus), les tiennes comprises.
+  function renderCards() {
+    const atout = G.contract?.atout;
+    const fallen = new Set();
+    for (const list of G.playedBy) for (const c of list) fallen.add(c.id);
+    const mine = new Set(
+      ((me >= 0 && G.hands[me]) || []).filter(Boolean).map((c) => c.id),
+    );
+    const force = (s) => (s === atout ? TRUMP_FORCE : PLAIN_FORCE);
+    const rows = (atout ? [atout, ...SUITS.filter((s) => s !== atout)] : SUITS)
+      .map((s) => {
+        const cells = RANKS.slice()
+          .sort((a, b) => force(s)[b] - force(s)[a])
+          .map((r) => {
+            const st = fallen.has(r + s) ? "fallen" : mine.has(r + s) ? "mine" : "out";
+            const label = `${cardLabel({ rank: r, suit: s })} : ${{ fallen: "tombé", mine: "dans ta main", out: "pas encore tombé" }[st]}`;
+            return `<li class="is-${st}" aria-label="${esc(label)}">${RANK_SHORT[r] ?? r}</li>`;
+          })
+          .join("");
+        return `<li class="cg-fallen-row${s === atout ? " is-trump" : ""}"><span class="cg-fallen-suit">${suitSpan(s)}${s === atout ? "<small>atout</small>" : ""}</span><ol>${cells}</ol></li>`;
+      })
+      .join("");
+    let sum = "";
+    if (atout) {
+      const left = RANKS.filter((r) => !fallen.has(r + atout) && !mine.has(r + atout)).length;
+      sum = `<p class="cg-fallen-sum">${suitSpan(atout)} ${left ? `${left} atout${left > 1 ? "s" : ""} encore chez les autres` : "Plus d’atout chez les autres"}</p>`;
+    }
+    const sigs = readSignals(G);
+    return `${sum}<ul class="cg-fallen">${rows}</ul>
+      <p class="cg-legend">${me >= 0 ? '<span class="is-mine">dans ta main</span>' : ""}<span class="is-fallen">tombée</span><span>pas encore jouée</span></p>
+      <h4>Lu dans les défausses</h4>
+      ${
+        sigs.length
+          ? `<ul class="cg-signals">${sigs.map((s) => `<li><b>${esc(seatName(s.seat))}</b> : ${s.kind === "appel" ? "appel" : "refus"} ${suitSpan(s.suit)}</li>`).join("")}</ul>`
+          : '<p class="cg-empty">Aucun appel ni refus pour l’instant.</p>'
+      }`;
+  }
+
+  function renderDonnes() {
+    return `<div class="cg-panel-scores"><span>${US} <b>${G.scores[ours]}</b></span><span>${THEM} <b>${G.scores[1 - ours]}</b></span></div>
+      ${
+        G.history.length
+          ? `<ol class="cg-history">${G.history
+              .map(
+                (h) => `<li class="${h.reussi ? "ok" : "ko"}">
+          <span>#${h.donne}</span>
+          <span>${bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
+          <span>${esc(seatName(h.preneur))}</span>
+          <span>${h.reussi ? "réussi" : "chuté"} · ${h.pointsFaits} pts</span>
+        </li>`,
+              )
+              .join("")}</ol>`
+          : `<p class="cg-empty">Aucune donne terminée pour l’instant.</p>`
+      }`;
+  }
+
   function renderPanel() {
     if (ui.panel === "history") {
-      const us = ours;
-      return `<div class="cg-panel" role="region" aria-label="Historique des donnes">
-        <div class="cg-panel-scores"><span>${US} <b>${G.scores[us]}</b></span><span>${THEM} <b>${G.scores[1 - us]}</b></span></div>
-        ${
-          G.history.length
-            ? `<ol class="cg-history">${G.history
-                .map(
-                  (h) => `<li class="${h.reussi ? "ok" : "ko"}">
-            <span>#${h.donne}</span>
-            <span>${bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
-            <span>${esc(seatName(h.preneur))}</span>
-            <span>${h.reussi ? "réussi" : "chuté"} · ${h.pointsFaits} pts</span>
-          </li>`,
-                )
-                .join("")}</ol>`
-            : `<p class="cg-empty">Aucune donne terminée pour l’instant.</p>`
-        }
+      const tab = ui.tab ?? "bids";
+      const name = {
+        bids: "Historique des enchères",
+        cards: "Cartes tombées",
+        donnes: "Historique des donnes",
+      }[tab];
+      const body = { bids: renderBids, cards: renderCards, donnes: renderDonnes }[tab]();
+      return `<div class="cg-panel" role="region" aria-label="${name}">
+        <div class="cg-tabs" role="group" aria-label="Contenu de l’historique">${TABS.map(
+          ([k, label]) =>
+            `<button type="button" class="cg-tab" data-tab="${k}" data-focus-key="tab-${k}" aria-pressed="${k === tab}">${label}</button>`,
+        ).join("")}</div>
+        ${body}
       </div>`;
     }
     if (ui.panel === "trick" && G.lastTrick) {
@@ -288,18 +435,32 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       G.phase === "SURCOINCHE" &&
       !G.contract.surcoinche &&
       teamOf(me) === G.contract.equipePreneur;
-    const coinche = canCoinche
-      ? '<button type="button" class="cg-btn is-danger" data-action="coincher" data-focus-key="coincher">Coincher</button>'
-      : "";
     // Apparition du bouton pour ce contrat : un clic trop rapide après (doigt
     // encore sur « Annoncer » ou « Passer ») ne coinche pas par erreur.
     if (canCoinche && ui.coincheFor !== G.contract.id) {
       ui.coincheFor = G.contract.id;
       ui.coincheShownAt = Date.now();
     }
-    if (canSurcoinche)
+    // Pendant l'armement, le bouton est grisé et une jauge se remplit (reprise
+    // là où elle en est si la barre est redessinée) ; un clic trop tôt secoue le
+    // bouton (voir nope) au lieu d'être ignoré en silence.
+    const armLeft = canCoinche ? COINCHE_ARM_MS - (Date.now() - ui.coincheShownAt) : 0;
+    clearTimeout(ui.armTimer);
+    if (armLeft > 0) ui.armTimer = setTimeout(() => G && render(), armLeft + 30);
+    const coinche = canCoinche
+      ? `<button type="button" class="cg-btn is-danger${armLeft > 0 ? " is-arming" : ""}" data-action="coincher" data-focus-key="coincher"${armLeft > 0 ? ` aria-disabled="true" style="--arm-ms:${COINCHE_ARM_MS}ms;--arm-at:${armLeft - COINCHE_ARM_MS}ms"` : ""}>Coincher</button>`
+      : "";
+    if (canSurcoinche) {
+      // La fenêtre dure DURATION_MS.SURCOINCHE ; comptée ici dès qu'elle
+      // s'ouvre (une fenêtre par G.tour), affichée par tickCount.
+      if (ui.countTour !== G.tour) {
+        ui.countTour = G.tour;
+        ui.countAt = Date.now();
+      }
       return `<div class="cg-bidbar"><span class="cg-prompt">Vous êtes coinchés</span>
-        <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button></div>`;
+        <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button>
+        <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${DURATION_MS.SURCOINCHE / 1000} s</b></div></div>`;
+    }
     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
       // Seul, sur le côté : jamais à la place d'« Annoncer » ou « Passer ».
       return coinche ? `<div class="cg-bidbar is-coinche">${coinche}</div>` : "";
@@ -332,6 +493,27 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       </div>
       ${ui.hint ? `<p class="cg-hint" role="alert">${esc(ui.hint)}</p>` : ""}
     </div>`;
+  }
+
+  // Décompte de la surcoinche : texte et jauge retouchés en place (cinq fois
+  // par seconde), sans redessiner la barre.
+  function tickCount() {
+    const el = G?.phase === "SURCOINCHE" && root.querySelector(".cg-count");
+    if (!el) return;
+    const left = Math.max(0, DURATION_MS.SURCOINCHE - (Date.now() - ui.countAt));
+    el.querySelector("b").textContent = `${Math.ceil(left / 1000)} s`;
+    el.querySelector("i").style.transform = `scaleX(${left / DURATION_MS.SURCOINCHE})`;
+    el.classList.toggle("is-low", left < 3000);
+  }
+
+  // Clic sur « Coincher » pendant l'armement : le bouton le dit (secousse, ou
+  // simple éclair en mouvement réduit), et le lecteur d'écran aussi.
+  function nope(btn) {
+    btn.classList.remove("is-nope");
+    void btn.offsetWidth; // relance l'animation
+    btn.classList.add("is-nope");
+    setTimeout(() => btn.classList.remove("is-nope"), 400);
+    announcer.textContent = "Coincher : un instant, le bouton s’arme.";
   }
 
   // ---- Résultat ------------------------------------------------------------------
@@ -408,15 +590,19 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       if (painted[i] === html) return;
       // Même barre, contenu retouché (montant choisi) : pas de nouvelle
       // apparition, elle ne sautille pas à chaque toucher.
-      // (Barre d'enchères seulement : le résultat de la donne, lui, garde son
-      // délai d'apparition.)
+      // Idem pour un panneau dont le contenu change (enchère ajoutée à
+      // l'historique, onglet changé), qui garde en plus son défilement.
+      // (Le résultat de la donne, lui, garde son délai d'apparition.)
       const same =
-        html.includes("cg-bidbar") &&
+        (html.includes("cg-bidbar") || html.includes("cg-panel")) &&
         painted[i] &&
         painted[i].slice(0, 40) === html.slice(0, 40);
+      const scroll = same ? slots[i].firstElementChild?.scrollTop : 0;
       slots[i].innerHTML = html;
-      if (same && slots[i].firstElementChild)
+      if (same && slots[i].firstElementChild) {
         slots[i].firstElementChild.style.animation = "none";
+        slots[i].firstElementChild.scrollTop = scroll;
+      }
       painted[i] = html;
     });
     if (focusKey && !root.contains(document.activeElement))
@@ -431,6 +617,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       renderBidbar(),
       renderHandButtons(),
     ]);
+    tickCount();
   }
 
   // ---- Événements ----------------------------------------------------------------
@@ -449,6 +636,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     }
     if (btn.dataset.amount) {
       ui.amount = Number(btn.dataset.amount);
+      render();
+      return;
+    }
+    if (btn.dataset.tab) {
+      ui.tab = btn.dataset.tab;
       render();
       return;
     }
@@ -471,6 +663,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     } else if (action === "passer") onAction({ type: "PASSER" });
     else if (action === "coincher") {
       if (Date.now() - (ui.coincheShownAt || 0) >= COINCHE_ARM_MS) onAction({ type: "COINCHER" });
+      else nope(btn);
     }
     else if (action === "surcoincher") onAction({ type: "SURCOINCHER" });
     else if (action === "toggle-history" || action === "toggle-trick") {
@@ -489,6 +682,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       render();
     }
   });
+
+  const countTimer = setInterval(tickCount, 200);
 
   preloadFlash();
 
@@ -643,6 +838,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast("Belote !");
         if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)
           toast(`Rebelote ! +${BELOTE_BONUS}`);
+        // Ta défausse vient d'être lue comme un appel ou un refus : tu le sais.
+        for (const s of newSignals(G, prev)) if (s.seat === me) toast(signalNote(s), true);
       }
       // Joueur parti en cours de partie : un bot prend sa place.
       for (const s of [0, 1, 2, 3])
@@ -654,6 +851,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       render();
     },
     destroy() {
+      clearInterval(countTimer);
+      clearTimeout(ui.armTimer);
       root.innerHTML = "";
       announcer.textContent = "";
       G = null;
