@@ -2293,34 +2293,28 @@ const CONVENTION_MARGIN = { trumpDef: 32, takerDraw: 32, defAce: 16, called: 32 
 // qu'il reste un choix honnête (faux signaux émis 4,9 % → 1,3 %).
 const KEEP_APPEL_MARGIN = 16;
 const SIG_PENALTY = 5;
-// Test apparié : on ne quitte le réflexe que si la carte préférée gagne
-// nettement sur les mêmes mondes, écart moyen > 2 erreurs-types + 0,5 pt
-// (cartes qui changent avec la graine : 34 % → 11 %).
-const PAIRED_Z = 2;
-const PAIRED_EXTRA = 0.5;
 
 // Monde par monde, toutes les cartes sur les mêmes mondes, et tous les
 // mondes : jamais d'horloge (voir tuning).
 // Ordre : la pénalité des faux signaux entre avant le choix (elle peut le
-// changer) ; le reste ne fait que revenir au réflexe, dans n'importe quel ordre.
+// changer) ; les marges ne font que revenir au réflexe.
+// Pas de test apparié (ne quitter le réflexe que si la carte préférée gagne
+// de plus de 2 erreurs-types + 0,5 pt sur les mêmes mondes) : plus régulier
+// (cartes qui changent avec la graine 34 % → 11 %), mais −6,6 ± 2,3 pts/donne
+// en duel (MC 48) : les petits écarts du Monte-Carlo sont réels.
 function mcChooseCard(seat, legal, reflex, why) {
   const worlds = mcWorlds(seat, tuning.mcSamples);
   if (!worlds.length) return reflex;
   const cards = [reflex, ...legal.filter((c) => c.id !== reflex.id)];
-  const vals = cards.map(() => []);
-  for (const w of worlds) {
-    cards.forEach((c, i) => {
-      vals[i].push(mcValue(seat, c, w));
-    });
-  }
+  const totals = cards.map(() => 0);
+  for (const w of worlds) cards.forEach((c, i) => (totals[i] += mcValue(seat, c, w)));
   const n = worlds.length;
   const hand = G.hands[seat];
   const bad = cards.map((c) => sigFalse(hand, c, legal));
   if (bad.some(Boolean) && !bad.every(Boolean))
     bad.forEach((b, i) => {
-      if (b) vals[i] = vals[i].map((v) => v - SIG_PENALTY);
+      if (b) totals[i] -= SIG_PENALTY * n;
     });
-  const totals = vals.map((v) => v.reduce((t, x) => t + x, 0));
   let best = 0;
   totals.forEach((t, i) => {
     if (t > totals[best] + 1e-9) best = i;
@@ -2357,20 +2351,7 @@ function mcChooseCard(seat, legal, reflex, why) {
     if ((why === "called" || why === "partner") && choice.suit !== reflex.suit)
       margin = Math.max(margin, M.called);
   }
-  if (totals[0] >= totals[best] - margin * n) return reflex;
-  let mu = 0;
-  let m2 = 0;
-  for (let k = 0; k < n; k++) {
-    const d = vals[best][k] - vals[0][k];
-    mu += d;
-    m2 += d * d;
-  }
-  mu /= n;
-  const sd = n > 1 ? Math.sqrt(Math.max(0, (m2 - n * mu * mu) / (n - 1))) : Infinity;
-  // Comparaison fausse si le seuil vaut NaN (PAIRED_Z = −∞ et sd = 0) : le
-  // test est alors sans effet, comme pour tout PAIRED_Z = −∞.
-  if (mu <= (PAIRED_Z * sd) / Math.sqrt(n) + PAIRED_EXTRA) return reflex;
-  return choice;
+  return totals[0] >= totals[best] - margin * n ? reflex : choice;
 }
 
 // Chances de réussite d'un contrat avant la première carte : la donne est
