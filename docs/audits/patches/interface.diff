@@ -1,0 +1,963 @@
+diff --git a/site/assets/css/styles.css b/site/assets/css/styles.css
+index be450a7..c23c184 100644
+--- a/site/assets/css/styles.css
++++ b/site/assets/css/styles.css
+@@ -681,6 +681,19 @@ a {
+   line-height: 1.6;
+   margin-bottom: 0;
+ }
++.rules-panel ul {
++  margin: 6px 0 0;
++  padding-left: 18px;
++  font-size: 0.7812rem;
++  line-height: 1.6;
++}
++/* Brouillon à valider (section « Comment jouent les bots ») */
++.rules-panel .rules-draft {
++  padding: 6px 10px;
++  border: 1px dashed var(--gold);
++  border-radius: 8px;
++  color: var(--gold);
++}
+ @media (max-width: 760px) {
+   .rules-btn {
+     right: 14px;
+@@ -2639,6 +2652,178 @@ body.is-playing .header {
+   color: var(--gold);
+ }
+ 
++/* Historique à onglets (hud.js) : enchères, cartes tombées, donnes. */
++.cg-tabs {
++  display: flex;
++  gap: 6px;
++  margin-bottom: 12px;
++}
++.cg-tab {
++  flex: 1;
++  min-height: 44px;
++  padding: 0 10px;
++  border: 1px solid var(--line);
++  border-radius: 10px;
++  background: none;
++  color: var(--muted);
++  font-size: 13px;
++  font-weight: 700;
++  cursor: pointer;
++  transition:
++    border-color 0.15s,
++    color 0.15s,
++    transform 0.15s;
++}
++.cg-tab[aria-pressed="true"] {
++  border-color: var(--gold);
++  color: var(--gold);
++}
++.cg-tab:focus-visible {
++  outline: 3px solid var(--gold);
++  outline-offset: 2px;
++}
++.cg-tab:active {
++  transform: scale(0.97);
++  transition-duration: 80ms;
++}
++@media (hover: hover) {
++  .cg-tab:hover {
++    border-color: #ffffff66;
++  }
++}
++.cg-panel h4 {
++  margin: 14px 0 6px;
++  color: var(--muted);
++  font: 700 11px Consolas, monospace;
++  letter-spacing: 0.1em;
++  text-transform: uppercase;
++}
++/* Enchères : une colonne par siège, une ligne par tour. */
++.cg-bids {
++  width: 100%;
++  border-collapse: collapse;
++  table-layout: fixed;
++  font-size: 13px;
++  font-variant-numeric: tabular-nums;
++}
++.cg-bids th {
++  padding: 4px 4px 8px;
++  color: var(--muted);
++  font-size: 12px;
++  font-weight: 700;
++  text-align: center;
++}
++.cg-bids th.is-us {
++  color: var(--green);
++}
++.cg-bids th small {
++  display: block;
++  overflow: hidden;
++  font-size: 11px;
++  font-weight: 400;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++.cg-bids td {
++  padding: 7px 4px;
++  border-top: 1px solid var(--line);
++  text-align: center;
++}
++.cg-bids td.is-pass {
++  color: var(--muted);
++}
++.cg-bids td.is-lead,
++.cg-bids td.is-wait {
++  color: var(--gold);
++  font-weight: 800;
++}
++.cg-bids-note {
++  margin: 10px 0 0;
++  color: var(--muted);
++  font-size: 13px;
++}
++/* Cartes tombées : 4 couleurs de 8 cartes, de la plus forte à la plus faible. */
++.cg-fallen {
++  display: grid;
++  gap: 6px;
++  margin: 0;
++  padding: 0;
++  list-style: none;
++}
++.cg-fallen-row {
++  display: grid;
++  grid-template-columns: 48px 1fr;
++  align-items: center;
++  gap: 6px;
++}
++.cg-fallen-suit {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  font-size: 20px;
++  line-height: 1;
++}
++.cg-fallen-suit small {
++  margin-top: 3px;
++  color: var(--gold);
++  font: 700 10px Consolas, monospace;
++  letter-spacing: 0.1em;
++  text-transform: uppercase;
++}
++.cg-fallen-row ol {
++  display: grid;
++  grid-template-columns: repeat(8, 1fr);
++  gap: 3px;
++  margin: 0;
++  padding: 0;
++  list-style: none;
++}
++.cg-fallen-row ol li {
++  padding: 6px 0;
++  border: 1px solid var(--line);
++  border-radius: 6px;
++  font-size: 13px;
++  font-weight: 700;
++  text-align: center;
++}
++.cg-fallen-row.is-trump ol li {
++  background: #f4c60014;
++}
++.cg-fallen-row ol li.is-fallen,
++.cg-legend .is-fallen {
++  color: var(--muted);
++  text-decoration: line-through;
++}
++.cg-fallen-row ol li.is-fallen {
++  border-style: dashed;
++  opacity: 0.65;
++}
++.cg-fallen-row ol li.is-mine,
++.cg-legend .is-mine {
++  border-color: var(--gold);
++  color: var(--gold);
++}
++.cg-fallen-sum {
++  margin: 0 0 10px;
++  font-size: 13px;
++}
++.cg-legend {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 4px 14px;
++  margin: 10px 0 0;
++  color: var(--muted);
++  font-size: 12px;
++}
++.cg-signals {
++  display: grid;
++  gap: 4px;
++  margin: 0;
++  padding: 0;
++  list-style: none;
++  font-size: 13px;
++}
++
+ /* Résultat de la donne, au centre de la table */
+ .cg-banner {
+   position: absolute;
+@@ -2809,6 +2994,91 @@ body.is-playing .header {
+   border-color: #ff8a8a;
+   color: #ff8a8a;
+ }
++/* « Coincher » pendant son armement (COINCHE_ARM_MS, hud.js) : grisé, une
++   jauge se remplit ; un clic trop tôt le secoue. */
++.cg-btn.is-arming {
++  position: relative;
++  overflow: hidden;
++  border-color: #ff8a8a66;
++  color: #ff8a8a99;
++  cursor: not-allowed;
++}
++.cg-btn.is-arming::after {
++  content: "";
++  position: absolute;
++  inset: 0;
++  background: #ff8a8a33;
++  transform-origin: left;
++  animation: cg-arm var(--arm-ms, 600ms) linear var(--arm-at, 0ms) both;
++}
++@keyframes cg-arm {
++  from {
++    transform: scaleX(0);
++  }
++}
++.cg-btn.is-nope {
++  animation: cg-nope 0.3s var(--ease-out);
++}
++@keyframes cg-nope {
++  20%,
++  60% {
++    transform: translateX(-5px);
++  }
++  40%,
++  80% {
++    transform: translateX(5px);
++  }
++}
++/* Mouvement réduit : pas de jauge animée (elle s'afficherait pleine d'un
++   coup), le bouton reste grisé ; le clic trop tôt teinte le fond. */
++@media (prefers-reduced-motion: reduce) {
++  .cg-btn.is-arming::after {
++    display: none;
++  }
++  .cg-btn.is-nope {
++    animation: none;
++    background: #ff8a8a40;
++  }
++}
++/* Décompte de la fenêtre de surcoinche (DURATION_MS.SURCOINCHE). */
++.cg-count {
++  display: flex;
++  flex-basis: 100%;
++  align-items: center;
++  gap: 10px;
++}
++.cg-count-bar {
++  flex: 1;
++  height: 6px;
++  overflow: hidden;
++  border-radius: 999px;
++  background: #ffffff1f;
++}
++.cg-count-bar i {
++  display: block;
++  height: 100%;
++  background: var(--gold);
++  transform-origin: left;
++  transition: transform 0.2s linear;
++}
++.cg-count b {
++  min-width: 3ch;
++  color: var(--muted);
++  font-size: 13px;
++  text-align: right;
++  font-variant-numeric: tabular-nums;
++}
++.cg-count.is-low .cg-count-bar i {
++  background: #ff8a8a;
++}
++.cg-count.is-low b {
++  color: #ff8a8a;
++}
++@media (prefers-reduced-motion: reduce) {
++  .cg-count-bar i {
++    transition: none;
++  }
++}
+ .cg-hint {
+   flex-basis: 100%;
+   margin: 0;
+@@ -3011,6 +3281,20 @@ body.is-playing .header {
+   pointer-events: none;
+   animation: cg-toast 2.4s ease both;
+ }
++/* Remarque discrète (signal lu dans ta défausse) : plus bas, plus petite, plus longue. */
++.cg-toast.is-note {
++  top: 14%;
++  width: max-content;
++  max-width: calc(100vw - 32px);
++  padding: 8px 16px;
++  border: 1px solid #a98bff;
++  background: #120d20f2;
++  color: var(--text);
++  font-size: 14px;
++  font-weight: 700;
++  text-align: center;
++  animation-duration: 3.6s;
++}
+ @keyframes cg-toast {
+   0% { opacity: 0; transform: scale(0.8); }
+   12% { opacity: 1; transform: scale(1.05); }
+diff --git a/site/jeux/coinche/index.html b/site/jeux/coinche/index.html
+index 40b2721..de059ad 100644
+--- a/site/jeux/coinche/index.html
++++ b/site/jeux/coinche/index.html
+@@ -146,6 +146,123 @@
+         Une place quittée en cours de partie est reprise par l’ordinateur, et
+         l’on peut revenir s’y asseoir.
+       </p>
++      <!-- BROUILLON À VALIDER (audit des bots, proposition P1). Décrit les bots
++           tels qu'ils seront APRÈS les corrections du plan : signaux (appel
++           et refus), conventions d'entame protégées, remontée stricte,
++           barème d'ouverture (palier du barème annoncé tel quel). Ne retirer
++           « hidden » qu'une fois ces corrections fusionnées et les passages
++           « [à confirmer] » tranchés, sinon la page décrit un système que
++           les bots ne respectent pas (LIS-10). -->
++      <div class="rules-bots" hidden>
++        <h3>Comment jouent les bots</h3>
++        <p class="rules-draft">
++          Brouillon à valider : à publier seulement quand les bots jouent
++          comme ceci.
++        </p>
++        <p>
++          Les bots jouent tous avec le même système d’annonces et relisent les
++          tiennes avec la même grille. Ils ne voient jamais ta main : tout ce
++          qu’ils savent de toi vient de tes annonces et de tes cartes jouées.
++        </p>
++        <h3>Ouvrir : le chiffre est un code</h3>
++        <ul>
++          <li>
++            <b>80</b> : une tenue d’atout correcte (le Valet troisième, ou le 9
++            et l’As troisièmes, ou l’As et le 10 quatrièmes), en général avec un
++            As à côté. Ce n’est pas une promesse de 80 points. En 4e position,
++            après trois passes, un 80 peut être léger [à confirmer : au moins
++            deux ou trois atouts].
++          </li>
++          <li>
++            <b>90</b> : le Valet et le 9 d’atout, à trois atouts au moins. La
++            tenue est garantie.
++          </li>
++          <li>
++            <b>100</b> : une longueur. Quatre atouts avec le Valet ou le 9, plus
++            l’As ou le 10, ou cinq atouts avec la belote et un As. Un 100 n’a
++            jamais le Valet et le 9 ensemble : il n’est pas « plus fort » que le
++            90.
++          </li>
++          <li>
++            <b>110, 120, 130</b> : le Valet et le 9 d’atout, avec 3, 2 ou 1
++            « fausses cartes » (perdantes hors atout). Plus le chiffre monte,
++            moins il en reste.
++          </li>
++          <li><b>160 et capot</b> : une main presque imbattable.</li>
++        </ul>
++        <h3>Soutenir : la remontée</h3>
++        <p>
++          Quand ton partenaire a ouvert, le bot compte ce que sa main ajoute et
++          annonce l’ouverture plus ce total (160 au plus), une seule fois par
++          donne.
++        </p>
++        <ul>
++          <li>
++            +10 par As hors atout, +20 le Valet d’atout, +10 le 9 d’atout (avec
++            au moins deux atouts), +20 la belote. Sans atout, il ne remonte pas.
++          </li>
++          <li>
++            Sa relance se lit à la lettre : « +20 » veut dire 20 points, qui
++            peuvent être le Valet, deux As ou la belote.
++          </li>
++          <li>
++            Capot : si ses As dépassent les fausses cartes de ton ouverture
++            (110 : 3, 120 : 2, 130 : 1), il annonce le capot.
++          </li>
++          <li>
++            Face à une intervention adverse, il peut monter au minimum quand sa
++            main vaut ce minimum moins 10 (deux fois par camp et par donne au
++            plus).
++          </li>
++          <li>
++            Il lit ton 90 ou ton 110 et plus comme « j’ai le Valet » ; une
++            simple relance ne le dit pas.
++          </li>
++        </ul>
++        <h3>Coincher</h3>
++        <p>
++          Un bot coinche quand ses calculs, faits sur des mains possibles
++          compatibles avec les annonces, donnent un contrat qui chute presque
++          toujours [à confirmer : seuil exact]. Une coinche ne promet donc pas
++          de tenue d’atout. Sa surcoinche suit le même calcul, sans hasard : la
++          même main donne la même décision.
++        </p>
++        <h3>Appel et refus</h3>
++        <ul>
++          <li>
++            <b>Appel</b> : un 7 ou un 8 défaussé volontairement (quand il avait
++            le choix entre plusieurs couleurs), avant le 4e pli, dans une
++            couleur dont l’As n’est pas tombé. Il veut dire « j’ai l’As, rejoue
++            cette couleur ».
++          </li>
++          <li>
++            <b>Refus</b> : un Roi ou une Dame défaussé de la même façon : « ne
++            joue pas cette couleur ».
++          </li>
++          <li>
++            Le dernier signal remplace le précédent. Le 9, le 10, le Valet et
++            l’As ne disent rien.
++          </li>
++          <li>
++            Les bots lisent tes défausses de la même façon. Une pastille
++            « Appel ♠ » ou « Refus ♦ » s’affiche près du joueur qui vient de
++            signaler ; l’onglet « Cartes » de l’historique les garde.
++          </li>
++        </ul>
++        <h3>Entamer</h3>
++        <ul>
++          <li>
++            Quand son camp a pris : avec le Valet et le 9, il tire d’abord les
++            atouts, puis rejoue la couleur que son partenaire a appelée.
++          </li>
++          <li>
++            En défense : il n’entame pas à l’atout, encaisse ses As (sauf un As
++            dont le 10 est encore dehors, à la première entame), rejoue la
++            couleur appelée ou annoncée par son partenaire, et entame un
++            singleton pour couper ensuite.
++          </li>
++        </ul>
++      </div>
+     </div>
+     <header class="header">
+       <div class="header-inner">
+diff --git a/src/coinche/client/hud.js b/src/coinche/client/hud.js
+index b754e1d..086f5ca 100644
+--- a/src/coinche/client/hud.js
++++ b/src/coinche/client/hud.js
+@@ -8,20 +8,26 @@
+ import {
+   ALLOWED_BIDS,
+   BELOTE_BONUS,
++  DURATION_MS,
+   GENERALE,
+   GENERALE_BELOTE,
++  PLAIN_FORCE,
++  RANKS,
+   SUITS,
+   SUIT_NAME,
+   SUIT_SYMBOL,
++  TRUMP_FORCE,
+   cardLabel,
+   computeLegal,
+   teamOf,
+ } from "../engine.js";
+ import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
++import { newSignals, readSignals } from "./signaux.js";
+ 
+ const RED_SUITS = new Set(["H", "D"]);
+ const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
+ const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
++const RANK_SHORT = { J: "V", Q: "D", K: "R" }; // Valet, Dame, Roi (les autres : tels quels)
+ const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
+ const FLASH = {
+   coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1100 },
+@@ -77,6 +83,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+     bidMin: undefined,
+     hint: "",
+     panel: null, // "history" | "trick" | null
++    tab: null, // onglet de l'historique : "bids" | "cards" | "donnes" (null : enchères)
+   };
+   let G = null;
+   const flashBlobs = {};
+@@ -98,6 +105,23 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+       ? seatName(s)
+       : `${G.seats[s].name} (${compass(s)})`;
+ 
++  // Signal lu dans une défausse (voir signaux.js), dit comme les bots le lisent.
++  const signalWord = ({ kind, suit }) =>
++    `${kind === "appel" ? "appel" : "refus"} ${SUIT_NAME[suit]}`;
++  const signalSpeech = (s) =>
++    s.seat === me
++      ? `Les bots lisent ta défausse comme un ${signalWord(s)}.`
++      : `${who(s.seat)} : ${signalWord(s)}.`;
++  function signalNote(s) {
++    const played = G.playedBy[s.seat];
++    const card = played[played.length - 1];
++    const what =
++      card?.suit === s.suit
++        ? `ton ${RANK_SHORT[card.rank] ?? card.rank}${SUIT_SYMBOL[s.suit]}`
++        : "ta défausse";
++    return `Les bots lisent ${what} comme un ${s.kind === "appel" ? "appel" : "refus"}`;
++  }
++
+   // ---- Annonces pour lecteur d'écran --------------------------------------
+ 
+   function announce(prev) {
+@@ -113,13 +137,19 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+             : `${who(e.seat)} : passe`,
+         );
+     }
+-    if (G.contract?.coinche && !prev?.contract?.coinche) out.push("Coinché !");
++    if (G.contract?.coinche && !prev?.contract?.coinche)
++      out.push(
++        !spectator && teamOf(me) === G.contract.equipePreneur
++          ? `Coinché ! Tu as ${DURATION_MS.SURCOINCHE / 1000} secondes pour surcoincher.`
++          : "Coinché !",
++      );
+     if (G.contract?.surcoinche && !prev?.contract?.surcoinche)
+       out.push("Surcoinché !");
+     if (same)
+       for (const s of [0, 1, 2, 3])
+         for (const c of G.playedBy[s].slice(prev.playedBy[s].length))
+           out.push(`${who(s)} : ${cardLabel(c)}`);
++    for (const s of newSignals(G, prev)) out.push(signalSpeech(s));
+     if (G.belote.beloteDeclared && !(same && prev.belote.beloteDeclared))
+       out.push("Belote !");
+     if (G.belote.rebeloteDeclared && !(same && prev.belote.rebeloteDeclared))
+@@ -176,14 +206,15 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+   }
+ 
+   // Bandeau bref en haut de la table (belote, rebelote) ; le lecteur d'écran
+-  // a déjà l'annonce (announce).
+-  function toast(text) {
++  // a déjà l'annonce (announce). `note` : remarque plus discrète et plus
++  // longue à lire (signal lu dans ta défausse).
++  function toast(text, note = false) {
+     const el = document.createElement("div");
+-    el.className = "cg-toast";
++    el.className = note ? "cg-toast is-note" : "cg-toast";
+     el.setAttribute("aria-hidden", "true");
+     el.textContent = text;
+     root.append(el);
+-    setTimeout(() => el.remove(), 2400);
++    setTimeout(() => el.remove(), note ? 3600 : 2400);
+   }
+ 
+   // ---- Barre de jeu ------------------------------------------------------------
+@@ -234,25 +265,141 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+     </div>`;
+   }
+ 
++  // Historique à trois onglets : les enchères de la donne (G.bidLog), les
++  // cartes tombées (G.playedBy) et les donnes terminées (G.history).
++  const TABS = [
++    ["bids", "Enchères"],
++    ["cards", "Cartes"],
++    ["donnes", "Donnes"],
++  ];
++
++  // Une colonne par siège (toi en premier), une ligne par tour de table,
++  // passes comprises ; la dernière annonce, celle du contrat, est en or.
++  // Le coinche et la surcoinche ne sont pas dans bidLog : ils suivent en note.
++  function renderBids() {
++    const cols = [0, 1, 2, 3].map((p) => (anchor + p) % 4);
++    const waiting = G.phase === "ENCHERES" ? { seat: G.joueurActif, wait: true } : null;
++    if (!G.bidLog.length && !waiting) return `<p class="cg-empty">Personne n’a encore parlé.</p>`;
++    let lead = null;
++    for (const e of G.bidLog) if (e.montant) lead = e;
++    const rows = [];
++    let prevCol = 4;
++    for (const e of waiting ? [...G.bidLog, waiting] : G.bidLog) {
++      const c = cols.indexOf(e.seat);
++      if (c <= prevCol) rows.push([null, null, null, null]);
++      rows[rows.length - 1][c] = e;
++      prevCol = c;
++    }
++    const cell = (e) =>
++      !e
++        ? "<td></td>"
++        : e.wait
++          ? '<td class="is-wait" aria-hidden="true">…</td>'
++          : !e.montant
++            ? '<td class="is-pass">Passe</td>'
++            : `<td${e === lead ? ' class="is-lead"' : ""}>${bidReadout(e.montant)} ${suitSpan(e.atout)}</td>`;
++    const head = cols
++      .map((s) => {
++        const note = [
++          s === me
++            ? "toi"
++            : !spectator && s === (me + 2) % 4
++              ? "partenaire"
++              : G.seats[s].type === "human"
++                ? G.seats[s].name
++                : "",
++          s === G.donneur ? "donneur" : "",
++        ]
++          .filter(Boolean)
++          .join(" · ");
++        return `<th scope="col"${teamOf(s) === ours ? ' class="is-us"' : ""}>${compass(s)}${note ? `<small>${esc(note)}</small>` : ""}</th>`;
++      })
++      .join("");
++    const c = G.contract;
++    const verb = (s, v) => (s === me ? `Tu ${v}s` : `${esc(seatName(s))} ${v}`);
++    const calls = [];
++    if (c?.coinche && c.coincheur != null) calls.push(verb(c.coincheur, "coinche"));
++    if (c?.surcoinche && c.surcoincheur != null) calls.push(verb(c.surcoincheur, "surcoinche"));
++    return `<table class="cg-bids" aria-label="Enchères de la donne">
++      <thead><tr>${head}</tr></thead>
++      <tbody>${rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody>
++    </table>${calls.length ? `<p class="cg-bids-note">${calls.join(" · ")}</p>` : ""}`;
++  }
++
++  // Les 32 cartes par couleur, l'atout en premier, de la plus forte à la
++  // plus faible : barrées une fois tombées, cerclées d'or si elles sont dans
++  // ta main. Dessous, ce que les bots ont lu dans les défausses (appel,
++  // refus), les tiennes comprises.
++  function renderCards() {
++    const atout = G.contract?.atout;
++    const fallen = new Set();
++    for (const list of G.playedBy) for (const c of list) fallen.add(c.id);
++    const mine = new Set(
++      ((me >= 0 && G.hands[me]) || []).filter(Boolean).map((c) => c.id),
++    );
++    const force = (s) => (s === atout ? TRUMP_FORCE : PLAIN_FORCE);
++    const rows = (atout ? [atout, ...SUITS.filter((s) => s !== atout)] : SUITS)
++      .map((s) => {
++        const cells = RANKS.slice()
++          .sort((a, b) => force(s)[b] - force(s)[a])
++          .map((r) => {
++            const st = fallen.has(r + s) ? "fallen" : mine.has(r + s) ? "mine" : "out";
++            const label = `${cardLabel({ rank: r, suit: s })} : ${{ fallen: "tombé", mine: "dans ta main", out: "pas encore tombé" }[st]}`;
++            return `<li class="is-${st}" aria-label="${esc(label)}">${RANK_SHORT[r] ?? r}</li>`;
++          })
++          .join("");
++        return `<li class="cg-fallen-row${s === atout ? " is-trump" : ""}"><span class="cg-fallen-suit">${suitSpan(s)}${s === atout ? "<small>atout</small>" : ""}</span><ol>${cells}</ol></li>`;
++      })
++      .join("");
++    let sum = "";
++    if (atout) {
++      const left = RANKS.filter((r) => !fallen.has(r + atout) && !mine.has(r + atout)).length;
++      sum = `<p class="cg-fallen-sum">${suitSpan(atout)} ${left ? `${left} atout${left > 1 ? "s" : ""} encore chez les autres` : "Plus d’atout chez les autres"}</p>`;
++    }
++    const sigs = readSignals(G);
++    return `${sum}<ul class="cg-fallen">${rows}</ul>
++      <p class="cg-legend">${me >= 0 ? '<span class="is-mine">dans ta main</span>' : ""}<span class="is-fallen">tombée</span><span>pas encore jouée</span></p>
++      <h4>Lu dans les défausses</h4>
++      ${
++        sigs.length
++          ? `<ul class="cg-signals">${sigs.map((s) => `<li><b>${esc(seatName(s.seat))}</b> : ${s.kind === "appel" ? "appel" : "refus"} ${suitSpan(s.suit)}</li>`).join("")}</ul>`
++          : '<p class="cg-empty">Aucun appel ni refus pour l’instant.</p>'
++      }`;
++  }
++
++  function renderDonnes() {
++    return `<div class="cg-panel-scores"><span>${US} <b>${G.scores[ours]}</b></span><span>${THEM} <b>${G.scores[1 - ours]}</b></span></div>
++      ${
++        G.history.length
++          ? `<ol class="cg-history">${G.history
++              .map(
++                (h) => `<li class="${h.reussi ? "ok" : "ko"}">
++          <span>#${h.donne}</span>
++          <span>${bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
++          <span>${esc(seatName(h.preneur))}</span>
++          <span>${h.reussi ? "réussi" : "chuté"} · ${h.pointsFaits} pts</span>
++        </li>`,
++              )
++              .join("")}</ol>`
++          : `<p class="cg-empty">Aucune donne terminée pour l’instant.</p>`
++      }`;
++  }
++
+   function renderPanel() {
+     if (ui.panel === "history") {
+-      const us = ours;
+-      return `<div class="cg-panel" role="region" aria-label="Historique des donnes">
+-        <div class="cg-panel-scores"><span>${US} <b>${G.scores[us]}</b></span><span>${THEM} <b>${G.scores[1 - us]}</b></span></div>
+-        ${
+-          G.history.length
+-            ? `<ol class="cg-history">${G.history
+-                .map(
+-                  (h) => `<li class="${h.reussi ? "ok" : "ko"}">
+-            <span>#${h.donne}</span>
+-            <span>${bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
+-            <span>${esc(seatName(h.preneur))}</span>
+-            <span>${h.reussi ? "réussi" : "chuté"} · ${h.pointsFaits} pts</span>
+-          </li>`,
+-                )
+-                .join("")}</ol>`
+-            : `<p class="cg-empty">Aucune donne terminée pour l’instant.</p>`
+-        }
++      const tab = ui.tab ?? "bids";
++      const name = {
++        bids: "Historique des enchères",
++        cards: "Cartes tombées",
++        donnes: "Historique des donnes",
++      }[tab];
++      const body = { bids: renderBids, cards: renderCards, donnes: renderDonnes }[tab]();
++      return `<div class="cg-panel" role="region" aria-label="${name}">
++        <div class="cg-tabs" role="group" aria-label="Contenu de l’historique">${TABS.map(
++          ([k, label]) =>
++            `<button type="button" class="cg-tab" data-tab="${k}" data-focus-key="tab-${k}" aria-pressed="${k === tab}">${label}</button>`,
++        ).join("")}</div>
++        ${body}
+       </div>`;
+     }
+     if (ui.panel === "trick" && G.lastTrick) {
+@@ -288,18 +435,32 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+       G.phase === "SURCOINCHE" &&
+       !G.contract.surcoinche &&
+       teamOf(me) === G.contract.equipePreneur;
+-    const coinche = canCoinche
+-      ? '<button type="button" class="cg-btn is-danger" data-action="coincher" data-focus-key="coincher">Coincher</button>'
+-      : "";
+     // Apparition du bouton pour ce contrat : un clic trop rapide après (doigt
+     // encore sur « Annoncer » ou « Passer ») ne coinche pas par erreur.
+     if (canCoinche && ui.coincheFor !== G.contract.id) {
+       ui.coincheFor = G.contract.id;
+       ui.coincheShownAt = Date.now();
+     }
+-    if (canSurcoinche)
++    // Pendant l'armement, le bouton est grisé et une jauge se remplit (reprise
++    // là où elle en est si la barre est redessinée) ; un clic trop tôt secoue le
++    // bouton (voir nope) au lieu d'être ignoré en silence.
++    const armLeft = canCoinche ? COINCHE_ARM_MS - (Date.now() - ui.coincheShownAt) : 0;
++    clearTimeout(ui.armTimer);
++    if (armLeft > 0) ui.armTimer = setTimeout(() => G && render(), armLeft + 30);
++    const coinche = canCoinche
++      ? `<button type="button" class="cg-btn is-danger${armLeft > 0 ? " is-arming" : ""}" data-action="coincher" data-focus-key="coincher"${armLeft > 0 ? ` aria-disabled="true" style="--arm-ms:${COINCHE_ARM_MS}ms;--arm-at:${armLeft - COINCHE_ARM_MS}ms"` : ""}>Coincher</button>`
++      : "";
++    if (canSurcoinche) {
++      // La fenêtre dure DURATION_MS.SURCOINCHE ; comptée ici dès qu'elle
++      // s'ouvre (une fenêtre par G.tour), affichée par tickCount.
++      if (ui.countTour !== G.tour) {
++        ui.countTour = G.tour;
++        ui.countAt = Date.now();
++      }
+       return `<div class="cg-bidbar"><span class="cg-prompt">Vous êtes coinchés</span>
+-        <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button></div>`;
++        <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button>
++        <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${DURATION_MS.SURCOINCHE / 1000} s</b></div></div>`;
++    }
+     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
+       // Seul, sur le côté : jamais à la place d'« Annoncer » ou « Passer ».
+       return coinche ? `<div class="cg-bidbar is-coinche">${coinche}</div>` : "";
+@@ -334,6 +495,27 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+     </div>`;
+   }
+ 
++  // Décompte de la surcoinche : texte et jauge retouchés en place (cinq fois
++  // par seconde), sans redessiner la barre.
++  function tickCount() {
++    const el = G?.phase === "SURCOINCHE" && root.querySelector(".cg-count");
++    if (!el) return;
++    const left = Math.max(0, DURATION_MS.SURCOINCHE - (Date.now() - ui.countAt));
++    el.querySelector("b").textContent = `${Math.ceil(left / 1000)} s`;
++    el.querySelector("i").style.transform = `scaleX(${left / DURATION_MS.SURCOINCHE})`;
++    el.classList.toggle("is-low", left < 3000);
++  }
++
++  // Clic sur « Coincher » pendant l'armement : le bouton le dit (secousse, ou
++  // simple éclair en mouvement réduit), et le lecteur d'écran aussi.
++  function nope(btn) {
++    btn.classList.remove("is-nope");
++    void btn.offsetWidth; // relance l'animation
++    btn.classList.add("is-nope");
++    setTimeout(() => btn.classList.remove("is-nope"), 400);
++    announcer.textContent = "Coincher : un instant, le bouton s’arme.";
++  }
++
+   // ---- Résultat ------------------------------------------------------------------
+ 
+   function renderBanner() {
+@@ -408,15 +590,19 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+       if (painted[i] === html) return;
+       // Même barre, contenu retouché (montant choisi) : pas de nouvelle
+       // apparition, elle ne sautille pas à chaque toucher.
+-      // (Barre d'enchères seulement : le résultat de la donne, lui, garde son
+-      // délai d'apparition.)
++      // Idem pour un panneau dont le contenu change (enchère ajoutée à
++      // l'historique, onglet changé), qui garde en plus son défilement.
++      // (Le résultat de la donne, lui, garde son délai d'apparition.)
+       const same =
+-        html.includes("cg-bidbar") &&
++        (html.includes("cg-bidbar") || html.includes("cg-panel")) &&
+         painted[i] &&
+         painted[i].slice(0, 40) === html.slice(0, 40);
++      const scroll = same ? slots[i].firstElementChild?.scrollTop : 0;
+       slots[i].innerHTML = html;
+-      if (same && slots[i].firstElementChild)
++      if (same && slots[i].firstElementChild) {
+         slots[i].firstElementChild.style.animation = "none";
++        slots[i].firstElementChild.scrollTop = scroll;
++      }
+       painted[i] = html;
+     });
+     if (focusKey && !root.contains(document.activeElement))
+@@ -431,6 +617,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+       renderBidbar(),
+       renderHandButtons(),
+     ]);
++    tickCount();
+   }
+ 
+   // ---- Événements ----------------------------------------------------------------
+@@ -452,6 +639,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+       render();
+       return;
+     }
++    if (btn.dataset.tab) {
++      ui.tab = btn.dataset.tab;
++      render();
++      return;
++    }
+     if (btn.dataset.suit) {
+       ui.suit = btn.dataset.suit;
+       ui.hint = "";
+@@ -471,6 +663,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+     } else if (action === "passer") onAction({ type: "PASSER" });
+     else if (action === "coincher") {
+       if (Date.now() - (ui.coincheShownAt || 0) >= COINCHE_ARM_MS) onAction({ type: "COINCHER" });
++      else nope(btn);
+     }
+     else if (action === "surcoincher") onAction({ type: "SURCOINCHER" });
+     else if (action === "toggle-history" || action === "toggle-trick") {
+@@ -490,6 +683,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+     }
+   });
+ 
++  const countTimer = setInterval(tickCount, 200);
++
+   preloadFlash();
+ 
+   // Bouton en bas à droite : il ouvre la palette ; une émoticône ou un
+@@ -643,6 +838,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+         if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast("Belote !");
+         if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)
+           toast(`Rebelote ! +${BELOTE_BONUS}`);
++        // Ta défausse vient d'être lue comme un appel ou un refus : tu le sais.
++        for (const s of newSignals(G, prev)) if (s.seat === me) toast(signalNote(s), true);
+       }
+       // Joueur parti en cours de partie : un bot prend sa place.
+       for (const s of [0, 1, 2, 3])
+@@ -654,6 +851,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
+       render();
+     },
+     destroy() {
++      clearInterval(countTimer);
++      clearTimeout(ui.armTimer);
+       root.innerHTML = "";
+       announcer.textContent = "";
+       G = null;
+diff --git a/src/coinche/client/signaux.js b/src/coinche/client/signaux.js
+new file mode 100644
+index 0000000..6af4427
+--- /dev/null
++++ b/src/coinche/client/signaux.js
+@@ -0,0 +1,35 @@
++// Signaux de défausse (appel, refus) tels que le moteur les a lus, pour
++// l'affichage (hud.js, table-scene.js). Ce module ne décide de rien : il
++// recopie G.appel[siège] et G.refus[siège]. Il ne suppose que deux choses :
++// ces champs sont indexés par siège et désignent des couleurs (clés d'un
++// objet { S: true }, tableau, chaîne ou { suit }). Si le moteur change ce
++// qu'il lit (autre règle, autre forme), l'affichage suit sans y toucher.
++import { SUITS } from "../engine.js";
++
++function suitsOf(v) {
++  if (!v) return [];
++  if (typeof v === "string") return SUITS.includes(v) ? [v] : [];
++  if (Array.isArray(v)) return v.flatMap(suitsOf);
++  if (typeof v === "object") return v.suit ? suitsOf(v.suit) : SUITS.filter((s) => v[s]);
++  return [];
++}
++
++// Tous les signaux lus dans la donne : [{ seat, kind, suit }], kind valant
++// le nom du champ du moteur ("appel" ou "refus").
++export function readSignals(G) {
++  const out = [];
++  for (const kind of ["appel", "refus"])
++    for (let seat = 0; seat < 4; seat++)
++      for (const suit of suitsOf(G?.[kind]?.[seat])) out.push({ seat, kind, suit });
++  return out;
++}
++
++// Ceux que cet état a de plus que le précédent, dans la même donne : un
++// signal qui en remplace un autre compte comme nouveau, un signal effacé
++// ne se montre pas.
++export function newSignals(G, prev) {
++  if (!prev || prev.donneNumero !== G.donneNumero) return [];
++  const key = (s) => `${s.seat}${s.kind}${s.suit}`;
++  const had = new Set(readSignals(prev).map(key));
++  return readSignals(G).filter((s) => !had.has(key(s)));
++}
+diff --git a/src/coinche/client/table-scene.js b/src/coinche/client/table-scene.js
+index 2d0574e..35ce15c 100644
+--- a/src/coinche/client/table-scene.js
++++ b/src/coinche/client/table-scene.js
+@@ -27,6 +27,7 @@ import {
+ } from "../engine.js";
+ import { trickPause } from "../host.js";
+ import { EMOTES } from "../../online/tables.js";
++import { newSignals } from "./signaux.js";
+ 
+ const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
+ const CARD_RATIO = CARD_PX.h / CARD_PX.w;
+@@ -46,6 +47,7 @@ const COLORS = {
+   avatar: 0x3c3489,
+   avatarMe: 0x26215c,
+   bubble: 0xf7f4fc,
++  signal: 0xa98bff, // appel, refus : violet clair
+ };
+ const FONT = 'system-ui, "Segoe UI", sans-serif';
+ 
+@@ -868,6 +870,9 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
+     }
+     placeHand(newDonne);
+     drawSeats(false);
++    // Appel, refus lus dans une défausse : pastille près du siège (la tienne
++    // est dite par le HUD, en note sous la barre de jeu).
++    for (const s of newSignals(G, prev)) if (s.seat !== me) showSignal(s);
+     if (!prev || reduced) return;
+     // Coinche, surcoinche : la table tremble.
+     const c = G.contract;
+@@ -884,6 +889,39 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
+     }
+   }
+ 
++  // Pastille « Appel ♠ » / « Refus ♦ » près d'un siège, le temps de la lire.
++  // Discrète : petite, violet clair, sans rebond ; en mouvement réduit elle
++  // apparaît d'un coup mais reste aussi longtemps.
++  function showSignal({ seat, kind, suit }) {
++    if (!scene || !L) return;
++    const { x, y } = L.seat[posOf(seat)];
++    const label = txt(0, 0, `${kind === "appel" ? "Appel" : "Refus"} ${SUIT_SYMBOL[suit]}`, {
++      fontSize: "13px",
++      fontStyle: "bold",
++      color: COLORS.ink,
++    }).setOrigin(0.5);
++    const w = label.width + 16;
++    const h = label.height + 8;
++    const bg = scene.add.graphics();
++    bg.fillStyle(0x000000, 0.3)
++      .fillRoundedRect(-w / 2, -h / 2 + 3, w, h, h / 2)
++      .fillStyle(COLORS.signal, 1)
++      .fillRoundedRect(-w / 2, -h / 2, w, h, h / 2);
++    // Sous le nom pour les sièges du haut, au-dessus de l'avatar sinon.
++    const below = y < L.cy;
++    const bx = Phaser.Math.Clamp(x, w / 2 + 8, parent.clientWidth - w / 2 - 8);
++    const by = below ? y + L.r + h / 2 + 22 : y - L.r - h / 2 - 8;
++    const box = scene.add.container(bx, by, [bg, label]).setDepth(84).setAlpha(0);
++    scene.tweens.chain({
++      targets: box,
++      tweens: [
++        { alpha: 1, duration: dur(150), ease: "Quad.easeOut" },
++        { alpha: 0, delay: 2600, duration: dur(300) },
++      ],
++      onComplete: () => box.destroy(),
++    });
++  }
++
+   // Gerbe d'étincelles dorées et vertes (système de particules de Phaser).
+   function burst(x, y, count, power = 1) {
+     if (reduced) return;
