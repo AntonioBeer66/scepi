@@ -216,8 +216,9 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
 }
 
 // ---- ZON-3 : carte jouée d'office, aucun signal ------------------------------------
-// Siège 2 sans pique et sans atout défausse son seul trèfle (8♣, « appel » s'il
-// le joue volontairement). Témoin : le même coup joué par le joueur.
+// Siège 2 sans pique et sans atout défausse le 8♣ (« appel » s'il le joue
+// volontairement : il pouvait aussi jeter le 7♦). Témoin : le même coup joué
+// par le joueur.
 {
   const jeu = () => {
     const G = createGame(seatsOf("human", "human", "human", "human"), rng(5));
@@ -227,7 +228,7 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
     assert.strictEqual(G.phase, "JEU");
     G.pliCourant = [{ siege: 1, carte: card("AS") }];
     G.joueurActif = 2;
-    G.hands[2] = [card("8C")];
+    G.hands[2] = [card("8C"), card("7D")];
     return G;
   };
   const voulu = jeu();
@@ -254,7 +255,7 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   ok(G.bidLog[0].type === "human", "MON-4 : le type est enregistré avec l'enchère");
   const avant = bots.seatWeight(G, s, sansCoeur);
   G.seats[s] = { type: "bot", name: "Bob (bot)" }; // devenirBot
-  ok(bots.seatWeight(G, s, sansCoeur) === avant && avant === 0.15, "MON-4 : un humain devenu bot reste lu comme un humain");
+  ok(bots.seatWeight(G, s, sansCoeur) === avant && avant === 0.05, "MON-4 : un humain devenu bot reste lu comme un humain");
   delete G.bidLog[0].type; // partie sauvegardée avant ce champ
   ok(bots.seatWeight(G, s, sansCoeur) === 0.0001, "MON-4 : sans type enregistré, on retombe sur le type actuel");
   // ZON-4 : un siège qui passe à l'ouverture avec une main d'ouverture.

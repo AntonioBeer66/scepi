@@ -40,7 +40,7 @@ function instrument(src) {
   return w;
 }
 function mcWorlds0(seat, n) {`],
-    ['  for (const r of readings) if (r.e.seat === s)', '  for (const r of readings) if (r.e.seat === s && globalThis.__cueBid(r, s))'],
+    ['    if (r.e.seat !== s || r.e.auto) continue;', '    if (r.e.seat !== s || r.e.auto || !globalThis.__cueBid(r, s)) continue;'],
     ['  for (const suit of Object.keys(G.appel[s])) {', '  if (globalThis.__cue?.appel !== false) for (const suit of Object.keys(G.appel[s])) {'],
     ['function canHold(s, c) {\n  return (', 'function canHold(s, c) {\n  if (globalThis.__cue?.voids === false) return true;\n  return ('],
   ];

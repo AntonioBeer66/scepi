@@ -1247,32 +1247,68 @@ function calledSuit(ctx) {
   );
 }
 
-// Appel : une petite carte d'une couleur dont on tient l'As, une fois par donne.
+// Défausse volontaire : les cartes légales couvraient au moins deux couleurs
+// hors atout. Une défausse forcée ne dit rien.
+function volontaire(legal, atout) {
+  const suits = new Set();
+  for (const c of legal) if (c.suit !== atout) suits.add(c.suit);
+  return suits.size >= 2;
+}
+const SIGNAL_TRICKS = 3; // signaux lus aux plis 1 à 3 seulement
+
+// Appel : un 7 ou un 8 d'une couleur dont on tient l'As (au moins deux
+// cartes), sur une défausse volontaire avant le pli 4, une fois par donne.
+// Émission et lecture (sigReading) parlent la même langue.
 function appelCard(ctx, cards) {
   if (Object.keys(G.appel[ctx.seat]).length) return null;
+  if (G.plisJoues >= SIGNAL_TRICKS || !volontaire(ctx.legal, ctx.atout))
+    return null;
   return (
     cards.find(
       (c) =>
-        cardPoints(c, ctx.atout) === 0 &&
+        (c.rank === "7" || c.rank === "8") &&
         holds(ctx.hand, c.suit, "A") &&
         suitCards(ctx.hand, c.suit).length >= 2,
     ) || null
   );
 }
 
+// Ce que dit une défausse (sans rien modifier) : appel (7 ou 8 volontaire,
+// As de la couleur pas tombé), refus (Roi ou Dame volontaire) ou null.
+// legalBefore : les cartes légales du siège avant qu'il joue.
+function sigReading(carte, legalBefore) {
+  const atout = G.contract.atout;
+  if (carte.suit === atout || G.plisJoues >= SIGNAL_TRICKS) return null;
+  if (!volontaire(legalBefore, atout)) return null;
+  if (carte.rank === "7" || carte.rank === "8")
+    return G.seen["A" + carte.suit] ? null : "appel";
+  if (carte.rank === "K" || carte.rank === "Q") return "refus";
+  return null;
+}
+
+// Ce que lirait la table de cette carte, jouée dans le pli en cours.
+function sigOnPlay(c, legal) {
+  const lead = G.pliCourant.length ? G.pliCourant[0].carte.suit : null;
+  return lead && c.suit !== lead ? sigReading(c, legal) : null;
+}
+// Faux signal : appel sans l'As, refus avec l'As ou le 10.
+function sigFalse(hand, c, legal) {
+  const k = sigOnPlay(c, legal);
+  if (k === "appel") return !holds(hand, c.suit, "A");
+  return k === "refus" && (holds(hand, c.suit, "A") || holds(hand, c.suit, "10"));
+}
+
 // Les signaux se lisent sur la carte posée, pour tout le monde (bots
-// compris : pas de canal privé entre partenaires) : première défausse
-// petite = appel, Roi/Dame/Valet = refus.
-function readDiscardSignal(seat, carte) {
-  if (
-    carte.suit === G.contract.atout ||
-    Object.keys(G.appel[seat]).length ||
-    Object.keys(G.refus[seat]).length
-  )
-    return;
-  if (["7", "8", "9"].includes(carte.rank)) G.appel[seat][carte.suit] = true;
-  else if (["K", "Q", "J"].includes(carte.rank))
-    G.refus[seat][carte.suit] = true;
+// compris : pas de canal privé entre partenaires). Le dernier signal valable
+// remplace le précédent : un appel efface les autres appels du siège et le
+// refus de la même couleur, un refus les autres refus et l'appel de la même
+// couleur.
+function readDiscardSignal(seat, carte, legalBefore) {
+  const k = sigReading(carte, legalBefore);
+  if (!k) return;
+  const [same, other] = k === "appel" ? [G.appel, G.refus] : [G.refus, G.appel];
+  same[seat] = { [carte.suit]: true };
+  delete other[seat][carte.suit];
 }
 
 function leadCard(ctx) {
@@ -1304,11 +1340,13 @@ function leadCard(ctx) {
       if (toRuff.length) return lowest(toRuff, atout);
     }
     const called = calledSuit(ctx);
-    if (called)
+    if (called) {
+      reflexWhy = "called";
       return lowest(
         side.filter((c) => c.suit === called),
         atout,
       );
+    }
     // (Pas en capot : la petite carte seule donnerait un pli.)
     if (!ctx.capot && trumps.length >= 2 && G.plisJoues <= 4) {
       const single = side.find(
@@ -1328,13 +1366,18 @@ function leadCard(ctx) {
       safeMaster(ctx, c) &&
       (G.plisJoues || ctx.capot || c.rank !== "A" || holds(hand, c.suit, "10")),
   );
-  if (masters.length) return highest(masters, atout);
+  if (masters.length) {
+    reflexWhy = "master";
+    return highest(masters, atout);
+  }
   const called = calledSuit(ctx);
-  if (called)
+  if (called) {
+    reflexWhy = "called";
     return lowest(
       side.filter((c) => c.suit === called),
       atout,
     );
+  }
   // Couleur annoncée par le partenaire aux enchères, pas encore jouée.
   const partnerSuit = G.donneAnnonces
     .filter((a) => a.seat === ctx.partner && a.atout !== atout)
@@ -1347,6 +1390,7 @@ function leadCard(ctx) {
     !oppCanRuff(ctx, partnerSuit)
   ) {
     const cards = side.filter((c) => c.suit === partnerSuit);
+    reflexWhy = "partner";
     return cards.find((c) => c.rank === "A") || lowest(cards, atout);
   }
   const nTrumps = suitCards(hand, atout).length;
@@ -1540,10 +1584,26 @@ function discard(ctx, lead, cards) {
       v += 40; // garde du 10
     return v;
   };
-  return firstMin(side, cost);
+  const pick = firstMin(side, cost);
+  // Pas de faux signal pour un écart de coût d'au plus 10 : un 9 plutôt
+  // qu'un 7, pas un Valet (20).
+  if (sigFalse(hand, pick, ctx.legal)) {
+    const neutral = side.filter((c) => sigReading(c, ctx.legal) === null);
+    if (neutral.length) {
+      const alt = firstMin(neutral, cost);
+      if (cost(alt) - cost(pick) <= 10) return alt;
+    }
+  }
+  return pick;
 }
 
+// Pourquoi le réflexe a choisi sa carte, quand c'est une convention que la
+// simulation doit respecter (voir CONVENTION_MARGIN) : "master", "called",
+// "partner" ; null sinon.
+let reflexWhy = null;
+
 function heuristicCard(seat) {
+  reflexWhy = null;
   const ctx = playContext(seat);
   if (ctx.legal.length === 1) return ctx.legal[0];
   return G.pliCourant.length ? followCard(ctx) : leadCard(ctx);
@@ -1813,8 +1873,10 @@ function baremeFits({ e, partnerBid, acted }, h) {
 // Poids d'une main qui aurait parlé autrement : un bot suit exactement
 // son système, un humain beaucoup moins. Toute tolérance laisse entrer les
 // mains faibles, bien plus nombreuses : avec 1 %, la réussite des
-// contrats était sous-estimée de 16 points.
-const MISFIT = { bot: 0.0001, human: 0.15 };
+// contrats était sous-estimée de 16 points. Humain à 0,05 plutôt que 0,15 :
+// +6 à +10 pts de justesse sur sa main, au plus 3 % de placements « sûrs
+// mais faux ».
+const MISFIT = { bot: 0.0001, human: 0.05 };
 const BLUFF = 0.07; // ouverture légère hors quatrième : un humain peut bluffer, plus les bots
 // Ce que la simulation décide hors barème (interventions et remontées à
 // l'espérance, veto d'ouverture, 80 hors barème). Lu comme impossible
@@ -1823,7 +1885,9 @@ const BLUFF = 0.07; // ouverture légère hors quatrième : un humain peut bluff
 // Mesuré en duel (MC 48, trois séries de donnes jumelles) : +4,4 ± 1,3
 // pt/donne ; 0,05 et 0,15 font pareil, 0,3 moins bien.
 const SIM_FIT = 0.1;
-const SIGNAL_MISFIT = 0.3; // appel sans l'As
+// Appel sans l'As : un appel lu (7 ou 8 volontaire avant le pli 4) est vrai
+// 77 % du temps ; 0,1 est calibré sur ces appels (0,3 avec l'ancienne lecture).
+const SIGNAL_MISFIT = 0.1;
 
 // Plausibilité de la main actuelle d'un siège au vu de ce qu'il a dit.
 // La tolérance dépend de qui parlait quand il a parlé (e.type), pas de qui
@@ -1835,7 +1899,7 @@ function seatWeight(s, hand, readings) {
   for (const r of readings) {
     if (r.e.seat !== s || r.e.auto) continue;
     const misfit = MISFIT[(r.e.type ?? G.seats[s].type) === "bot" ? "bot" : "human"];
-    w *= bidFits(r, h) || misfit;
+    w *= Math.max(bidFits(r, h), misfit);
   }
   for (const suit of Object.keys(G.appel[s])) {
     if (!G.seen["A" + suit] && !hand.some((c) => c.id === "A" + suit))
@@ -1938,15 +2002,24 @@ function worldBelote(seat, world) {
 
 function simPlay(sim, seat, carte) {
   const hand = sim.hands[seat];
+  const lead = sim.pliCourant.length ? sim.pliCourant[0].carte.suit : null;
+  // Cartes légales avant de jouer, seulement pour une défausse qui peut
+  // être lue (voir sigReading).
+  const legalBefore =
+    lead &&
+    carte.suit !== lead &&
+    carte.suit !== sim.contract.atout &&
+    sim.plisJoues < SIGNAL_TRICKS
+      ? computeLegal(hand, sim.pliCourant, sim.contract.atout, seat)
+      : null;
   hand.splice(
     hand.findIndex((c) => c.id === carte.id),
     1,
   );
-  const lead = sim.pliCourant.length ? sim.pliCourant[0].carte.suit : null;
   // G est le monde simulé pendant la simulation.
   if (lead && carte.suit !== lead) {
     sim.void[seat][lead] = true;
-    readDiscardSignal(seat, carte);
+    readDiscardSignal(seat, carte, legalBefore);
   }
   noteTrumpObligations(seat, carte);
   sim.pliCourant.push({ siege: seat, carte });
@@ -2210,33 +2283,94 @@ function mcValue(seat, card, world) {
 // preneur ne tirait atout au premier pli que 35 % du temps et la défense
 // entamait atout 24 % du temps ; +1,2 ± 1,0 pt/donne en duel.
 const TRUMP_LEAD_MARGIN = 8;
+// Conventions lisibles à l'entame (pts par monde) : la défense n'entame pas
+// atout, le preneur Valet-9 et trois atouts tire atout, la défense entame
+// son As, la couleur appelée ou annoncée par le partenaire revient.
+// Violations mesurées : 8 → 3 %, 57 → 26 %, 55 → 27 %, 45-63 → 10-12 %.
+const CONVENTION_MARGIN = { trumpDef: 32, takerDraw: 32, defAce: 16, called: 32 };
+// Défausses : un vrai appel du réflexe est gardé à 16 pts par monde près
+// (gardé 36 % → 86 % du temps) ; un faux signal coûte 5 pts par monde tant
+// qu'il reste un choix honnête (faux signaux émis 4,9 % → 1,3 %).
+const KEEP_APPEL_MARGIN = 16;
+const SIG_PENALTY = 5;
+// Test apparié : on ne quitte le réflexe que si la carte préférée gagne
+// nettement sur les mêmes mondes, écart moyen > 2 erreurs-types + 0,5 pt
+// (cartes qui changent avec la graine : 34 % → 11 %).
+const PAIRED_Z = 2;
+const PAIRED_EXTRA = 0.5;
 
 // Monde par monde, toutes les cartes sur les mêmes mondes, et tous les
 // mondes : jamais d'horloge (voir tuning).
-function mcChooseCard(seat, legal, reflex) {
+// Ordre : la pénalité des faux signaux entre avant le choix (elle peut le
+// changer) ; le reste ne fait que revenir au réflexe, dans n'importe quel ordre.
+function mcChooseCard(seat, legal, reflex, why) {
   const worlds = mcWorlds(seat, tuning.mcSamples);
   if (!worlds.length) return reflex;
   const cards = [reflex, ...legal.filter((c) => c.id !== reflex.id)];
-  const totals = cards.map(() => 0);
+  const vals = cards.map(() => []);
   for (const w of worlds) {
     cards.forEach((c, i) => {
-      totals[i] += mcValue(seat, c, w);
+      vals[i].push(mcValue(seat, c, w));
     });
   }
   const n = worlds.length;
+  const hand = G.hands[seat];
+  const bad = cards.map((c) => sigFalse(hand, c, legal));
+  if (bad.some(Boolean) && !bad.every(Boolean))
+    bad.forEach((b, i) => {
+      if (b) vals[i] = vals[i].map((v) => v - SIG_PENALTY);
+    });
+  const totals = vals.map((v) => v.reduce((t, x) => t + x, 0));
   let best = 0;
   totals.forEach((t, i) => {
     if (t > totals[best] + 1e-9) best = i;
   });
-  const atout = G.contract.atout;
-  if (
-    best &&
-    !G.pliCourant.length &&
-    (cards[best].suit === atout) !== (reflex.suit === atout) &&
-    totals[0] >= totals[best] - TRUMP_LEAD_MARGIN * n
-  )
-    best = 0;
-  return cards[best];
+  if (!best) return reflex;
+  const choice = cards[best];
+  const { atout, preneur, equipePreneur, type } = G.contract;
+  let margin = 0;
+  if (G.pliCourant.length) {
+    if (sigOnPlay(reflex, legal) === "appel" && holds(hand, reflex.suit, "A"))
+      margin = KEEP_APPEL_MARGIN;
+  } else {
+    const M = CONVENTION_MARGIN;
+    const def = teamOf(seat) !== equipePreneur;
+    if ((choice.suit === atout) !== (reflex.suit === atout))
+      margin = TRUMP_LEAD_MARGIN;
+    // La défense n'entame pas atout (sauf capot ou Générale).
+    if (def && type === "NUMERIQUE" && choice.suit === atout && reflex.suit !== atout)
+      margin = Math.max(margin, M.trumpDef);
+    // Le preneur Valet-9 et trois atouts tire atout quand le réflexe le fait.
+    if (
+      seat === preneur &&
+      reflex.suit === atout &&
+      choice.suit !== atout &&
+      holds(hand, atout, "J") &&
+      holds(hand, atout, "9") &&
+      suitCards(hand, atout).length >= 3
+    )
+      margin = Math.max(margin, M.takerDraw);
+    // La défense entame son As quand le réflexe le fait.
+    if (def && reflex.rank === "A" && reflex.suit !== atout && choice.rank !== "A")
+      margin = Math.max(margin, M.defAce);
+    // La couleur appelée ou annoncée par le partenaire revient.
+    if ((why === "called" || why === "partner") && choice.suit !== reflex.suit)
+      margin = Math.max(margin, M.called);
+  }
+  if (totals[0] >= totals[best] - margin * n) return reflex;
+  let mu = 0;
+  let m2 = 0;
+  for (let k = 0; k < n; k++) {
+    const d = vals[best][k] - vals[0][k];
+    mu += d;
+    m2 += d * d;
+  }
+  mu /= n;
+  const sd = n > 1 ? Math.sqrt(Math.max(0, (m2 - n * mu * mu) / (n - 1))) : Infinity;
+  // Comparaison fausse si le seuil vaut NaN (PAIRED_Z = −∞ et sd = 0) : le
+  // test est alors sans effet, comme pour tout PAIRED_Z = −∞.
+  if (mu <= (PAIRED_Z * sd) / Math.sqrt(n) + PAIRED_EXTRA) return reflex;
+  return choice;
 }
 
 // Chances de réussite d'un contrat avant la première carte : la donne est
@@ -2277,9 +2411,10 @@ function botChooseCard(seat) {
     seat,
   );
   if (legal.length === 1) return legal[0];
-  return withSeed(seat, "card", () =>
-    mcChooseCard(seat, legal, heuristicCard(seat)),
-  );
+  return withSeed(seat, "card", () => {
+    const reflex = heuristicCard(seat);
+    return mcChooseCard(seat, legal, reflex, reflexWhy);
+  });
 }
 
 // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
@@ -2532,7 +2667,7 @@ function act(seat, action) {
     if (couleurDemandeeAvant && carte.suit !== couleurDemandeeAvant) {
       G.void[seat][couleurDemandeeAvant] = true;
       // Une carte tirée au hasard par TIMEOUT n'est pas un message.
-      if (!action.auto) readDiscardSignal(seat, carte);
+      if (!action.auto) readDiscardSignal(seat, carte, legal);
     }
     declareBeloteIfNeeded(seat, carte);
 
@@ -2646,6 +2781,8 @@ export const bots = {
   mcWorlds: withG(mcWorlds),
   seatWeight: withG((s, hand) => seatWeight(s, hand, bidReadings())),
   noteTrumpObligations: withG(noteTrumpObligations),
+  sigReading: withG(sigReading),
+  readDiscardSignal: withG(readDiscardSignal),
   contractHuitAtouts: withG(contractHuitAtouts),
   exactEnd,
 };

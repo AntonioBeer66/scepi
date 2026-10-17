@@ -1,7 +1,8 @@
 // Scénarios de stratégie des bots : une situation, la décision qu'un bon
 // joueur prendrait. Échoue si un réflexe classique se perd en modifiant
-// l'IA. Le jeu de la carte est testé sur les réflexes (heuristicCard), que
-// la simulation Monte-Carlo ne fait qu'affiner.
+// l'IA. Le jeu de la carte est testé sur les réflexes (heuristicCard), et,
+// pour les scénarios clés, sur la carte réellement jouée après la
+// simulation (chooseCard : graine tirée de l'état, donc reproductible).
 //   node tests/coinche-strategies.test.js
 import { bots } from '../src/coinche/engine.js';
 
@@ -15,6 +16,12 @@ const api = {
   getG: () => cur,
   botDecideBid: (s) => bots.decideBid(cur, s),
   heuristicCard: (s) => bots.heuristicCard(cur, s),
+  // Sans aucun monde possible (mains de tailles incohérentes), chooseCard
+  // rendrait le réflexe sans simuler : le test ne vérifierait rien.
+  chooseCard: (s) => {
+    const g = { multiplicateur: 1, ...cur };
+    return bots.mcWorlds(g, s, 1).length ? bots.chooseCard(g, s) : { id: 'aucun monde' };
+  },
   botWantsToCoinche: (s) => bots.wantsToCoinche(cur, s),
   botWantsToSurcoinche: (s) => bots.wantsToSurcoinche(cur, s),
   contractHuitAtouts: (c) => bots.contractHuitAtouts(cur, c),
@@ -157,6 +164,40 @@ setup({ ...JEU, contract: contract(1, 80, 'H'), hands: hands('AS KS AD 8D 7C 8C 
 check('L’As par-dessus le 10 du partenaire quand le Roi gardé devient maître', play(0), 'AS');
 setup({ ...JEU, hands: hands('AD 10D 7S 8S 8C 7C JH 7H'), pli: [[1, 'KD'], [2, '7D'], [3, '8D']] });
 check('Pli gagné avec deux maîtres : l’As plutôt que le 10', play(0), 'AD');
+setup({ contract: contract(3, 110, 'C'), donneAnnonces: [{ seat: 3, montant: 110, atout: 'C' }], plisJoues: 2,
+  hands: hands('', '', '7D QD KH QH AH 9D'), pli: [[3, '9C'], [0, 'KC'], [1, '8H']] });
+check('Défausse libre sans l’As de carreau : le 9♦ (même coût), pas le 7♦ (faux appel)', play(2), '9D');
+
+// ---- Carte réellement jouée : la simulation garde les conventions lisibles
+// sauf gain net. (Valet-9 troisième, plus haut : elle préfère encore une
+// couleur, d'environ 50 pts par monde, plus que la marge de 32.)
+const played = (seat) => api.chooseCard(seat).id;
+setup({ ...JEU, hands: hands('JH 9H 8H 7H AS 8S KD 7D') });
+check('Carte jouée : le preneur Valet-9 quatrième tire l’atout maître', played(0), 'JH');
+setup({ ...JEU, hands: hands('', 'AS 10S 8D 7D 9C 8C 7C 8H') });
+check('Carte jouée : la défense entame l’As avec son 10, pas atout', played(1), 'AS');
+setup({ ...JEU, hands: hands('', '9C 8C KS QD 7D 8S 7S QS'), appel: [{}, {}, {}, { C: true }] });
+check('Carte jouée : la couleur appelée par le partenaire revient', played(1), '8C');
+setup({ ...JEU, hands: hands('AC 7C KS 8S QC 10S 9S 7S'), contract: contract(1, 100, 'H'), pli: [[1, 'AD'], [2, '9D'], [3, 'QD']] });
+check('Carte jouée : l’appel sous l’As est gardé', played(0), '7C');
+
+// ---- Signaux : un 7 ou un 8 volontaire avant le pli 4 = appel (As dehors),
+// Roi ou Dame volontaire = refus, rien d'autre ; le dernier signal compte.
+const sig = (id, legal) => bots.sigReading(api.getG(), card(id), cards(legal));
+setup(JEU);
+check('Signal : 7♦ volontaire, As dehors = appel', sig('7D', '7D 9C'), 'appel');
+check('Signal : Roi volontaire = refus', sig('KD', 'KD 9C'), 'refus');
+check('Signal : un 9 ne dit rien', sig('9D', '9D 9C'), null);
+check('Signal : un Valet ne dit rien', sig('JD', 'JD 9C'), null);
+check('Signal : défausse forcée, rien', sig('7D', '7D 8D'), null);
+setup({ ...JEU, seenIds: ['AD'] });
+check('Signal : 7 d’une couleur dont l’As est tombé, rien', sig('7D', '7D 9C'), null);
+setup({ ...JEU, plisJoues: 3 });
+check('Signal : au pli 4, rien', sig('7D', '7D 9C'), null);
+setup(JEU);
+bots.readDiscardSignal(api.getG(), 1, card('KD'), cards('KD 7D 9C'));
+bots.readDiscardSignal(api.getG(), 1, card('7D'), cards('7D 9C'));
+check('Dernier signal : un refus puis un appel à carreau donnent un appel', JSON.stringify([api.getG().appel[1], api.getG().refus[1]]), '[{"D":true},{}]');
 
 // ---- Déductions : obligation de couper et de monter (le siège 2 mène, adversaire du 3)
 setup({ ...JEU, pli: [[2, 'AS']] });

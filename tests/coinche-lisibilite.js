@@ -48,16 +48,19 @@ const PROJ = path.join(import.meta.dirname, '..');
 // concernée est simplement signalée comme indisponible.
 function instrument(src) {
   const rep = [
-    ['appels', 'function readDiscardSignal(seat, carte) {', `function readDiscardSignal(seat, carte) {
+    // Avant et après le lot 3 (readDiscardSignal(seat, carte, legalBefore)) :
+    // avec sigReading, lu = ce que dit la carte ; sans, premier signal de la donne.
+    ['appels', 'function readDiscardSignal(seat, carte', `function readDiscardSignal(seat, carte, ...args) {
   const a0 = Object.keys(G.appel[seat]).length;
   const r0 = Object.keys(G.refus[seat]).length;
+  const k = typeof sigReading === 'function' ? sigReading(carte, args[0]) : undefined;
   try {
-    return readDiscardSignal0(seat, carte);
+    return readDiscardSignal0(seat, carte, ...args);
   } finally {
-    globalThis.__onSignal?.(seat, carte, G, !a0 && !!G.appel[seat][carte.suit], !r0 && !!G.refus[seat][carte.suit]);
+    globalThis.__onSignal?.(seat, carte, G, k !== undefined ? k === 'appel' : !a0 && !!G.appel[seat][carte.suit], k !== undefined ? k === 'refus' : !r0 && !!G.refus[seat][carte.suit]);
   }
 }
-function readDiscardSignal0(seat, carte) {`],
+function readDiscardSignal0(seat, carte`],
     ['mondes (carte)', '  let best = 0;\n  totals.forEach((t, i) => {', '  globalThis.__mcN = [n, worlds.length];\n  let best = 0;\n  totals.forEach((t, i) => {'],
     ['mondes (enchère, coinche)', '    return n >= minWorlds ? ok / n : null;', '    (globalThis.__pm ||= []).push([n, worlds.length]);\n    return n >= minWorlds ? ok / n : null;'],
   ];
