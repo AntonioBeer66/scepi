@@ -2337,7 +2337,13 @@ function mcChooseCard(seat, legal, reflex, why) {
     // La défense n'entame pas atout (sauf capot ou Générale).
     if (def && type === "NUMERIQUE" && choice.suit === atout && reflex.suit !== atout)
       margin = Math.max(margin, M.trumpDef);
-    // Le preneur Valet-9 et trois atouts tire atout quand le réflexe le fait.
+    // Le preneur Valet-9 et trois atouts tire atout quand le réflexe le fait,
+    // et toujours à la première entame s'il a annoncé 110 ou plus. Donnes
+    // rejouées par les bots depuis 288 premières entames réelles à trois
+    // atouts, Valet contre la meilleure carte hors atout du Monte-Carlo : à 110
+    // et plus, le Valet ne perd rien (+6 ± 8 pts, n = 169) alors que la
+    // simulation le croit 42 pts moins bon ; à 90, la coupe vaut mieux
+    // (−42 ± 10, n = 119).
     if (
       seat === preneur &&
       reflex.suit === atout &&
@@ -2346,7 +2352,10 @@ function mcChooseCard(seat, legal, reflex, why) {
       holds(hand, atout, "9") &&
       suitCards(hand, atout).length >= 3
     )
-      margin = Math.max(margin, M.takerDraw);
+      margin = Math.max(
+        margin,
+        G.contract.montant >= 110 && !G.plisJoues ? Infinity : M.takerDraw,
+      );
     // La défense entame son As quand le réflexe le fait.
     if (def && reflex.rank === "A" && reflex.suit !== atout && choice.rank !== "A")
       margin = Math.max(margin, M.defAce);

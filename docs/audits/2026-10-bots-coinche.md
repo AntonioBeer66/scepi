@@ -38,6 +38,22 @@ Ce qui reste :
 - **Non fait** : règle dure « la couleur appelée revient », exception B1 (défenseur qui tient le Valet), barème de club pour lire les enchères humaines, ré-apprentissage d'`INTERVENTION_W` (appris sur l'ancien comportement), mesure du garde-fou sur un vrai téléphone.
 - **Erreur-type des duels.** Calculée par partie, elle ne dépasse l'erreur naïve que de 5 à 15 %, et non de 1,5 à 3 fois comme estimé en vague 2.
 
+### Suite, soir du 17 octobre
+
+Duels MC 48, 540 donnes de départ, même convention de signe :
+
+| Changement | Duel | Décision |
+|---|---|---|
+| Règle dure « la couleur appelée ou annoncée revient » | −1,0 ± 0,8 | non (la marge de 32 garde 88-90 % des cas) |
+| Exception B1 (défenseur avec le Valet d'atout) | 0,00 sur 1 000 paires : ne se déclenche presque jamais | non |
+| `INTERVENTION_W` réappris (39 390 décisions, perte log 0,375 → 0,335) | +1,45 ± 2,4 | oui |
+| Passe au-dessus de l'adversaire lue 1 − Σp au lieu de Π(1 − p) | +0,3 ± 2,2 | oui |
+| Preneur V+9 à 110 ou plus : atout toujours à la première entame | −0,1 ± 0,3 | oui |
+
+Preneur Valet-9 à trois atouts : sur 288 premières entames réelles rejouées par les bots, entamer le Valet ne perd rien à 110 et plus (+6 ± 8 pts, n = 169) alors que la simulation le croit 42 pts moins bon ; à 90, la simulation a raison (−42 ± 10, n = 119). Aucune correction de la simulation ne tient aux deux paliers (biais pour moitié dans la lecture des enchères du partenaire, pour moitié dans la suite imaginée). D'où une règle dure à 110 et plus seulement : tirage d'atout à trois atouts 36 % → 72 %. L'exemple à 100♥ du guide reste joué hors atout, à raison.
+
+Non fait : lecture des enchères et signaux humains (journal des donnes humaines trop récent pour la calibrer).
+
 L'audit s'est fait en deux vagues de sous-agents :
 - **Vague 1** : diagnostic, fonction par fonction.
 - **Vague 2** : corrections prototypées et chiffrées, partenaire humain simulé, zones restantes, interface, re-vérification des cas de la vague 1, remontée du partenaire. Ses résultats sont résumés dans la section [Vague 2](#vague-2--ce-que-les-mesures-ajoutent) et corrigent plusieurs chiffres de la vague 1.
