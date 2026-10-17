@@ -6,6 +6,7 @@ import { Client } from "boardgame.io/client";
 import { Local } from "boardgame.io/multiplayer";
 import { Coinche } from "../game.js";
 import { trickPause } from "../host.js";
+import { buildRecord, JOURNAL_MAX_BYTES } from "../journal.js";
 import { sameName } from "../../online/tables.js";
 import { createHud } from "./hud.js";
 import { OnlineClient } from "./online-client.js";
@@ -158,6 +159,44 @@ export function startSession({
     }, 150 + trickPause(G));
   }
 
+  // Journal anonyme (voir journal.js) : le navigateur hôte, seul à voir
+  // toutes les mains, envoie chaque donne finie ou passée ; le temps de
+  // décision n'est connu que pour le joueur de ce navigateur. Rien si le
+  // navigateur demande de ne pas être suivi (Global Privacy Control).
+  let times = [];
+  let turnStart = null;
+  const myActions = (G) =>
+    G.bidLog.filter((e) => e.seat === me).length + (G.playedBy?.[me]?.length || 0);
+  function journal(G, prevG) {
+    if (watch || !prevG || navigator.globalPrivacyControl) return;
+    if (G.phase === "ENCHERES" || G.phase === "JEU") {
+      if (G.donneNumero === prevG.donneNumero && myActions(G) > myActions(prevG) && turnStart != null) {
+        // Dernière carte jouée toute seule (autoLastCard) : pas une décision.
+        if (prevG.hands[me]?.length !== 1) times.push(performance.now() - turnStart);
+        turnStart = null;
+      }
+      if (G.joueurActif === me && turnStart == null) turnStart = performance.now();
+    }
+    let rec = null;
+    if (G.phase === "SCORE" && prevG.phase !== "SCORE")
+      rec = buildRecord(G, { mode: online ? "ligne" : "solo", me, times });
+    else if (G.donneNumero > prevG.donneNumero && prevG.phase === "ENCHERES")
+      rec = buildRecord(prevG, { mode: online ? "ligne" : "solo", me, times, lastPass: prevG.joueurActif });
+    if (G.donneNumero !== prevG.donneNumero) {
+      times = [];
+      turnStart = null;
+    }
+    if (!rec || G.hote !== me) return;
+    const body = JSON.stringify(rec);
+    if (body.length > JOURNAL_MAX_BYTES) return;
+    fetch("/api/journal", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  }
+
   let stopped = false;
   const unsubscribe = client.subscribe((state) => {
     if (!state || stopped) return;
@@ -181,6 +220,7 @@ export function startSession({
       host.update(G);
     } else host.stop();
     if (!watch) watchSeats(G);
+    journal(G, prev);
     autoLastCard(G);
     hud.update(G, prev);
     table.update(G, prev);
