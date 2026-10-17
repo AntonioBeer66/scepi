@@ -9,7 +9,7 @@
     ]
   },
   "src/coinche/client/session.js": {
-    "file": "session-wpYltk7X.js",
+    "file": "session-Drw-tux1.js",
     "name": "session",
     "src": "src/coinche/client/session.js",
     "isDynamicEntry": true,
@@ -17,7 +17,7 @@
       "src/coinche/client/lobby.js"
     ],
     "assets": [
-      "assets/host-worker-BwhdHfUE.js"
+      "assets/host-worker-Cb5JzBEB.js"
     ]
   }
 }
