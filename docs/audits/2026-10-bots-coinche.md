@@ -54,6 +54,27 @@ Preneur Valet-9 à trois atouts : sur 288 premières entames réelles rejouées 
 
 Non fait : lecture des enchères et signaux humains (journal des donnes humaines trop récent pour la calibrer).
 
+### Campagne du 18 octobre (nuit, en local)
+
+Chaque variante contre le moteur du 18 au matin, deux séries de 540 donnes de départ (MC 48), retenue si la moyenne ≥ −0,7 pt/donne :
+
+| Variante | Série 1 | Série 2 | Décision |
+|---|---|---|---|
+| Remontée seulement avec un honneur ou deux atouts | +1,5 ± 2,3 | +1,2 ± 2,1 | oui |
+| Preneur au Valet (sans le 9) qui tire atout | +0,0 ± 0,5 | +0,2 ± 0,6 | oui |
+| Défense : As entamé, marge 16 → 32 | −0,2 ± 0,7 | −0,1 ± 0,6 | oui |
+| Surenchère dans une autre couleur avec le Valet ou le 9 | +0,0 ± 0,9 | −0,2 ± 0,9 | oui |
+| Vrai appel gardé, marge 16 → 32 | −0,1 ± 0,5 | +0,0 ± 0,5 | oui |
+| Entame d'atout, marge 8 → 16 | −0,2 ± 1,0 | +1,1 ± 1,0 | oui |
+| Attaque qui tire atout aux deux premiers plis | −0,4 ± 1,7 | +0,8 ± 1,7 | oui |
+| Remontée sur un 80 (9 sec, Valet + 9 : +10) | +0,4 ± 1,6 | −0,8 ± 1,7 | oui |
+| Défense qui n'entame jamais atout | −0,9 ± 1,1 | −2,4 ± 1,1 | non |
+| Coinche plus prudente (marge 0,45) | −2,1 ± 1,2 | — | non |
+| Remontée systématique dès un point, au moins au minimum | −1,8 ± 1,9 | — | non |
+| **Paquet des huit** | +0,6 ± 2,4 | −0,6 ± 2,3 | **adopté** |
+
+Lisibilité, avant → après le paquet : preneur V+9 qui ne tire pas atout 28 % → 0 % ; entame d'atout de l'attaque refusée par la simulation 38 % → 12 % ; vrai appel écrasé 20 % → 10 % ; remontée avec au plus un atout et sans honneur 10 % → 0 % ; carte jouée différente du réflexe 31 % → 26 %.
+
 L'audit s'est fait en deux vagues de sous-agents :
 - **Vague 1** : diagnostic, fonction par fonction.
 - **Vague 2** : corrections prototypées et chiffrées, partenaire humain simulé, zones restantes, interface, re-vérification des cas de la vague 1, remontée du partenaire. Ses résultats sont résumés dans la section [Vague 2](#vague-2--ce-que-les-mesures-ajoutent) et corrigent plusieurs chiffres de la vague 1.

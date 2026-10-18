@@ -519,12 +519,16 @@ function supportPoints(hand, suit, partnerBid) {
   // rien sans atout. Pas de palier de prudence : la relance vaut ces points.
   const m = asMask(hand);
   const n = countOf(m, suit);
-  if (!n) return 0;
+  // Un honneur (Valet, 9, As) ou deux atouts, sinon pas de remontée : un 7
+  // sec et des As à côté ne se lisaient pas (duel +1,3 ± 1,6).
+  if (!peutAppuyer(m, suit)) return 0;
   let pts =
     (has(m, suit, "J") ? 20 : 0) +
-    (has(m, suit, "9") && n >= 2 ? 10 : 0) +
+    (has(m, suit, "9") && (n >= 2 || partnerBid === 80) ? 10 : 0) +
     10 * sideAces(m, suit);
   if (hasBelote(m, suit)) pts += 20;
+  // Sur un 80 (souvent sans Valet ni 9), Valet et 9 ensemble valent plus.
+  if (partnerBid === 80 && has(m, suit, "J") && has(m, suit, "9")) pts += 10;
   return pts;
 }
 
@@ -807,7 +811,8 @@ function decideBid(seat) {
         const partnerSuit = !!partnerBid && partnerBid.atout === s;
         if (partnerSuit ? !peutAppuyer(hand, s) : suitCards(hand, s).length < 3)
           continue;
-        if (!partnerSuit && !tenue(hand, s)) continue;
+        // Une autre couleur : le Valet ou le 9 (l'As seul ne se lisait pas).
+        if (!partnerSuit && !(holds(hand, s, "J") || holds(hand, s, "9"))) continue;
         // Main forte : le palier du barème est candidat aussi (130 plutôt
         // que 90, +1,9 pt/donne), il renseigne le partenaire.
         const sys = Math.min(160, openingBid(hand, s, false));
@@ -2293,16 +2298,22 @@ function mcValue(seat, card, world) {
 // préfère pas l'autre choix de plus de 8 pts en moyenne. Sans lui, le
 // preneur ne tirait atout au premier pli que 35 % du temps et la défense
 // entamait atout 24 % du temps ; +1,2 ± 1,0 pt/donne en duel.
-const TRUMP_LEAD_MARGIN = 8;
+const TRUMP_LEAD_MARGIN = 16;
 // Conventions lisibles à l'entame (pts par monde) : la défense n'entame pas
 // atout, le preneur Valet-9 et trois atouts tire atout, la défense entame
 // son As, la couleur appelée ou annoncée par le partenaire revient.
 // Violations mesurées : 8 → 3 %, 57 → 26 %, 55 → 27 %, 45-63 → 10-12 %.
-const CONVENTION_MARGIN = { trumpDef: 32, takerDraw: 32, defAce: 16, called: 32 };
+const CONVENTION_MARGIN = { trumpDef: 32, takerDraw: 32, defAce: 32, called: 32 };
 // Défausses : un vrai appel du réflexe est gardé à 16 pts par monde près
 // (gardé 36 % → 86 % du temps) ; un faux signal coûte 5 pts par monde tant
 // qu'il reste un choix honnête (faux signaux émis 4,9 % → 1,3 %).
-const KEEP_APPEL_MARGIN = 16;
+const KEEP_APPEL_MARGIN = 32;
+// Campagne du 18 octobre (duels MC 48, deux séries chacune, paquet neutre :
+// +0,6 ± 2,4 et −0,6 ± 2,3) : marges d'entame d'atout 8 → 16 et d'As de
+// la défense 16 → 32, appel gardé 16 → 32, attaque qui tire atout aux deux
+// premiers plis quand le réflexe le fait, preneur au Valet sans le 9 aussi.
+// Rejetés : défense qui n'entame jamais atout (−1,6), coinche plus prudente
+// (marge 0,45 : −2,1).
 const SIG_PENALTY = 5;
 
 // Monde par monde, toutes les cartes sur les mêmes mondes, et tous les
@@ -2342,10 +2353,11 @@ function mcChooseCard(seat, legal, reflex, why) {
     const def = teamOf(seat) !== equipePreneur;
     if ((choice.suit === atout) !== (reflex.suit === atout))
       margin = TRUMP_LEAD_MARGIN;
+    if (!def && G.plisJoues <= 1 && reflex.suit === atout && choice.suit !== atout) margin = Infinity;
     // La défense n'entame pas atout (sauf capot ou Générale).
     if (def && type === "NUMERIQUE" && choice.suit === atout && reflex.suit !== atout)
       margin = Math.max(margin, M.trumpDef);
-    // Le preneur Valet-9 et trois atouts tire atout quand le réflexe le fait,
+    // Le preneur au Valet et trois atouts tire atout quand le réflexe le fait,
     // et toujours à la première entame s'il a annoncé 110 ou plus. Donnes
     // rejouées par les bots depuis 288 premières entames réelles à trois
     // atouts, Valet contre la meilleure carte hors atout du Monte-Carlo : à 110
@@ -2357,7 +2369,6 @@ function mcChooseCard(seat, legal, reflex, why) {
       reflex.suit === atout &&
       choice.suit !== atout &&
       holds(hand, atout, "J") &&
-      holds(hand, atout, "9") &&
       suitCards(hand, atout).length >= 3
     )
       margin = Math.max(
