@@ -281,6 +281,7 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   const G = { ...createGame(seatsOf("human", "human", "bot", "bot"), rng(2)), hote: 0 };
   G.bidMemo[2] = { supported: true };
   G.bidMemo[1] = {};
+  G.appel[1] = { D: true };
   const vue = (playerID) => Coinche.playerView({ G, playerID });
   const hote = vue("0");
   ok((hote.personalities || !G.personalities) && hote.bidMemo[2].supported, "l'hôte garde personnalités (s'il y en a) et mémoire des bots");
@@ -288,7 +289,9 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
     const v = vue(id);
     ok(!("personalities" in v), "HAS-7 : pas de personnalités");
     ok(v.bidMemo.every((m, s) => (s === Number(id) ? m !== null : m === null)), "HAS-7 : seule la mémoire de son propre siège");
+    ok(v.appel.every((a) => !Object.keys(a).length), "les appels lus par les bots restent chez l'hôte");
   }
+  ok(hote.appel[1].D, "l'hôte garde les appels lus");
   ok(G.bidMemo[2].supported && G.bidMemo[1] !== null, "l'état du serveur n'est pas modifié");
 }
 
