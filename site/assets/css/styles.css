@@ -2806,14 +2806,6 @@ body.is-playing .header {
   color: var(--muted);
   font-size: 12px;
 }
-.cg-signals {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-}
 
 /* Résultat de la donne, au centre de la table */
 .cg-banner {
@@ -3271,20 +3263,6 @@ body.is-playing .header {
   box-shadow: 0 10px 30px #000a;
   pointer-events: none;
   animation: cg-toast 2.4s ease both;
-}
-/* Remarque discrète (signal lu dans ta défausse) : plus bas, plus petite, plus longue. */
-.cg-toast.is-note {
-  top: 14%;
-  width: max-content;
-  max-width: calc(100vw - 32px);
-  padding: 8px 16px;
-  border: 1px solid #a98bff;
-  background: #120d20f2;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-  text-align: center;
-  animation-duration: 3.6s;
 }
 @keyframes cg-toast {
   0% { opacity: 0; transform: scale(0.8); }

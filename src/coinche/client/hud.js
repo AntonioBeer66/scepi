@@ -22,7 +22,6 @@ import {
   teamOf,
 } from "../engine.js";
 import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
-import { newSignals, readSignals } from "./signaux.js";
 
 const RED_SUITS = new Set(["H", "D"]);
 const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
@@ -105,22 +104,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ? seatName(s)
       : `${G.seats[s].name} (${compass(s)})`;
 
-  // Signal lu dans une défausse (voir signaux.js), dit comme les bots le lisent.
-  const signalWord = ({ kind, suit }) =>
-    `${kind === "appel" ? "appel" : "refus"} ${SUIT_NAME[suit]}`;
-  const signalSpeech = (s) =>
-    s.seat === me
-      ? `Les bots lisent ta défausse comme un ${signalWord(s)}.`
-      : `${who(s.seat)} : ${signalWord(s)}.`;
-  function signalNote(s) {
-    const played = G.playedBy[s.seat];
-    const card = played[played.length - 1];
-    const what =
-      card?.suit === s.suit
-        ? `ton ${RANK_SHORT[card.rank] ?? card.rank}${SUIT_SYMBOL[s.suit]}`
-        : "ta défausse";
-    return `Les bots lisent ${what} comme un ${s.kind === "appel" ? "appel" : "refus"}`;
-  }
 
   // ---- Annonces pour lecteur d'écran --------------------------------------
 
@@ -149,7 +132,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       for (const s of [0, 1, 2, 3])
         for (const c of G.playedBy[s].slice(prev.playedBy[s].length))
           out.push(`${who(s)} : ${cardLabel(c)}`);
-    for (const s of newSignals(G, prev)) out.push(signalSpeech(s));
     if (G.belote.beloteDeclared && !(same && prev.belote.beloteDeclared))
       out.push("Belote !");
     if (G.belote.rebeloteDeclared && !(same && prev.belote.rebeloteDeclared))
@@ -206,15 +188,14 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   }
 
   // Bandeau bref en haut de la table (belote, rebelote) ; le lecteur d'écran
-  // a déjà l'annonce (announce). `note` : remarque plus discrète et plus
-  // longue à lire (signal lu dans ta défausse).
-  function toast(text, note = false) {
+  // a déjà l'annonce (announce).
+  function toast(text) {
     const el = document.createElement("div");
-    el.className = note ? "cg-toast is-note" : "cg-toast";
+    el.className = "cg-toast";
     el.setAttribute("aria-hidden", "true");
     el.textContent = text;
     root.append(el);
-    setTimeout(() => el.remove(), note ? 3600 : 2400);
+    setTimeout(() => el.remove(), 2400);
   }
 
   // ---- Barre de jeu ------------------------------------------------------------
@@ -328,8 +309,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
 
   // Les 32 cartes par couleur, l'atout en premier, de la plus forte à la
   // plus faible : barrées une fois tombées, cerclées d'or si elles sont dans
-  // ta main. Dessous, ce que les bots ont lu dans les défausses (appel,
-  // refus), les tiennes comprises.
+  // ta main. Ce que les bots lisent dans les défausses reste secret.
   function renderCards() {
     const atout = G.contract?.atout;
     const fallen = new Set();
@@ -356,15 +336,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       const left = RANKS.filter((r) => !fallen.has(r + atout) && !mine.has(r + atout)).length;
       sum = `<p class="cg-fallen-sum">${suitSpan(atout)} ${left ? `${left} atout${left > 1 ? "s" : ""} encore chez les autres` : "Plus d’atout chez les autres"}</p>`;
     }
-    const sigs = readSignals(G);
     return `${sum}<ul class="cg-fallen">${rows}</ul>
-      <p class="cg-legend">${me >= 0 ? '<span class="is-mine">dans ta main</span>' : ""}<span class="is-fallen">tombée</span><span>pas encore jouée</span></p>
-      <h4>Lu dans les défausses</h4>
-      ${
-        sigs.length
-          ? `<ul class="cg-signals">${sigs.map((s) => `<li><b>${esc(seatName(s.seat))}</b> : ${s.kind === "appel" ? "appel" : "refus"} ${suitSpan(s.suit)}</li>`).join("")}</ul>`
-          : '<p class="cg-empty">Aucun appel ni refus pour l’instant.</p>'
-      }`;
+      <p class="cg-legend">${me >= 0 ? '<span class="is-mine">dans ta main</span>' : ""}<span class="is-fallen">tombée</span><span>pas encore jouée</span></p>`;
   }
 
   function renderDonnes() {
@@ -842,8 +815,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast("Belote !");
         if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)
           toast(`Rebelote ! +${BELOTE_BONUS}`);
-        // Ta défausse vient d'être lue comme un appel ou un refus : tu le sais.
-        for (const s of newSignals(G, prev)) if (s.seat === me) toast(signalNote(s), true);
       }
       // Joueur parti en cours de partie : un bot prend sa place.
       for (const s of [0, 1, 2, 3])
