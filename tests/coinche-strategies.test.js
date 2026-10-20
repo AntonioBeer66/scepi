@@ -4,7 +4,7 @@
 // pour les scénarios clés, sur la carte réellement jouée après la
 // simulation (chooseCard : graine tirée de l'état, donc reproductible).
 //   node tests/coinche-strategies.test.js
-import { bots } from '../src/coinche/engine.js';
+import { bots, __read, maskOf } from '../src/coinche/engine.js';
 
 // Hasard reproductible : les enchères jouent la donne sur des mondes tirés
 // au hasard, un hasard constant n'en fabriquerait qu'un seul.
@@ -86,6 +86,31 @@ check('Belote chez le partenaire preneur : elle compte déjà, pas de reprise', 
 setup({ hands: hands('JH 9H 8H 7H AS 7S 8D 7C'), contract: contract(2, 110, 'H'), passesConsecutives: 1,
   donneAnnonces: [{ seat: 0, montant: 100, atout: 'H' }, { seat: 2, montant: 110, atout: 'H' }] });
 check('Ne pas soutenir sa propre couleur relancée par le partenaire', bid(api.botDecideBid(0)), 'passe');
+// Ouvreur à 80 remonté à 100 : il remonte de ses As en plus et de sa belote.
+const remonte = (h) => setup({ hands: hands(h), contract: contract(2, 100, 'H'), passesConsecutives: 1,
+  donneAnnonces: [{ seat: 0, montant: 80, atout: 'H' }, { seat: 2, montant: 100, atout: 'H' }] });
+remonte('JH 8H 7H AS AD 7D 8C 7C');
+check('Ouvreur remonté : Valet troisième et deux As, +10', bid(api.botDecideBid(0)), '110H');
+remonte('JH KH QH AS 8S 7D 8D 7C');
+check('Ouvreur remonté : Valet-belote et un As, +20', bid(api.botDecideBid(0)), '120H');
+remonte('9H AH 7H AS AD 7D 8C 7C');
+check('Ouvreur remonté sans le Valet : ses As se font couper, passe', bid(api.botDecideBid(0)), 'passe');
+remonte('JH KH QH 8H 7S 8S 7D 8D');
+check('Ouvreur remonté, belote sans As : elle a fait le 80, passe', bid(api.botDecideBid(0)), 'passe');
+setup({ hands: hands('JH 8H 7H AS AD 7D 8C 7C'), contract: contract(2, 110, 'H'), passesConsecutives: 1,
+  donneAnnonces: [{ seat: 0, montant: 100, atout: 'H' }, { seat: 2, montant: 110, atout: 'H' }] });
+check('Ouvreur à 100 remonté : son ouverture comptait ses As, passe', bid(api.botDecideBid(0)), 'passe');
+// Les autres relisent cette relance et cette passe avec la même règle.
+{
+  const c80 = contract(0, 80, 'H'), c100 = contract(2, 100, 'H');
+  const log = (dernier) => [{ seat: 0, montant: 80, atout: 'H', cur: null, passes: 0 }, { seat: 1, cur: c80, passes: 0 },
+    { seat: 2, montant: 100, atout: 'H', cur: c80, passes: 1 }, { seat: 3, cur: c100, passes: 0 }, { seat: 0, cur: c100, passes: 1, ...dernier }];
+  const fits = (dernier, h) => { const g = { bidLog: log(dernier) }; return __read.baremeFits(g, __read.bidReadings(g)[4], maskOf(cards(h))); };
+  check('Relance 110 lue : Valet troisième et deux As', fits({ montant: 110, atout: 'H' }, 'JH 8H 7H AS AD 7D 8C 7C'), 1);
+  check('Relance 110 lue : pas sans le Valet', fits({ montant: 110, atout: 'H' }, '9H AH 7H AS AD 7D 8C 7C'), 0);
+  check('Passe de l’ouvreur lue : pas avec deux As', fits({}, 'JH 8H 7H AS AD 7D 8C 7C'), 0);
+  check('Passe de l’ouvreur lue : un seul As', fits({}, 'JH 8H 7H AS 8D 7D 8C 7C'), 1);
+}
 
 // ---- Coinche
 setup({ hands: hands('JS 9S 7S AH 8H AD 8D 7C'), contract: contract(1, 130, 'S'), donneAnnonces: [{ seat: 1, montant: 130, atout: 'S' }] });
