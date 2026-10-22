@@ -3,7 +3,8 @@
 // s'assoient à une table libre, la lancent et jouent deux plis, s'envoient
 // émoticône et message ; un spectateur (pseudo unique) regarde et écrit,
 // l'hôte le bannit du chat puis le débannit ; un joueur quitte, un bot le remplace sous son pseudo ; un
-// visiteur prend la place d'un bot ; tous partis, la partie s'arrête.
+// visiteur prend la place d'un bot, l'hôte l'expulse (/kick) ; tous partis,
+// la partie s'arrête.
 //   npm start  (dans un autre terminal), puis :
 //   node tests/coinche-online-e2e.js
 // BASE : adresse du site (défaut http://localhost:8000) ; PASSWORD : mot
@@ -238,7 +239,20 @@ try {
   await dave.waitForSelector(".cg-phase", { timeout: 20000 });
   // Il joue désormais pour cette place : enchère ou carte à son tour.
   await until(async () => (await dave.locator(".hand-buttons button, .cg-bidbar").count()) > 0, [alice], 60000, "tour de Dave");
-  await dave.locator(".cg-icon", { hasText: "Quitter" }).click();
+
+  // /kick : Alice, hôte, expulse Dave ; il revient au salon, prévenu, et un
+  // bot reprend sa place sous son pseudo.
+  const kicked = new Promise((ok) => dave.once("dialog", (d) => { ok(d.message()); d.accept(); }));
+  await alice.click(".cg-emote-toggle");
+  await say(alice, "/kick dave");
+  assert.match(await kicked, /expulsé/);
+  await dave.waitForSelector("#game-view", { state: "hidden", timeout: 20000 });
+  await until(
+    async () => /Dave \(bot\)/.test(await alice.locator("#game-announce").textContent()),
+    [alice],
+    90000, "Dave (bot)",
+  );
+  await alice.click(".cg-emote-toggle");
 
   // Alice quitte à son tour : plus personne, la partie s'arrête (table
   // effacée, le spectateur revient au salon).
@@ -248,7 +262,7 @@ try {
   assert.ok(!tables.some((t) => t.matchID === matchID), "partie arrêtée quand tout le monde a quitté");
 
   assert.deepStrictEqual(errors, [], "aucune erreur dans les pages");
-  console.log(`En ligne : partie lancée à deux, jouée, regardée, joueur remplacé par un bot puis bot remplacé par un joueur, arrêtée quand tous sont partis (${BASE}).`);
+  console.log(`En ligne : partie lancée à deux, jouée, regardée, joueur remplacé par un bot puis bot remplacé par un joueur puis expulsé (/kick), arrêtée quand tous sont partis (${BASE}).`);
 } finally {
   await browser.close();
 }

@@ -226,6 +226,7 @@ export function startSession({
       stop();
       if (why === "PSEUDO_PRIS")
         window.alert("Ce pseudo est déjà pris à cette table : choisis-en un autre.");
+      if (why === "EXPULSE") window.alert("L'hôte t'a expulsé de la table.");
     });
   }
   client.start();

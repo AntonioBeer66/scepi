@@ -805,7 +805,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       // L'hôte de la partie peut bannir du chat (worker/tables.js).
       const chatInput = root.querySelector(".cg-chat input");
       if (chatInput)
-        chatInput.placeholder = G.hote === me ? "Message, /ban ou /deban pseudo" : "Message à la table";
+        chatInput.placeholder = G.hote === me ? "Message, /ban, /deban ou /kick pseudo" : "Message à la table";
       if (prev && prev.donneNumero !== G.donneNumero && ui.panel === "trick")
         ui.panel = null;
       if (prev && G.contract?.coinche && !prev.contract?.coinche) flash("coinche");

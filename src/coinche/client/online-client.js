@@ -109,6 +109,8 @@ export function OnlineClient({ api, matchID, playerID, credentials, name }) {
       }
       // Table fermée (abandonnée, effacée) : inutile d'insister.
       if (event.code === 4404) return goneFn?.();
+      // Expulsé par l'hôte (/kick) : sa place n'est plus à lui.
+      if (event.code === 4403) return goneFn?.("EXPULSE");
       // Pseudo de spectateur déjà pris à cette table. Déjà entré une fois :
       // c'est sa propre connexion d'avant (réseau changé), pas encore
       // refermée côté serveur ; on réessaie plus tard.

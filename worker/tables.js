@@ -21,8 +21,9 @@
 // messages : { type: "chat", text } → { type: "chat", seat, name, text }
 // (cleanChat) ; un spectateur peut écrire s'il a donné son pseudo (hello.name,
 // unique à la table : sinon fermée en 4409). { type: "watchers", names } :
-// spectateurs, à chaque arrivée ou départ. L'hôte écrit « /ban pseudo » ou
-// « /deban pseudo » ; messages système : { type: "chat", seat: null, name: null }.
+// spectateurs, à chaque arrivée ou départ. L'hôte écrit « /ban pseudo »,
+// « /deban pseudo » ou « /kick pseudo » (connexions fermées en 4403) ;
+// messages système : { type: "chat", seat: null, name: null }.
 // Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
 // Délais : le serveur les tient seul, avec une alarme pour tout le salon ;
 // elle joue l'action par défaut des tables dont la fenêtre est échue.
@@ -398,13 +399,39 @@ export class Tables extends DurableObject {
       // spectateur peut revenir sous un autre (bannir par empreinte d'IP, voir
       // ownerOf, si ça arrive).
       if (bans.some((b) => sameName(b, name))) return tell("Tu es banni du chat de cette table.");
-      // « /ban pseudo », « /deban pseudo » : l'hôte de la partie (G.hote)
-      // seulement ; la liste est enregistrée avec la table.
-      const command = text.match(/^\/(ban|deban)\b\s*(.*)$/i);
+      // « /ban pseudo », « /deban pseudo », « /kick pseudo » : l'hôte de la
+      // partie (G.hote) seulement ; la liste des bannis est enregistrée avec
+      // la table.
+      const command = text.match(/^\/(ban|deban|kick)\b\s*(.*)$/i);
       if (command) {
         const [, verb, target] = command;
-        if (!seated || att.seat !== m.G?.hote) return tell("Seul l'hôte de la table peut bannir ou débannir.");
+        if (!seated || att.seat !== m.G?.hote) return tell("Seul l'hôte de la table peut bannir, débannir ou expulser.");
         if (!target) return tell(`Écris /${verb.toLowerCase()} suivi du pseudo.`);
+        // Expulsé : sa place est libérée (l'hôte la confie à l'ordinateur si
+        // la partie est lancée, voir session.js) et ses connexions fermées ;
+        // il revient au lobby. ponytail: rien ne l'empêche de se rasseoir,
+        // /ban le fait taire mais ne l'écarte pas non plus.
+        if (verb.toLowerCase() === "kick") {
+          if (sameName(target, name)) return tell("Tu ne peux pas t'expulser toi-même.");
+          const seat = m.players.findIndex((p) => sameName(p.name, target));
+          if (seat < 0 && !this.watchers(id).some((w) => sameName(w, target)))
+            return tell(`Personne ne s'appelle « ${target} » à cette table.`);
+          if (seat >= 0) {
+            this.tables.leave(id, seat, m.players[seat].credentials);
+            await this.save(id);
+          }
+          for (const ws of this.ctx.getWebSockets(id)) {
+            const a = ws.deserializeAttachment();
+            if (!a?.ready || (seat >= 0 ? a.seat !== seat : a.seat != null || !sameName(a.name, target))) continue;
+            ws.serializeAttachment({ ...a, seat: null, ready: false });
+            ws.close(4403, "Expulsé");
+          }
+          this.broadcast(id);
+          this.relay(id, { type: "watchers", names: this.watchers(id) });
+          this.relay(id, { type: "chat", seat: null, name: null, text: `${target} est expulsé par l'hôte.` });
+          await this.maintain();
+          return;
+        }
         if (verb.toLowerCase() === "deban") {
           if (!bans.some((b) => sameName(b, target))) return tell(`« ${target} » n'est pas banni.`);
           m.chatBans = bans.filter((b) => !sameName(b, target));
