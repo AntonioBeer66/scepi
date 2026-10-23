@@ -962,10 +962,14 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     }
   }
 
+  // Cartes chargées et table dessinée : la partie peut commencer (session.js).
+  let markReady;
+  const ready = new Promise((resolve) => (markReady = resolve));
+
   class TableScene extends Phaser.Scene {
     preload() {
       for (const id of CARD_IDS)
-        this.load.image(id, `../../assets/images/coinche/cards/${id}.png`);
+        this.load.image(id, `../../assets/images/coinche/cards/${id}.webp`);
       this.load.svg("back", "../../assets/images/coinche/cards/back.svg", {
         width: CARD_PX.w,
         height: CARD_PX.h,
@@ -987,6 +991,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       relayout();
       if (queued) apply(queued);
       queued = null;
+      markReady();
     }
     update() {
       drawRing();
@@ -1012,6 +1017,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   resizer.observe(parent);
 
   return {
+    ready,
     update(next) {
       // Pas encore chargée : on garde le dernier état, affiché sans animer.
       if (scene) apply(next);

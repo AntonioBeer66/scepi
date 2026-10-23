@@ -6,7 +6,7 @@
 const CACHE = "scepi";
 const JEU = "/assets/js/coinche/";
 const CARTES = ["7", "8", "9", "10", "J", "Q", "K", "A"].flatMap((r) =>
-  ["C", "D", "H", "S"].map((c) => `/assets/images/coinche/cards/${r}${c}.png`),
+  ["C", "D", "H", "S"].map((c) => `/assets/images/coinche/cards/${r}${c}.webp`),
 );
 const FICHIERS = [
   "/",

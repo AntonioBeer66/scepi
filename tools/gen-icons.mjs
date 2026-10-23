@@ -58,7 +58,7 @@ const og = page(
 
 // Aperçu de la page coinche (le lien qu'on s'envoie pour jouer) : éventail
 // sur le tapis vert, accent vert réservé à la coinche.
-const CARD = (id) => `data:image/png;base64,${b64(`site/assets/images/coinche/cards/${id}.png`)}`;
+const CARD = (id) => `data:image/webp;base64,${b64(`site/assets/images/coinche/cards/${id}.webp`)}`;
 const GREEN_LOGO = `data:image/png;base64,${b64("site/assets/images/logo-green.png")}`;
 const ogCoinche = page(
   `<div class="og">

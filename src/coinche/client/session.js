@@ -229,7 +229,12 @@ export function startSession({
       if (why === "EXPULSE") window.alert("L'hôte t'a expulsé de la table.");
     });
   }
-  client.start();
+  // La partie (et ses délais, et les enchères à l'écran) ne démarre qu'une
+  // fois les cartes chargées : sinon on enchérit sans voir sa main. Au bout
+  // de 8 s on démarre quand même, plutôt que de rester bloqué.
+  Promise.race([table.ready, new Promise((r) => setTimeout(r, 8000))]).then(() => {
+    if (!stopped) client.start();
+  });
 
   // Tout est coupé avant la déconnexion, qui prévient encore les abonnés :
   // sinon l'hôte repartirait et les bots joueraient sans personne.
