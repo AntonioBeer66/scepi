@@ -1,9 +1,13 @@
 // Émoticônes des bots : réaction d'un bot à ce qui vient de se passer, lue
-// dans le passage d'un état public au suivant (prev → G). Rien n'est envoyé :
-// chaque écran (solo, joueurs en ligne, spectateurs) la déduit lui-même du
-// même état, et le tirage dépend seulement de la donne, donc tout le monde
-// voit le même bot réagir. Renvoie [siège, émoticône, attente en ms ?] ou null.
-import { teamOf, trickWinnerSeat } from "../engine.js";
+// dans le passage d'un état public au suivant (prev → G). Règle locale :
+// rien ne part au serveur, chaque écran (solo, joueurs en ligne, spectateurs)
+// la déduit lui-même du même état, et le tirage dépend seulement de la
+// donne, donc tout le monde voit le même bot réagir — ou aucun : la plupart
+// des moments n'ont qu'une chance de déclencher une réaction.
+// Comme un humain : un seul bot réagit, après un temps de réaction variable,
+// et il lui arrive d'insister (même émoticône deux ou trois fois de suite).
+// Renvoie la liste des bulles [siège, émoticône, attente en ms], vide sinon.
+import { teamOf } from "../engine.js";
 
 // Tirage déterministe dans [0, 1) à partir de la donne et du moment.
 function roll(G, salt) {
@@ -22,12 +26,45 @@ function pick(G, seats, salt) {
 const team = (t) => [0, 1, 2, 3].filter((s) => teamOf(s) === t);
 const withWait = (e, ms) => e && [...e, ms];
 
+// Chance qu'un moment provoque une réaction.
+const CHANCE = {
+  fin: 1, // fin de partie
+  capot: 0.9,
+  chute: 0.6,
+  sousAnnonce: 0.5,
+  coincheRatee: 0.5,
+  passe: 0.5,
+  coinche: 0.35,
+  surcoinche: 0.35,
+};
+// Contrat réussi avec au moins SOUS_ANNONCE points de plis de plus que
+// l'annonce : les preneurs ont sous-annoncé.
+const SOUS_ANNONCE = 40;
+
+const SPAM = 0.3; // chance d'insister
+const GAP_MS = 1000; // entre deux émoticônes d'un même joueur (comme hud.js)
+
 export function botEmote(G, prev) {
+  const e = reaction(G, prev);
+  if (!e) return [];
+  const [seat, emote, wait = 0] = e;
+  const at = wait + 300 + Math.floor(roll(G, "délai") * 1200); // temps de réaction
+  const out = [[seat, emote, at]];
+  if (roll(G, "spam") < SPAM) {
+    const n = 1 + Math.floor(roll(G, "combien") * 2);
+    let t = at;
+    for (let i = 1; i <= n; i++) out.push([seat, emote, (t += GAP_MS + Math.floor(roll(G, `rythme${i}`) * 300))]);
+  }
+  return out;
+}
+
+function reaction(G, prev) {
   if (!prev?.seats || !G?.seats || G.phase === "ATTENTE") return null;
   const say = (seats, emote, salt = emote) => {
     const s = pick(G, seats, salt);
     return s == null ? null : [s, emote];
   };
+  const lucky = (moment) => roll(G, moment) < CHANCE[moment];
   const c = G.contract;
 
   // Partie gagnée : les vainqueurs savourent, les autres boudent.
@@ -41,14 +78,21 @@ export function botEmote(G, prev) {
     const r = G.dernierResultat;
     const pre = team(r.preneurs);
     const def = team(1 - r.preneurs);
-    if (r.reussi && r.plis[r.preneurs] === 8) return say(pre, "🗿"); // capot
-    if (!r.reussi && r.plis[1 - r.preneurs] === 8) return say(def, "🗿");
-    if (!r.reussi)
-      // Chute : la défense se moque (plus fort s'il y avait coinche), le preneur pleure.
-      return roll(G, "chute") < 0.6
-        ? say(def, r.multiplicateur > 1 ? "🤡" : "😂")
-        : say([r.preneur], "😭") || say(def, "😂");
-    if (r.multiplicateur > 1) return say(pre, "🥱") || say(def, "😔"); // coinche ratée
+    const capot = r.plis.indexOf(8);
+    if (capot >= 0) return lucky("capot") ? say(team(capot), "🗿") : null;
+    if (!r.reussi) {
+      if (!lucky("chute")) return null;
+      // Chute : la défense se moque (plus fort s'il y avait coinche), le
+      // preneur pleure, son partenaire ne comprend pas.
+      const u = roll(G, "qui");
+      const mock = say(def, r.multiplicateur > 1 ? "🤡" : "😂");
+      if (u < 0.5) return mock;
+      if (u < 0.75) return say([r.preneur], "😭") || mock;
+      return say([(r.preneur + 2) % 4], "❓") || mock;
+    }
+    if (r.multiplicateur > 1) return lucky("coincheRatee") ? say(pre, "🥱") || say(def, "😔") : null;
+    if (r.montant <= 160 && r.points[r.preneurs] >= r.montant + SOUS_ANNONCE)
+      return lucky("sousAnnonce") ? say(def, "🅰️") : null;
     return null;
   }
 
@@ -56,36 +100,19 @@ export function botEmote(G, prev) {
   if (
     G.phase === "ENCHERES" &&
     prev.phase === "ENCHERES" &&
-    G.donneNumero > prev.donneNumero &&
-    roll(G, "passe") < 0.5
+    G.donneNumero > prev.donneNumero
   )
-    return say([0, 1, 2, 3], "🤷");
+    return lucky("passe") ? say([0, 1, 2, 3], "🤷") : null;
 
   // Coinche, puis surcoinche.
   // Troisième élément : attente (ms) que la vidéo de l'écran (hud.js, FLASH) passe.
   if (c?.coinche && !prev.contract?.coinche)
-    return withWait(say([c.coincheur], "💣") || say(team(c.equipePreneur), "😳"), 1100);
+    return lucky("coinche")
+      ? withWait(say([c.coincheur], "💣") || say(team(c.equipePreneur), "😳"), 1100)
+      : null;
   if (c?.surcoinche && !prev.contract?.surcoinche)
-    return withWait(say([c.surcoincheur], "💪") || say(team(1 - c.equipePreneur), "😳"), 1700);
-
-  // Pli où un joueur a coupé son partenaire déjà maître : le partenaire (bot)
-  // ne comprend pas.
-  const t = G.lastTrick;
-  if (t && t !== prev.lastTrick && G.plisJoues > prev.plisJoues && c) {
-    const lead = t.cards[0].carte.suit;
-    for (let i = 2; i < t.cards.length; i++) {
-      const { siege, carte } = t.cards[i];
-      const before = t.cards.slice(0, i);
-      const master = trickWinnerSeat(before, c.atout);
-      const mate = (siege + 2) % 4;
-      if (
-        lead !== c.atout &&
-        carte.suit === c.atout &&
-        master === mate &&
-        before.every((e) => e.carte.suit !== c.atout)
-      )
-        return say([mate], "❓");
-    }
-  }
+    return lucky("surcoinche")
+      ? withWait(say([c.surcoincheur], "💪") || say(team(1 - c.equipePreneur), "😳"), 1700)
+      : null;
   return null;
 }
