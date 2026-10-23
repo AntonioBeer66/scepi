@@ -8,6 +8,7 @@ import { Coinche } from "../game.js";
 import { trickPause } from "../host.js";
 import { buildRecord, JOURNAL_MAX_BYTES } from "../journal.js";
 import { sameName } from "../../online/tables.js";
+import { botEmote } from "./bot-emotes.js";
 import { createHud } from "./hud.js";
 import { OnlineClient } from "./online-client.js";
 import { createTable } from "./table-scene.js";
@@ -208,6 +209,12 @@ export function startSession({
     autoLastCard(G);
     hud.update(G, prev);
     table.update(G, prev);
+    // Réaction d'un bot (voir bot-emotes.js), un peu après le coup qui la provoque.
+    const reaction = botEmote(G, prev);
+    if (reaction) {
+      const [seat, emote, wait = 0] = reaction;
+      setTimeout(() => !stopped && table.showEmote(seat, emote), 500 + wait + trickPause(G));
+    }
     prev = G;
   });
   if (online) {
