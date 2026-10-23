@@ -7,7 +7,8 @@
 // Comme un humain : un seul bot réagit, après un temps de réaction variable,
 // et il lui arrive d'insister (même émoticône deux ou trois fois de suite).
 // Renvoie la liste des bulles [siège, émoticône, attente en ms], vide sinon.
-import { teamOf } from "../engine.js";
+import { teamOf, WIN_SCORE } from "../engine.js";
+import { LAST_TRICK_SHOW_MS, trickPause } from "../host.js";
 
 // Tirage déterministe dans [0, 1) à partir de la donne et du moment.
 function roll(G, salt) {
@@ -28,7 +29,6 @@ const withWait = (e, ms) => e && [...e, ms];
 
 // Chance qu'un moment provoque une réaction.
 const CHANCE = {
-  fin: 1, // fin de partie
   capot: 0.9,
   chute: 0.6,
   sousAnnonce: 0.5,
@@ -44,18 +44,24 @@ const SOUS_ANNONCE = 40;
 const SPAM = 0.3; // chance d'insister
 const GAP_MS = 1000; // entre deux émoticônes d'un même joueur (comme hud.js)
 
+// Attentes comptées depuis l'arrivée de l'état. Fin de donne : tout part
+// pendant que le dernier pli est montré, avant le récapitulatif qui couvre
+// la table (.cg-recap, au bout de LAST_TRICK_SHOW_MS) ; sinon après le pli
+// en cours (trickPause).
 export function botEmote(G, prev) {
   const e = reaction(G, prev);
   if (!e) return [];
   const [seat, emote, wait = 0] = e;
-  const at = wait + 300 + Math.floor(roll(G, "délai") * 1200); // temps de réaction
+  const score = G.phase === "SCORE";
+  const react = score ? 200 + roll(G, "délai") * 500 : 300 + roll(G, "délai") * 1200;
+  const at = Math.floor(wait + react + (score ? 0 : trickPause(G))); // temps de réaction
   const out = [[seat, emote, at]];
   if (roll(G, "spam") < SPAM) {
     const n = 1 + Math.floor(roll(G, "combien") * 2);
     let t = at;
     for (let i = 1; i <= n; i++) out.push([seat, emote, (t += GAP_MS + Math.floor(roll(G, `rythme${i}`) * 300))]);
   }
-  return out;
+  return score ? out.filter(([, , t]) => t < LAST_TRICK_SHOW_MS - 200) : out;
 }
 
 function reaction(G, prev) {
@@ -67,14 +73,14 @@ function reaction(G, prev) {
   const lucky = (moment) => roll(G, moment) < CHANCE[moment];
   const c = G.contract;
 
-  // Partie gagnée : les vainqueurs savourent, les autres boudent.
-  if (G.phase === "TERMINEE" && prev.phase !== "TERMINEE") {
-    const win = G.scores[0] >= G.scores[1] ? 0 : 1;
-    return say(team(win), "🎬") || say(team(1 - win), "😔");
-  }
-
   // Fin de donne.
   if (G.phase === "SCORE" && prev.phase !== "SCORE" && G.dernierResultat) {
+    // Dernière donne de la partie : les vainqueurs savourent, les autres
+    // boudent (dès la fin du pli : la bannière finale couvrirait la table).
+    if (Math.max(...G.scores) >= WIN_SCORE) {
+      const win = G.scores[0] >= G.scores[1] ? 0 : 1;
+      return say(team(win), "🎬") || say(team(1 - win), "😔");
+    }
     const r = G.dernierResultat;
     const pre = team(r.preneurs);
     const def = team(1 - r.preneurs);

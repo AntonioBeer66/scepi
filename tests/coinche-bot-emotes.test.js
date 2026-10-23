@@ -37,8 +37,14 @@ const sous = { reussi: true, preneurs: 0, preneur: 0, plis: [6, 2], points: [130
 near(rate(score(sous), ([s, e]) => assert.ok([1, 3].includes(s) && e === "🅰️")), 0.5);
 // Contrat juste fait : rien.
 assert.equal(rate(score({ ...sous, points: [95, 67] })), 0);
-// Fin de partie : toujours.
-assert.equal(rate((b) => [{ ...b, phase: "TERMINEE", scores: [1020, 700] }, { ...b, phase: "SCORE" }]), 1);
+// Fin de partie : toujours, dès la dernière donne (avant le récapitulatif).
+assert.equal(rate((b) => [{ ...b, phase: "SCORE", scores: [700, 1020], dernierResultat: sous }, b],
+  ([s, e]) => assert.ok([1, 3].includes(s) && e === "🎬")), 1);
+// Fin de donne : toutes les bulles avant le récapitulatif (2,5 s).
+for (let d = 1; d <= N; d++) {
+  const b = { ...base, donneNumero: d };
+  for (const [, , t] of botEmote(...score(capot)(b))) assert.ok(t < 2300, `${t} ms`);
+}
 // Coinche d'un bot : parfois.
 const contract = { atout: "S", equipePreneur: 0 };
 near(rate(

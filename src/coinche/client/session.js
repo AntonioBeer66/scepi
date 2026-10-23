@@ -211,7 +211,7 @@ export function startSession({
     table.update(G, prev);
     // Réaction d'un bot (voir bot-emotes.js), un peu après le coup qui la provoque.
     for (const [seat, emote, wait] of botEmote(G, prev))
-      setTimeout(() => !stopped && table.showEmote(seat, emote), wait + trickPause(G));
+      setTimeout(() => !stopped && table.showEmote(seat, emote), wait);
     prev = G;
   });
   if (online) {
