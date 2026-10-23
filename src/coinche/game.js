@@ -9,6 +9,7 @@
 // mains des bots. Si l'hôte se déconnecte, un autre humain reprend le rôle.
 import { createGame, actOn } from "./engine.js";
 import { MAX_NAME } from "../online/tables.js";
+import { defiRandom, isDefiDate } from "./defi.js";
 
 // Valeurs de boardgame.io/core, recopiées : ce sous-chemin ne se charge pas
 // en module ES sous Node (serveur, tests).
@@ -72,9 +73,10 @@ export const Coinche = {
   moves: {
     // Lancer (ou relancer après la fin) : seats = [{ type, name }], les
     // humains étant les places occupées de la table ; l'expéditeur devient hôte.
+    // options.defi (AAAA-MM-JJ) : la donne du jour (defi.js), la même pour tous.
     lancer: {
       client: false,
-      move: ({ G, playerID, random }, seats) => {
+      move: ({ G, playerID, random }, seats, options) => {
         if (G.phase !== "ATTENTE" && G.phase !== "TERMINEE") return INVALID_MOVE;
         if (!Array.isArray(seats) || seats.length !== 4) return INVALID_MOVE;
         const list = seats.map((s) => ({
@@ -86,8 +88,9 @@ export const Coinche = {
         }));
         const me = seatOf(playerID);
         if (list[me]?.type !== "human") return INVALID_MOVE;
-        const game = createGame(list, () => random.Number());
-        return { ...game, hote: me, table: G.table };
+        const defi = isDefiDate(options?.defi) ? options.defi : null;
+        const game = createGame(list, defi ? defiRandom(defi) : () => random.Number());
+        return { ...game, hote: me, table: G.table, defi };
       },
     },
 

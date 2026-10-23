@@ -2,7 +2,7 @@
 // servis directement par Cloudflare, sans passer ici (gratuit et illimité) :
 // le Worker ne reçoit que /api/* (run_worker_first) et les adresses sans
 // fichier. scepinvaders.com → www : règle de redirection du tableau de bord.
-import { saveDonne } from "./journal.js";
+import { saveDonne, statsDonnes } from "./journal.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -19,6 +19,15 @@ export default {
       if (origin && origin !== url.origin) return new Response("Origine refusée.", { status: 403 });
       // Journal anonyme des donnes (voir worker/journal.js) : écriture seule.
       if (url.pathname === "/api/journal") return saveDonne(request, env);
+      // Chiffres publics de la coinche (totaux du journal), partagés 15 min.
+      if (url.pathname === "/api/stats" && request.method === "GET") {
+        const key = url.origin + url.pathname;
+        const cached = await caches.default.match(key);
+        if (cached) return cached;
+        const res = await statsDonnes(env);
+        ctx.waitUntil(caches.default.put(key, res.clone()));
+        return res;
+      }
       // Compteur de l'accueil et de la ludothèque : une réponse partagée
       // 10 s plutôt qu'un réveil du salon par visite (le lobby, lui, n'y passe pas).
       if (url.pathname === "/api/tables" && url.search === "?compteur" && request.method === "GET") {

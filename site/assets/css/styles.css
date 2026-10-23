@@ -4859,6 +4859,67 @@ html {
 .cq-lobby {
   padding-top: 40px;
 }
+.cq-stats {
+  margin-top: 28px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #120d1d;
+}
+.cq-stats h3 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+.cq-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.cq-stats-grid div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+.cq-stats-grid dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.cq-stats-grid dd {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.cq-solo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.home-daily {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+/* Fin de la donne du jour, sous le récapitulatif (hud.js, renderDefi) */
+.cg-defi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 22rem;
+  margin-top: 6px;
+}
+.cg-defi p {
+  margin: 0;
+  font-size: 14px;
+}
+.cg-defi-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
 .cq-steps {
   display: flex;
   flex-wrap: wrap;
@@ -5124,5 +5185,89 @@ button,
   .pillar p,
   .asso-split p {
     max-width: 68ch;
+/* Puzzle du jour (page échecs, puzzle.js) */
+.pz {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+  gap: 32px;
+  align-items: center;
+}
+.pz-status {
+  min-height: 3em;
+  color: var(--gold);
+  font-weight: 600;
+}
+.pz-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pz-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 6px solid #241735;
+  border-radius: 4px;
+  box-shadow: 0 16px 28px #0a061335;
+  user-select: none;
+}
+.pz-square {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.pz-square.is-light {
+  background: #ead9ae;
+}
+.pz-square.is-dark {
+  background: #70526d;
+}
+.pz-square img {
+  position: relative;
+  z-index: 1;
+  width: 88%;
+  height: 88%;
+  pointer-events: none;
+}
+.pz-square:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -3px;
+}
+.pz-square.is-selected,
+.pz-square.is-hint {
+  box-shadow: inset 0 0 0 4px var(--gold);
+}
+.pz-square.is-target::after,
+.pz-square.is-capture::after {
+  content: "";
+  position: absolute;
+  width: 26%;
+  height: 26%;
+  border-radius: 50%;
+  background: #f4c600c4;
+}
+.pz-square.is-capture::after {
+  width: 78%;
+  height: 78%;
+  border: 4px solid #f4c600c4;
+  background: transparent;
+}
+.pz-square:disabled {
+  cursor: default;
+}
+@media (max-width: 760px) {
+  .pz {
+    grid-template-columns: 1fr;
+  }
+  .pz-board {
+    margin: 0 auto;
   }
 }

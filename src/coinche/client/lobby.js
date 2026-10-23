@@ -7,10 +7,12 @@
 // La place occupée (identifiants) est gardée dans ce navigateur : recharger
 // la page ramène à la table.
 import { CODE_MIN, MAX_NAME, cleanName, normCode } from "../../online/tables.js";
+import { isDefiDate, today } from "../defi.js";
 
 const API = "/api";
 const SESSION_KEY = "scepi-coinche-session";
 const SOLO_KEY = "scepi-coinche-solo-match";
+const SOLO_DEFI_KEY = "scepi-coinche-solo-defi"; // date de la donne du jour en cours
 const SEAT_LABELS = ["Nord", "Est", "Sud", "Ouest"];
 const SEAT_TEAM = ["Équipe A", "Équipe B", "Équipe A", "Équipe B"];
 const POLL_MS = 3000;
@@ -259,7 +261,7 @@ function soloID(fresh) {
   }
 }
 
-async function enterGame({ online, launch = false, fresh = false, watch = null, watchName = null }) {
+async function enterGame({ online, launch = false, fresh = false, watch = null, watchName = null, defi = null }) {
   // Réservé avant l'import : un rafraîchissement du salon qui aboutit
   // pendant le chargement lancerait sinon une seconde session.
   if (playing) return;
@@ -281,6 +283,7 @@ async function enterGame({ online, launch = false, fresh = false, watch = null, 
     soloID: online ? null : soloID(fresh),
     watch,
     watchName,
+    defi,
     seatsFromTable: () =>
       (tables || [])
         .find((t) => t.matchID === session?.matchID)
@@ -292,6 +295,7 @@ async function enterGame({ online, launch = false, fresh = false, watch = null, 
       if (!online)
         try {
           localStorage.removeItem(SOLO_KEY);
+          localStorage.removeItem(SOLO_DEFI_KEY);
         } catch {
           // stockage indisponible : rien à oublier
         }
@@ -393,18 +397,42 @@ function init() {
   const soloBtn = $("#solo-btn");
   soloBtn?.addEventListener("click", () => {
     if (playing) return;
+    try {
+      localStorage.removeItem(SOLO_DEFI_KEY);
+    } catch {
+      // stockage indisponible
+    }
     enterGame({ online: false, fresh: true });
   });
   if (soloBtn) soloBtn.disabled = false;
 
+  // Donne du jour (defi.js) : bouton, ou lien partagé ?defi=AAAA-MM-JJ.
+  const startDefi = (date) => {
+    if (playing) return;
+    try {
+      localStorage.setItem(SOLO_DEFI_KEY, date);
+    } catch {
+      // stockage indisponible : la donne se joue quand même
+    }
+    enterGame({ online: false, fresh: true, defi: date });
+  };
+  const defiBtn = $("#defi-btn");
+  defiBtn?.addEventListener("click", () => startDefi(today()));
+  if (defiBtn) defiBtn.disabled = false;
+  const asked = new URLSearchParams(location.search).get("defi");
+  const askedDefi = asked === "" || asked === "jour" ? today() : isDefiDate(asked) ? asked : null;
+
   // Rechargé en pleine partie solo : on y retourne.
   let resume = null;
+  let resumeDefi = null;
   try {
     resume = localStorage.getItem(SOLO_KEY);
+    resumeDefi = localStorage.getItem(SOLO_DEFI_KEY);
   } catch {
     // stockage indisponible
   }
-  if (resume && !session) enterGame({ online: false });
+  if (askedDefi && !session && !(resume && resumeDefi === askedDefi)) startDefi(askedDefi);
+  else if (resume && !session) enterGame({ online: false, defi: isDefiDate(resumeDefi) ? resumeDefi : null });
   else poll();
 }
 

@@ -138,6 +138,8 @@ Classées par rapport valeur / coût. Toutes respectent les contraintes de PRODU
 
 ### N1. Donne du jour (coinche) — M, full auto ★ conseillée
 
+**Fait** (23 octobre 2026) : `src/coinche/defi.js`, option `defi` du coup `lancer` (`src/coinche/game.js`), fin de donne et partage (`session.js`, `hud.js`), bouton et lien `?defi=AAAA-MM-JJ` ou `?defi=jour` (`lobby.js`), lien depuis l'accueil, tests `tests/coinche-defi.test.js`. Limite : à la marge, un appareil très lent (moins de mondes calculés par les bots, voir `host-worker.js`) ou une carte jouée d'office après 20 s peuvent faire diverger la suite de la donne.
+
 Un défi quotidien façon Wordle : la même donne pour tout le monde ce jour-là, jouée avec trois bots, et un résultat à partager.
 
 - **Pourquoi c'est sûr :** le moteur est déjà déterministe (graine dérivée de l'état, `tests/coinche-determinisme.test.js`) ; la partie tourne entièrement dans le navigateur et hors ligne (`sw.js`). Aucun serveur à ajouter.
@@ -151,6 +153,8 @@ Un défi quotidien façon Wordle : la même donne pour tout le monde ce jour-là
 
 ### N2. Statistiques publiques de la coinche — S/M, full auto
 
+**Fait**, sous forme d'un bloc « La coinche en chiffres » sur `jeux/coinche/` plutôt que d'une page à part : `GET /api/stats` (`worker/journal.js`, `statsDonnes`), agrégats en une seule requête SQL (`STATS_SQL`, `aggregateStats` dans `src/coinche/journal.js`), recalculés au plus toutes les 6 h et gardés dans la table D1 `stats_cache`, puis 15 min dans le cache de Cloudflare. Le bloc reste caché sous 50 donnes. Page confidentialité mise à jour. Tests `tests/coinche-stats.test.js`.
+
 Une page `jeux/coinche/stats/` : nombre de donnes jouées par des humains, contrats les plus pris, taux de réussite par contrat, part des coinches gagnées. Ce sont des chiffres agrégés et anonymes.
 
 - Source : le journal D1 existe déjà (`worker/journal.js`, table `donnes`). Ajouter une route `GET /api/stats` qui calcule les agrégats en SQL, mise en cache une heure (`caches.default`, comme le compteur de `worker/index.js`).
@@ -158,6 +162,8 @@ Une page `jeux/coinche/stats/` : nombre de donnes jouées par des humains, contr
 - Lire d'abord les colonnes réelles de la table dans `worker/journal.js` avant d'écrire le SQL.
 
 ### N3. Puzzle d'échecs du jour — M, full auto
+
+**Fait, autrement que prévu** : la base Lichess n'était pas joignable depuis l'environnement de travail. Les puzzles sont donc des mats en 2 ou 3 tirés de parties de Stockfish contre lui-même, avec un coup unique à chaque étape (`tools/puzzles-echecs.mjs`, sortie `site/assets/js/echecs/puzzles.json`). Ce sont des créations originales, sans licence à citer. Widget `site/assets/js/echecs/puzzle.js`, tests `tests/echecs-puzzles.test.js`. Le plan d'origine ci-dessous reste valable pour qui voudrait des puzzles plus variés.
 
 - Prendre un petit lot (≈ 365 positions) de la base de puzzles Lichess, publiée sous **CC0** (`database.lichess.org`), filtrée sur un classement de 1200 à 1800. La stocker en JSON dans `src/echecs/`.
 - Puzzle choisi par la date ; l'échiquier et `chess.min.js` existent déjà (`site/assets/js/echecs/echecs.js`). Valider les coups contre la solution, avec un indice affiché sur demande.

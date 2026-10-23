@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="../../assets/css/styles.css" />
     <script src="../../assets/js/main.js" defer></script>
     <script src="../../assets/js/coinche-rules.js" defer></script>
+    <script src="../../assets/js/coinche-stats.js" defer></script>
     <!-- Jeu compilé depuis src/coinche (npm run build) -->
     <script type="module" src="../../assets/js/coinche/coinche.js"></script>
       <script type="application/ld+json">{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"Coinche en ligne","alternateName":["Coinche","Belote coinchée","Coinche multijoueur","Coinche contre l’ordinateur"],"description":"Joue à la coinche en ligne gratuitement et sans inscription : une table avec tes amis, des bots pour compléter, ou une partie en solo contre l’ordinateur.","url":"https://www.scepinvaders.com/jeux/coinche/","image":"https://www.scepinvaders.com/assets/images/og-coinche.jpg","inLanguage":"fr","genre":["Jeu de cartes","Belote"],"gamePlatform":["Navigateur web","Android"],"applicationCategory":"GameApplication","operatingSystem":"Tous (navigateur web)","playMode":["MultiPlayer","SinglePlayer"],"numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":4},"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"author":{"@type":"Organization","name":"SCEP Invaders","url":"https://www.scepinvaders.com/"}}</script>
@@ -376,10 +377,15 @@
               <li>L’ordinateur complète</li>
             </ol>
           </div>
-          <!-- Activé par le jeu une fois chargé (lobby.js). -->
-          <button type="button" class="button primary" id="solo-btn" disabled>
-            Jouer seul contre l’ordinateur
-          </button>
+          <!-- Activés par le jeu une fois chargé (lobby.js). -->
+          <div class="cq-solo-actions">
+            <button type="button" class="button primary" id="solo-btn" disabled>
+              Jouer seul contre l’ordinateur
+            </button>
+            <button type="button" class="button outline" id="defi-btn" disabled>
+              Donne du jour
+            </button>
+          </div>
         </div>
         <p class="caption cq-status" id="lobby-status" role="status"></p>
         <div class="lobby-grid" id="lobby-grid"></div>
@@ -445,6 +451,17 @@
               <button type="button" class="button outline" id="private-create-btn">Créer</button>
             </div>
           </form>
+        </div>
+        <!-- Rempli par coinche-stats.js (GET /api/stats) ; reste caché sans chiffres. -->
+        <div class="cq-stats" id="coinche-stats" hidden>
+          <h3>La coinche en chiffres</h3>
+          <p class="caption" data-stats-intro></p>
+          <dl class="cq-stats-grid" data-stats-grid></dl>
+          <p class="caption">
+            Totaux du journal anonyme des donnes jouées sur le site (voir la
+            <a href="../../confidentialite/index.html">confidentialité</a>),
+            recalculés quelques fois par jour.
+          </p>
         </div>
       </section>
       <section

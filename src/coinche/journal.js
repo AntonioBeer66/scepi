@@ -74,3 +74,58 @@ export function checkRecord(r) {
   }
   return null;
 }
+
+// Chiffres publics tirés du journal (GET /api/stats, worker/journal.js) :
+// seulement des totaux, jamais une donne. rows : lignes de STATS_SQL.
+export const STATS_SQL = `SELECT json_extract(data, '$.mode') AS mode,
+  json_extract(data, '$.contrat[1]') AS montant, json_extract(data, '$.contrat[2]') AS atout,
+  json_extract(data, '$.reussi') AS reussi, json_extract(data, '$.contrat[3]') >= 0 AS coinche,
+  json_extract(data, '$.contrat[4]') >= 0 AS surcoinche, COUNT(*) AS n
+  FROM donnes GROUP BY 1, 2, 3, 4, 5, 6`;
+
+// Paliers d'annonce affichés : 80-90, 100-110, 120-130, 140-160, capot (250-270), générale.
+function palier(m) {
+  if (m >= 500) return "generale";
+  if (m >= 250) return "capot";
+  if (m >= 140) return "140";
+  if (m >= 120) return "120";
+  if (m >= 100) return "100";
+  return "80";
+}
+
+export function aggregateStats(rows) {
+  const s = {
+    donnes: 0,
+    passees: 0,
+    jouees: 0,
+    reussies: 0,
+    coinchees: 0,
+    coinchesGagnantes: 0, // contrat coinché qui chute
+    surcoinchees: 0,
+    modes: { solo: 0, ligne: 0 },
+    atouts: { H: 0, D: 0, C: 0, S: 0 },
+    paliers: {},
+  };
+  for (const r of rows) {
+    const n = Number(r.n) || 0;
+    s.donnes += n;
+    if (r.mode in s.modes) s.modes[r.mode] += n;
+    if (r.montant == null) {
+      s.passees += n;
+      continue;
+    }
+    s.jouees += n;
+    const ok = r.reussi === 1;
+    if (ok) s.reussies += n;
+    if (r.atout in s.atouts) s.atouts[r.atout] += n;
+    const p = (s.paliers[palier(r.montant)] ||= { n: 0, reussies: 0 });
+    p.n += n;
+    if (ok) p.reussies += n;
+    if (r.coinche) {
+      s.coinchees += n;
+      if (!ok) s.coinchesGagnantes += n;
+    }
+    if (r.surcoinche) s.surcoinchees += n;
+  }
+  return s;
+}
