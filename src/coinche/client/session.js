@@ -5,7 +5,6 @@
 import { Client } from "boardgame.io/client";
 import { Local } from "boardgame.io/multiplayer";
 import { Coinche } from "../game.js";
-import { DEFI_STORAGE, defiResult, recordResult, shareText, streak } from "../defi.js";
 import { trickPause } from "../host.js";
 import { buildRecord, JOURNAL_MAX_BYTES } from "../journal.js";
 import { sameName } from "../../online/tables.js";
@@ -31,7 +30,6 @@ export function startSession({
   watch, // matchID d'une partie à regarder en spectateur
   watchName, // pseudo du spectateur (ses messages)
   seatsFromTable,
-  defi, // AAAA-MM-JJ : la donne du jour, une seule donne (solo)
   onExit,
 }) {
   // Spectateur : ni place ni identifiants ; le serveur n'envoie aucune main.
@@ -122,39 +120,6 @@ export function startSession({
     onChat: online ? (text) => client.sendChat(text) : null, // seul contre les bots : pas de messages
   });
 
-  // Donne du jour finie (résultat, ou quatre passes) : la partie s'arrête là,
-  // le premier résultat du jour est gardé et le texte à partager préparé.
-  let defiOver = false;
-  function endDefi(G) {
-    defiOver = true;
-    host.stop();
-    const result = defiResult(G, me);
-    let results = {};
-    try {
-      results = JSON.parse(localStorage.getItem(DEFI_STORAGE)) || {};
-    } catch {}
-    const saved = recordResult(results, G.defi, result);
-    try {
-      localStorage.setItem(DEFI_STORAGE, JSON.stringify(saved.results));
-    } catch {}
-    const text = shareText(G.defi, saved.results[G.defi], streak(saved.results, G.defi));
-    hud.defi({ result, first: saved.first, share: () => share(text) });
-  }
-  async function share(text) {
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-        return null;
-      }
-      await navigator.clipboard.writeText(text);
-      return "Résultat copié : colle-le où tu veux";
-    } catch (e) {
-      if (e && e.name === "AbortError") return null;
-      window.prompt("Copie ton résultat :", text);
-      return null;
-    }
-  }
-
   let launched = false;
   let prev = null;
   let hostTried = null;
@@ -228,15 +193,12 @@ export function startSession({
         const seats = online ? seatsFromTable() : SOLO_SEATS;
         if (seats) {
           launched = true;
-          client.moves.lancer(seats, defi ? { defi } : undefined);
+          client.moves.lancer(seats);
         }
       }
       return;
     }
     if (!G.seats || G === prev) return; // même état notifié deux fois
-    if (defiOver) return;
-    // Donne du jour passée : la donne suivante n'est pas montrée.
-    if (G.defi && prev && G.donneNumero > prev.donneNumero) return endDefi(prev);
     if (G.hote === me) {
       if (prev && G.donneNumero < prev.donneNumero) host.stop(); // partie relancée
       host.update(G);
@@ -247,7 +209,6 @@ export function startSession({
     hud.update(G, prev);
     table.update(G, prev);
     prev = G;
-    if (G.defi && G.phase === "SCORE") endDefi(G);
   });
   if (online) {
     client.onEmote((seat, e) => table.showEmote(seat, e));

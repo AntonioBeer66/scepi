@@ -83,7 +83,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     hint: "",
     panel: null, // "history" | "trick" | null
     tab: null, // onglet de l'historique : "bids" | "cards" | "donnes" (null : enchères)
-    defi: null, // donne du jour finie : { result, first, share } (session.js)
   };
   let G = null;
   const flashBlobs = {};
@@ -492,23 +491,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
 
   // ---- Résultat ------------------------------------------------------------------
 
-  // Fin de la donne du jour : partager, ou revenir au salon.
-  function renderDefi() {
-    const d = ui.defi;
-    if (!d) return "";
-    return `<div class="cg-defi">
-        <p>${d.result.passee ? "Personne n’a pris : la donne du jour est passée." : d.result.gagne ? "Donne du jour gagnée !" : "Donne du jour perdue."}${d.first ? "" : " Déjà jouée aujourd’hui : seul ton premier résultat compte."}</p>
-        <div class="cg-defi-actions">
-          <button type="button" class="cg-btn is-primary" data-action="defi-share" data-focus-key="defi-share">Partager</button>
-          <button type="button" class="cg-btn" data-action="quit" data-focus-key="defi-quit">Retour au salon</button>
-        </div>
-      </div>`;
-  }
-
   function renderBanner() {
     const us = ours;
-    if (ui.defi?.result.passee)
-      return `<div class="cg-banner"><b>Donne passée</b>${renderDefi()}</div>`;
     if (G.phase === "SCORE" && G.dernierResultat) {
       const r = G.dernierResultat;
       const won = (r.reussi ? r.preneurs : 1 - r.preneurs) === us;
@@ -543,7 +527,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         </table>`
             : ""
         }
-        ${renderDefi()}
       </div>`;
     }
     if (G.phase === "TERMINEE") {
@@ -664,7 +647,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     else if (action === "restart")
       onRelaunch(G.seats.map((s) => ({ type: s.type, name: s.name })));
     else if (action === "quit") onQuit();
-    else if (action === "defi-share") ui.defi?.share().then((msg) => msg && toast(msg));
   });
 
   root.addEventListener("keydown", (event) => {
@@ -817,11 +799,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         "",
         "",
       ]);
-    },
-    defi(info) {
-      ui.defi = info;
-      render();
-      root.querySelector('[data-focus-key="defi-share"]')?.focus();
     },
     update(next, prev) {
       G = next;

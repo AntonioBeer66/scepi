@@ -23,7 +23,6 @@
     <script src="../../assets/js/echecs/chess.min.js" defer></script>
     <script src="../../assets/js/main.js" defer></script>
     <script src="../../assets/js/echecs/echecs.js" defer></script>
-    <script src="../../assets/js/echecs/puzzle.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -152,24 +151,6 @@
             </div>
           </div>
         </aside>
-      </section>
-      <!-- Rempli par puzzle.js (puzzles.json) ; caché s'il ne se charge pas. -->
-      <section class="section pz" id="chess-puzzle" aria-labelledby="pz-heading" hidden>
-        <div class="pz-text">
-          <p class="eyebrow">Puzzle du jour</p>
-          <h2 id="pz-heading" data-puzzle-title>Puzzle du jour</h2>
-          <p>
-            Le même pour tout le monde aujourd’hui, un nouveau demain. Trouve
-            la suite qui force le mat ; l’adversaire répond tout seul.
-          </p>
-          <p class="pz-status" data-puzzle-status role="status"></p>
-          <div class="pz-actions">
-            <button type="button" class="button outline" data-puzzle-action="hint">Indice</button>
-            <button type="button" class="button outline" data-puzzle-action="reset">Recommencer</button>
-            <button type="button" class="button outline" data-puzzle-action="solution">Voir la solution</button>
-          </div>
-        </div>
-        <div class="pz-board" data-puzzle-board aria-label="Échiquier du puzzle"></div>
       </section>
     </main>
     <footer class="footer">
