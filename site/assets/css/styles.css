@@ -3362,8 +3362,7 @@ body.is-playing .header {
    (enchère à 80), la barre cachait Est et Ouest. */
 @media (max-width: 700px) and (min-height: 501px) {
   .cg-chip,
-  .cg-btn,
-  .cg-emotes .cg-emote {
+  .cg-btn {
     min-height: 44px;
   }
   /* Même raison qu'en paysage : sans le titre, la barre laisse voir les
@@ -3619,11 +3618,34 @@ body.is-playing .header {
     bottom: auto;
     flex-direction: column-reverse;
   }
+  /* Sous le bouton (100 px + 48 px + 8 px), jamais plus bas que l'écran. */
+  .cg-emote-list {
+    max-height: calc(100vh - 168px);
+    max-height: calc(100dvh - 168px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
 }
 /* Peu haut (téléphone en paysage) : palette sur trois colonnes, moins haute. */
 @media (max-height: 500px) {
   .cg-emote-list {
     grid-template-columns: repeat(3, auto);
+    /* Au-dessus du bouton (12 px + 48 px + 8 px), jamais au-delà du haut. */
+    max-height: calc(100vh - 76px);
+    max-height: calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+}
+/* Téléphone : la palette défile si elle est trop haute, et le chat passe
+   en tête pour rester visible sans défiler (il était en bas, hors écran
+   sur les téléphones peu hauts). */
+@media (max-width: 640px), (max-height: 500px) {
+  .cg-emote-list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .cg-chat-watchers,
+  .cg-chat-log,
+  .cg-chat,
+  .cg-chat-off {
+    order: -1;
   }
 }
 
