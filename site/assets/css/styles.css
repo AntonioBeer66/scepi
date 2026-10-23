@@ -421,14 +421,23 @@ a {
 .green {
   color: var(--green);
 }
+/* Contour neutre partout ; vert seulement sur la coinche (le vert
+   n'appartient qu'à elle, DESIGN.md). */
 .outline {
-  border-color: #5c7948;
+  border-color: #ffffff40;
   background: transparent;
-  color: #dcf2d6;
+  color: var(--text);
   margin-top: 12px;
+}
+.coinche-page .outline {
+  border-color: #5c7948;
+  color: #dcf2d6;
 }
 @media (hover: hover) {
   .outline:hover {
+    background: #ffffff10;
+  }
+  .coinche-page .outline:hover {
     background: #25321d;
   }
 }
@@ -759,11 +768,12 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 14px;
+  min-height: 44px;
+  padding: 9px 16px;
   border: 1px solid var(--gold);
   border-radius: 999px;
   color: var(--gold);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;

@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-23T12:00:00Z",
+  "title": "Design System: SCEP Invaders",
+  "extensions": {
+    "colorMeta": {
+      "night": { "role": "neutral", "displayName": "Nuit violette", "canonical": "#0c0914", "tonalRamp": ["#06040a", "#0c0914", "#181127", "#281747", "#3d2a63", "#5b4785", "#8c7bb0", "#d6cfe4"] },
+      "gold": { "role": "primary", "displayName": "Or des lauriers", "canonical": "#f4c600", "tonalRamp": ["#3d3100", "#665200", "#997b00", "#c9a200", "#f4c600", "#ffdc40", "#ffe880", "#fff6cc"] },
+      "coinche-green": { "role": "secondary", "displayName": "Vert du tapis", "canonical": "#39ff14", "tonalRamp": ["#0b3304", "#145c08", "#25321d", "#5c7948", "#2bc00f", "#39ff14", "#8cff73", "#dcf2d6"] },
+      "lilac": { "role": "tertiary", "displayName": "Lilas", "canonical": "#a98bff", "tonalRamp": ["#20154a", "#352278", "#4f37a8", "#6c52d4", "#8b6ff0", "#a98bff", "#cbb9ff", "#ece5ff"] },
+      "muted": { "role": "neutral", "displayName": "Atténué", "canonical": "#bdb5cd" },
+      "suit-red": { "role": "neutral", "displayName": "Rouge des cartes", "canonical": "#ff6b6b" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Le h1 de chaque page ; deuxième ligne en or une fois par page." },
+      "label": { "displayName": "Repère", "purpose": "Eyebrows, dates, pied de page ; jamais un paragraphe." }
+    },
+    "shadows": [
+      { "name": "panel", "value": "0 16px 40px #000a", "purpose": "Fenêtres et panneaux ouverts par-dessus le contenu." },
+      { "name": "bubble", "value": "0 10px 30px #000a", "purpose": "Bulles et menus courts." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Ce qui apparaît : panneaux, bulles, visionneuse." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Ce qui se déplace : pièces d'échecs, cartes." },
+      { "name": "press", "value": "80ms", "purpose": "Retour d'appui, scale(0.97)." },
+      { "name": "panel", "value": "200ms", "purpose": "Panneaux et bulles." }
+    ],
+    "breakpoints": [
+      { "name": "landscape-phone", "value": "max-height: 500px" },
+      { "name": "small", "value": "560px" },
+      { "name": "phone", "value": "760px" },
+      { "name": "tablet", "value": "1000px" },
+      { "name": "wide", "value": "1100px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Une seule action en or par zone.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Jouer à la coinche</a>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; min-height: 48px; padding: 15px 21px; border-radius: 6px; background: #f4c600; color: #181127; font: 700 0.8125rem system-ui, sans-serif; text-decoration: none; transition: background .18s, transform .18s; } .ds-btn-primary:hover { background: #ffdc40; transform: translateY(-2px); } .ds-btn-primary:active { transform: scale(0.97); transition-duration: 80ms; } .ds-btn-primary:focus-visible { outline: 2px solid #f4c600; outline-offset: 6px; }"
+    },
+    {
+      "name": "Bouton à contour",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Actions secondaires.",
+      "html": "<a class=\"ds-btn-outline\" href=\"#\">Rejoindre l'asso</a>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; min-height: 48px; padding: 15px 21px; border-radius: 6px; border: 1px solid #ffffff40; background: transparent; color: #f7f4fc; font: 700 0.8125rem system-ui, sans-serif; text-decoration: none; transition: background .18s; } .ds-btn-outline:hover { background: #ffffff10; } .ds-btn-outline:active { transform: scale(0.97); } .ds-btn-outline:focus-visible { outline: 2px solid #f4c600; outline-offset: 6px; }"
+    },
+    {
+      "name": "Pastille",
+      "kind": "chip",
+      "refersTo": "pill",
+      "description": "Étiquette courte.",
+      "html": "<span class=\"ds-pill\">Jeux de société</span>",
+      "css": ".ds-pill { display: inline-flex; border: 1px solid #ffffff24; border-radius: 999px; padding: 7px 12px; font: 500 0.75rem system-ui, sans-serif; color: #bdb5cd; }"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "description": "Page courante soulignée d'or.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">Accueil</a><a href=\"#\" aria-current=\"page\">Jeux</a><a href=\"#\">Contact</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 30px; background: #0c0914; padding: 0 20px; } .ds-nav a { position: relative; padding: 24px 0; color: #bdb5cd; font: 0.875rem system-ui, sans-serif; text-decoration: none; } .ds-nav a:hover, .ds-nav a[aria-current] { color: #f7f4fc; } .ds-nav a[aria-current]::after { content: ''; position: absolute; left: 0; right: 0; bottom: 12px; height: 3px; background: #f4c600; }"
+    },
+    {
+      "name": "Carte",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Bloc de contenu ; s'efface en filet sur téléphone.",
+      "html": "<article class=\"ds-card\"><span class=\"ds-eyebrow\">Échecs</span><h3>Joue contre un bot</h3><p>Choisis ton adversaire et lance la partie.</p></article>",
+      "css": ".ds-card { background: #120d1d; border: 1px solid #ffffff19; border-radius: 12px; padding: 24px; color: #f7f4fc; } .ds-card h3 { font: 700 1.4rem/1.2 Oxanium, system-ui, sans-serif; letter-spacing: -0.02em; margin: 8px 0; } .ds-card p { color: #bdb5cd; line-height: 1.75; margin: 0; } .ds-eyebrow { font: 600 0.75rem Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; color: #f4c600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La borne d'arcade dans l'espace",
+    "overview": "Le club de jeux de l'ESCP sur fond de nuit violette, avec l'or des lauriers de l'emblème et des envahisseurs en pixels, mais une interface d'aujourd'hui, aérée, qui se lit avant de se regarder. Le jeu se voit dans les emblèmes, les envahisseurs pixelisés, la lumière dorée et les cartes ; jamais dans des effets qui gênent la lecture.",
+    "keyCharacteristics": [
+      "Fond sombre partout, or pour l'action, vert réservé à la coinche.",
+      "Titres en Oxanium, texte en police système, repères courts en monospace.",
+      "Sur téléphone, les cartes s'effacent au profit de filets horizontaux.",
+      "Le mouvement explique ou confirme, sinon il n'existe pas."
+    ],
+    "rules": [
+      { "name": "The One Gold Rule", "body": "Une seule action en or par zone ; les actions secondaires sont des boutons à contour.", "section": "colors" },
+      { "name": "The Green Table Rule", "body": "Le vert n'apparaît que sur la coinche, et jamais au même niveau que l'or sur une même page.", "section": "colors" },
+      { "name": "The Short Mono Rule", "body": "Le monospace et les capitales ne servent qu'à des repères courts, jamais à un paragraphe.", "section": "typography" },
+      { "name": "The Rem Rule", "body": "Tailles en rem sur les pages du site pour suivre le réglage du téléphone ; seuls le HUD de la coinche et l'échiquier restent en px.", "section": "typography" },
+      { "name": "The No-Glow Rule", "body": "Pas de halo ni de bande de couleur sur les cartes ; le seul halo doré est celui des cartes « projecteur », qui suit la souris et disparaît au toucher.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do garder une seule action en or par zone, les autres en contour.",
+      "Do mettre tous les survols sous @media (hover: hover) et donner le retour tactile par :active.",
+      "Do animer transform et opacity avec --ease-out pour ce qui apparaît et --ease-in-out pour ce qui se déplace ; rendre les mouvements instantanés sous prefers-reduced-motion en gardant les temps de lecture.",
+      "Do utiliser uniquement les photos de l'asso, avec un alt qui les décrit (alt=\"\" pour le décoratif).",
+      "Do mettre touch-action: manipulation sur ce qui se touche."
+    ],
+    "donts": [
+      "Don't recadrer, recolorer ou déformer l'emblème ni Invadachan.",
+      "Don't mettre l'or et le vert au même niveau sur une page.",
+      "Don't écrire un paragraphe en monospace ou en capitales.",
+      "Don't utiliser ease-in sur l'interface ni faire apparaître depuis scale(0).",
+      "Don't animer left/top/width/height quand transform suffit.",
+      "Don't répéter le décor spatial au-delà du premier écran."
+    ]
+  }
+}

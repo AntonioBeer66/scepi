@@ -1,0 +1,68 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "buried-raster",
+        "value": "*",
+        "files": [
+          "site/evenements/index.html"
+        ],
+        "createdAt": "2026-10-06T21:12:37.991Z",
+        "reason": "Claude: carousel slides, hidden at opacity 0 only until their turn in the rotation (evenements carousels)"
+      },
+      {
+        "rule": "radial-halo",
+        "value": "*",
+        "files": [
+          "site/**/*.html"
+        ],
+        "createdAt": "2026-10-06T21:19:10.327Z",
+        "reason": "user confirmed: keep the spatial decor (stars, grid, halo) in each page's first screen only, per DIRECTION_ARTISTIQUE.md"
+      },
+      {
+        "rule": "all-caps-body",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-10-07T08:31:19.059Z",
+        "reason": "Claude triage: the 34 uppercase chars are the short .home-badge sticker 'Essential Society / 3 années de suite', a label not body text; predates this session"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/index.html"
+        ],
+        "createdAt": "2026-10-07T09:13:12.652Z",
+        "reason": "Claude triage: detector merges base border with the max-width:760px padding:0 rule; on mobile those borders are removed (border:0, top hairline only), on desktop the original padding applies"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/asso/index.html"
+        ],
+        "createdAt": "2026-10-07T09:13:12.935Z",
+        "reason": "Claude triage: detector merges base border with the max-width:760px padding:0 rule; on mobile those borders are removed (border:0, top hairline only), on desktop the original padding applies"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/evenements/index.html"
+        ],
+        "createdAt": "2026-10-07T09:13:13.275Z",
+        "reason": "Claude triage: detector merges base border with the max-width:760px padding:0 rule; on mobile those borders are removed (border:0, top hairline only), on desktop the original padding applies"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "georgia",
+        "createdAt": "2026-10-23T19:44:22.521Z",
+        "reason": "Claude: Georgia renders only the Unicode chess piece glyphs on the board and captures, not text"
+      }
+    ]
+  }
+}
