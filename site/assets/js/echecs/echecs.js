@@ -304,6 +304,11 @@
         difference < 0 ? `+${Math.abs(difference)}` : "";
     const sidePanel = document.querySelector(".chess-side-panel");
     if (sidePanel) sidePanel.classList.toggle("is-game-started", gameStarted);
+    // Aussi sur la page : le pied change de panneau selon la largeur, et
+    // l'intro reste masquée sur mobile jusqu'au retour à la sélection.
+    document
+      .querySelector(".chess-page")
+      ?.classList.toggle("is-game-started", gameStarted);
   }
   const name = (file, rank) => files[file] + (8 - rank);
   const pos = (square) => ({
@@ -554,7 +559,9 @@
   function endGame(title) {
     gameStarted = true;
     gameEnded = true;
-    document.querySelector(".chess-side-panel")?.classList.add("is-game-ended");
+    // Sur la page : le pied (Abandonner / Nouvelle partie) peut vivre dans
+    // l'un ou l'autre panneau selon la largeur.
+    document.querySelector(".chess-page")?.classList.add("is-game-ended");
     status("Historique");
     const renderEndStatus = () => {
       const statusArea = $("#chess-status");
@@ -1216,7 +1223,7 @@
     botThinking = false;
     gameEnded = false;
     document
-      .querySelector(".chess-side-panel")
+      .querySelector(".chess-page")
       ?.classList.remove("is-game-ended");
     if (!gameStarted) setChessGameMode(false);
     document
@@ -2014,9 +2021,16 @@
   );
   const boardPanel = document.querySelector(".chess-board-panel"),
     sidePanelHeight = document.querySelector(".chess-side-panel");
+  // Deux colonnes seulement sur grand écran (même seuil que le CSS) : en
+  // dessous, les panneaux s'empilent et le pied reste sous l'échiquier.
+  const wideLayout = window.matchMedia(
+    "(min-width: 901px) and (min-height: 501px)",
+  );
   const syncSidePanelHeight = () => {
     if (boardPanel && sidePanelHeight)
-      sidePanelHeight.style.height = `${boardPanel.getBoundingClientRect().height}px`;
+      sidePanelHeight.style.height = wideLayout.matches
+        ? `${boardPanel.getBoundingClientRect().height}px`
+        : "";
   };
   requestAnimationFrame(syncSidePanelHeight);
   window.addEventListener("resize", syncSidePanelHeight);
@@ -2033,7 +2047,20 @@
     boardFooter = document.querySelector(".chess-board-footer");
   if (boardFooter && navigation)
     boardFooter.insertBefore(navigation, $("#chess-reset"));
-  if (boardFooter && sidePanel) sidePanel.appendChild(boardFooter);
+  // Le pied (statut, navigation, Abandonner) rejoint le panneau latéral en
+  // deux colonnes ; empilé, il reste juste sous le joueur du bas, à portée.
+  const placeBoardFooter = () => {
+    if (!boardFooter || !sidePanel) return;
+    if (wideLayout.matches) sidePanel.appendChild(boardFooter);
+    else
+      document.querySelector(".chess-player-bottom")?.after(boardFooter);
+    syncSidePanelHeight();
+  };
+  placeBoardFooter();
+  // addListener : vieux Safari, où MediaQueryList n'a pas addEventListener.
+  if (wideLayout.addEventListener)
+    wideLayout.addEventListener("change", placeBoardFooter);
+  else wideLayout.addListener(placeBoardFooter);
   fetch("../../../src/echecs/config.json")
     .then((response) => response.json())
     .then((config) => {

@@ -193,6 +193,8 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     const W = parent.clientWidth || 800;
     const H = parent.clientHeight || 500;
     const portrait = W < H * 0.9;
+    // Téléphone en paysage : peu de hauteur, beaucoup de largeur.
+    const low = !portrait && H < 500;
     const cardH = Math.round(
       Math.max(84, Math.min(H * 0.26, 210, portrait ? W * 0.24 * CARD_RATIO : 999)),
     );
@@ -210,14 +212,16 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     const handTop = handY - cardH * 0.74;
     // Pli en croix (d : demi-écart vertical) : il doit tenir entre Nord
     // (avatar, nom et dos de cartes : ~3,6 r sous le haut) et la main, ce
-    // qui borne sa taille sur un écran peu haut (téléphone en paysage).
-    const northBottom = top + 10 + r * 3.6;
+    // qui borne sa taille sur un écran peu haut (téléphone en paysage, où le
+    // nom de Nord passe à gauche de l'avatar : ~2,6 r).
+    const northBottom = top + 10 + r * (low ? 2.6 : 3.6);
     const trickH = Math.round(
       Math.max(
         56,
         Math.min(
           tableH * 0.3,
-          (right - left) * 0.14 * CARD_RATIO,
+          // Portrait : le tapis est haut et presque vide, le pli peut grandir.
+          (right - left) * (portrait ? 0.19 : 0.14) * CARD_RATIO,
           150,
           (cy - northBottom) / 1.05,
           (handTop - cy) / 1.05,
@@ -226,11 +230,14 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     );
     const trickW = trickH / CARD_RATIO;
     const d = trickH * 0.55;
-    // Éventail : rayon proportionnel à la carte, ouverture bornée.
-    const R = cardH * 4;
+    // Éventail : rayon proportionnel à la carte, ouverture bornée. En
+    // paysage sur téléphone, plus plat : les cartes du bout ne sortent plus
+    // de l'écran et chacune dépasse de ~0,8 carte (voir fanSlot).
+    const R = cardH * (low ? 7 : 4);
     // Écran étroit (téléphone) : l'éventail va presque jusqu'aux bords,
-    // chaque carte dépasse davantage de sa voisine (plus facile à toucher).
-    const avail = Math.max(0, W - cardW * (portrait ? 1.4 : 1.7) - 24);
+    // chaque carte dépasse davantage de sa voisine (plus facile à toucher) ;
+    // le coin de la carte de gauche reste à l'écran.
+    const avail = Math.max(0, W - cardW * (portrait ? 1.1 : 1.7) - 24);
     const maxSpread = 2 * Math.asin(Math.min(1, avail / (2 * R)));
     const sideY = cy - (portrait ? tableH * 0.12 : 0);
     // Vous : au-dessus de l'éventail, à gauche ; sur un écran peu haut
@@ -241,6 +248,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     return {
       W,
       H,
+      low,
       cx,
       cy,
       top,
@@ -404,31 +412,36 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       }
       box.add(
         txt(0, 0, seat === me ? "Toi" : bot ? "IA" : initials(name), {
-          fontSize: `${Math.round(L.r * (seat === me ? 0.5 : 0.62))}px`,
+          // Pas sous 12 px : « Toi » tombait à 10 px au téléphone (r = 20).
+          fontSize: `${Math.max(12, Math.round(L.r * (seat === me ? 0.5 : 0.62)))}px`,
           fontStyle: "bold",
           color: COLORS.text,
         }).setOrigin(0.5),
       );
-      if (seat !== me)
+      if (seat !== me) {
+        // Nord en paysage sur téléphone : nom à gauche de l'avatar, sinon le
+        // pli, collé sous Nord faute de hauteur, le recouvre.
+        const aside = L.low && pos === 2;
         box.add(
-          txt(0, L.r + 4, name, {
+          txt(aside ? -(L.r + 8) : 0, aside ? 0 : L.r + 4, name, {
             fontSize: "12px",
             fontStyle: "bold",
             color: active ? COLORS.goldCss : COLORS.text,
             stroke: "#0c0914",
             strokeThickness: 3,
-          }).setOrigin(0.5, 0),
+          }).setOrigin(aside ? 1 : 0.5, aside ? 0.5 : 0),
         );
+      }
 
       if (G.donneur === seat) {
         const chip = scene.add.graphics();
         const px = L.r * 0.75;
         const py = -L.r * 0.75;
-        chip.fillStyle(COLORS.gold, 1).fillCircle(px, py, 9);
+        chip.fillStyle(COLORS.gold, 1).fillCircle(px, py, 10);
         box.add(chip);
         box.add(
           txt(px, py, "D", {
-            fontSize: "11px",
+            fontSize: "12px",
             fontStyle: "bold",
             color: COLORS.ink,
           }).setOrigin(0.5),
@@ -445,9 +458,15 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         const bw = label.width + 18;
         const bh = label.height + 10;
         // À côté de l'avatar, du côté du centre de la table.
+        // Est et Ouest en paysage sur téléphone : au-dessus de l'avatar, sinon
+        // la barre d'enchères cache leurs annonces pendant qu'on annonce ;
+        // la bulle reste dans l'écran.
         const side = pos === 1 ? -1 : 1;
-        const bx = side * (L.r + 10 + bw / 2);
-        const by = pos === 2 ? 0 : -L.r * 0.2;
+        const above = L.low && (pos === 1 || pos === 3);
+        const bx = above
+          ? Math.min(Math.max(0, L.left + bw / 2 - x), L.right - bw / 2 - x)
+          : side * (L.r + 10 + bw / 2);
+        const by = above ? -(L.r + bh / 2 + 6) : pos === 2 ? 0 : -L.r * 0.2;
         const bg = scene.add.graphics();
         bg.fillStyle(0x000000, 0.3)
           .fillRoundedRect(bx - bw / 2, by - bh / 2 + 3, bw, bh, bh / 2)
@@ -498,7 +517,10 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   }
 
   function fanSlot(i, n) {
-    const step = n > 1 ? Math.min(FAN_STEP, L.maxSpread / (n - 1)) : 0;
+    // Pas en pixels aussi : ~0,8 carte visible par carte (éventail plat en
+    // paysage sur téléphone) ; ailleurs FAN_STEP ou l'ouverture bornent.
+    const step =
+      n > 1 ? Math.min(FAN_STEP, (L.cardW * 0.8) / L.R, L.maxSpread / (n - 1)) : 0;
     const a = (i - (n - 1) / 2) * step;
     return {
       x: L.cx + Math.sin(a) * L.R,
@@ -921,10 +943,12 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     scene.scale.resize(w * dpr, h * dpr);
     scene.cameras.main.setSize(w * dpr, h * dpr);
     L = layout();
-    // Hauteur occupée par l'éventail : la barre d'enchères se pose au-dessus.
+    // Hauteur occupée par l'éventail, et par votre avatar s'il est posé
+    // dessus (portrait) : la barre d'enchères se pose au-dessus, votre chrono
+    // reste visible.
     parent.parentElement?.style.setProperty(
       "--cg-hand",
-      `${Math.round(L.cardH * 1.25 + 12)}px`,
+      `${Math.round(Math.max(L.cardH * 1.25 + 12, L.H - L.seat[0].y + L.r + 10))}px`,
     );
     drawTable();
     if (!G) return;
@@ -1005,7 +1029,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       const r = L.r;
       const face = txt(0, 0, emote, { fontSize: `${Math.round(r * 1.5)}px` }).setOrigin(0.5, 1);
       const taunt = txt(0, 2, (EMOTES.get(emote) || "").toUpperCase(), {
-        fontSize: `${Math.round(r * 0.55)}px`,
+        fontSize: `${Math.max(12, Math.round(r * 0.6))}px`, // lisible au téléphone (r = 20)
         fontStyle: "900 italic",
         color: COLORS.goldCss,
         stroke: COLORS.ink,

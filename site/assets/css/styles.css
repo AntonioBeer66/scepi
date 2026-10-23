@@ -657,6 +657,7 @@ a {
   margin: 0;
 }
 .rules-panel-close {
+  position: relative;
   width: 28px;
   height: 28px;
   flex-shrink: 0;
@@ -665,6 +666,12 @@ a {
   background: #181722;
   color: var(--text);
   font-size: 0.75rem;
+}
+/* Zone de toucher de 44 px autour du petit rond. */
+.rules-panel-close::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
 }
 @media (hover: hover) {
   .rules-panel-close:hover {
@@ -691,6 +698,7 @@ a {
   .rules-btn {
     right: 14px;
     bottom: 14px;
+    min-height: 44px; /* cible au doigt */
     padding: 10px 14px;
     font-size: 0.75rem;
   }
@@ -701,6 +709,14 @@ a {
     width: auto;
     max-height: 60vh;
     padding: 18px 18px;
+  }
+  /* Lecture longue au téléphone : texte un cran plus grand. */
+  .rules-panel h3 {
+    font-size: 0.8125rem;
+  }
+  .rules-panel p,
+  .rules-panel ul {
+    font-size: 0.875rem;
   }
 }
 
@@ -766,8 +782,12 @@ a {
   font-size: 0.75rem;
   letter-spacing: 0.04em;
 }
+/* Zone tactile de 44 px : en inline, le padding ne prenait pas de place et
+   les deux liens légaux se touchaient au doigt. */
 .footer-bottom a {
-  padding-block: 12px; /* zone tactile sans changer la mise en page */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 /* Pages secondaires : intro, asso, contact --------------------------------- */
@@ -901,11 +921,13 @@ a {
   color: #241735;
   text-shadow: 0 1px 1px #fff9df70;
 }
-.chess-coordinates {
+/* Lettres et chiffres à la même taille : les chiffres héritaient du 16px. */
+.chess-coordinates,
+.chess-ranks {
   position: absolute;
   color: #a995b3;
   font:
-    11px "DM Mono",
+    13px "DM Mono",
     monospace;
   text-transform: uppercase;
 }
@@ -943,10 +965,11 @@ a {
 .chess-board-footer small {
   color: #a295b5;
 }
+/* 44px : cible tactile minimale. */
 .chess-reset {
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 14px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .chess-navigation {
   display: inline-flex;
@@ -956,8 +979,8 @@ a {
 }
 .chess-nav-button {
   display: grid;
-  min-width: 38px;
-  min-height: 38px;
+  min-width: 44px;
+  min-height: 44px;
   place-items: center;
   padding: 0 10px 2px;
   font-size: 18px;
@@ -973,11 +996,11 @@ a {
   justify-self: end;
 }
 .chess-toggle-end {
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 14px;
   color: var(--muted);
   border-color: var(--line);
-  font-size: 11px;
+  font-size: 13px;
 }
 .chess-board-footer #chess-reset {
   color: var(--bg);
@@ -1128,13 +1151,13 @@ a {
 }
 .chess-bot-option strong {
   overflow: hidden;
-  font-size: 12px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .chess-bot-option small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 .chess-start-button {
   width: 100%;
@@ -1158,7 +1181,7 @@ a {
 }
 .chess-color-mode {
   display: grid;
-  min-height: 42px;
+  min-height: 48px;
   place-items: center;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1176,7 +1199,8 @@ a {
 .chess-side-panel.is-game-started .chess-bot-selection {
   display: none;
 }
-.chess-side-panel:not(.is-game-started) .chess-board-footer {
+/* Classes posées sur la page : le pied change de panneau selon la largeur. */
+.chess-page:not(.is-game-started) .chess-board-footer {
   display: none;
 }
 .chess-side-panel:not(.is-game-started) .chess-move-list {
@@ -1197,11 +1221,11 @@ a {
 }
 .chess-give-up {
   justify-self: start;
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 14px;
   color: #ffb0a8;
   border-color: #c95c5c;
-  font-size: 11px;
+  font-size: 13px;
 }
 @media (hover: hover) {
   .chess-give-up:hover {
@@ -1210,10 +1234,10 @@ a {
     background: #c95c5c22;
   }
 }
-.chess-side-panel.is-game-started:not(.is-game-ended) #chess-reset {
+.chess-page.is-game-started:not(.is-game-ended) #chess-reset {
   display: none;
 }
-.chess-side-panel.is-game-started.is-game-ended #chess-give-up {
+.chess-page.is-game-started.is-game-ended #chess-give-up {
   display: none;
 }
 .chess-game-end-modal {
@@ -1231,6 +1255,11 @@ a {
 .chess-game-end-dialog {
   position: relative;
   width: min(500px, 100%);
+  /* Écran court : la fenêtre défile plutôt que de déborder (vh d'abord
+     pour les vieux navigateurs sans dvh). */
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
   padding: 24px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1286,8 +1315,10 @@ a {
 }
 .chess-game-end-close {
   position: absolute;
-  top: 10px;
-  right: 13px;
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
   border: 0;
   color: var(--muted);
   background: none;
@@ -1317,7 +1348,7 @@ a {
   }
 }
 .chess-game-end-dialog button:not(.chess-game-end-close) {
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 13px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1337,12 +1368,12 @@ a {
   padding-top: 16px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .chess-selection-description {
   margin: 14px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   text-align: justify;
   white-space: pre-wrap;
@@ -1458,7 +1489,10 @@ a {
   }
 }
 @media (max-width: 560px) {
-  .chess-board-panel,
+  /* Échiquier : 8px de marge suffisent, chaque pixel va aux cases. */
+  .chess-board-panel {
+    padding: 8px;
+  }
   .chess-side-panel {
     padding: 18px;
   }
@@ -1470,10 +1504,6 @@ a {
   }
   .chess-live {
     align-self: flex-start;
-  }
-  .chess-board-footer {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 
@@ -1809,11 +1839,12 @@ a {
   stroke-width: 0.8;
   opacity: 0.9;
 }
+/* Repères calés sur les cases : marge des chiffres + cadre de 7px. */
 .chess-files {
   position: absolute;
-  right: 24px;
+  right: 7px;
   bottom: 2px;
-  left: 34px;
+  left: 31px;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   text-align: center;
@@ -1827,8 +1858,8 @@ a {
 }
 .chess-ranks {
   position: absolute;
-  top: 0;
-  bottom: 24px;
+  top: 7px;
+  bottom: 31px;
   left: 3px;
   display: grid;
   grid-template-rows: repeat(8, 1fr);
@@ -1900,7 +1931,7 @@ a {
 .chess-list-heading > span:last-child {
   color: var(--muted);
   font:
-    11px Consolas,
+    13px Consolas,
     monospace;
 }
 .chess-moves-list {
@@ -1912,11 +1943,12 @@ a {
 .chess-move-row {
   display: grid;
   grid-template-columns: 28px 1fr 1fr;
+  align-items: center;
   gap: 8px;
-  padding: 7px 5px;
+  padding: 3px 5px;
   border-bottom: 1px solid #ffffff0b;
   font:
-    12px Consolas,
+    14px Consolas,
     monospace;
 }
 .chess-move-row span {
@@ -1931,6 +1963,7 @@ a {
 }
 .chess-move-button {
   min-width: 0;
+  min-height: 32px;
   border: 0;
   padding: 1px 3px;
   color: #f1dfb2;
@@ -1957,14 +1990,92 @@ a {
 }
 @media (max-width: 560px) {
   .chess-board-shell {
-    padding-left: 21px;
+    padding-left: 18px;
   }
   .chess-files {
-    right: 21px;
-    left: 29px;
+    left: 25px;
   }
   .chess-ranks {
-    bottom: 21px;
+    left: 2px;
+  }
+  /* Partie en cours ou finie : l'échiquier prend presque toute la largeur
+     (classe sur la page, pour ne pas tout décaler à la fin de partie). */
+  .chess-page.is-game-started {
+    width: calc(100% - 16px);
+  }
+}
+/* Écrans étroits ou couchés : l'intro cède la place à l'échiquier. */
+@media (max-width: 900px), (max-height: 500px) {
+  .chess-page.is-game-started .chess-intro {
+    display: none;
+  }
+}
+/* Pied sur deux lignes : statut + Abandonner, puis la navigation sur toute
+   la largeur (en 1fr auto 1fr, Abandonner chevauchait ›|). */
+@media (max-width: 560px), (max-height: 500px) and (orientation: landscape) {
+  .chess-board-footer {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding-top: 12px;
+  }
+  .chess-board-footer #chess-status {
+    transform: none;
+  }
+  .chess-board-footer #chess-give-up,
+  .chess-board-footer #chess-reset {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .chess-board-footer .chess-navigation {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    margin: 0;
+  }
+}
+/* Téléphone couché : échiquier à gauche, à la hauteur de l'écran ; joueurs
+   et commandes à droite. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .chess-arena {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .chess-board-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto;
+    column-gap: 18px;
+    padding: 8px 12px;
+  }
+  /* Largeur = hauteur (bandeau des lettres compris) : écran moins 40px. */
+  .chess-board-shell {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    width: calc(100vh - 40px);
+    width: calc(100dvh - 40px);
+    margin: 0;
+  }
+  .chess-player-top {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .chess-board-footer {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+  }
+  .chess-player-bottom {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  /* Fin de partie centrée sur l'écran, sans le portrait décoratif. */
+  .chess-game-end-modal {
+    position: fixed;
+    padding: 8px;
+  }
+  .chess-game-end-portrait {
+    display: none;
   }
 }
 
@@ -2512,7 +2623,7 @@ body.is-playing .header {
 }
 .cg-score small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2525,7 +2636,7 @@ body.is-playing .header {
 .cg-score em {
   color: var(--green);
   font-family: Consolas, monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-style: normal;
 }
 .cg-icon {
@@ -2711,7 +2822,7 @@ body.is-playing .header {
 }
 .cg-bids th small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   overflow-wrap: break-word; /* « partenaire · donneur » sur deux lignes au téléphone */
 }
@@ -2757,7 +2868,7 @@ body.is-playing .header {
 .cg-fallen-suit small {
   margin-top: 3px;
   color: var(--gold);
-  font: 700 10px Consolas, monospace;
+  font: 700 11px Consolas, monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -3180,12 +3291,17 @@ body.is-playing .header {
   }
   .cg-score small,
   .cg-score em {
-    font-size: 11px;
+    font-size: 12px;
   }
   .cg-icon {
     min-width: 40px;
-    min-height: 40px;
+    min-height: 44px; /* la barre fait déjà 45 à 50 px */
     padding: 0 6px;
+  }
+  /* « À toi » est déjà dans la barre de jeu : la barre d'enchères, moins
+     haute, ne cache plus le nom de Nord. */
+  .cg-bidbar.is-open .cg-prompt {
+    display: none;
   }
   .cg-panel {
     top: 52px;
@@ -3239,6 +3355,21 @@ body.is-playing .header {
   .cg-btn {
     min-height: 40px;
     padding: 0 14px;
+  }
+}
+/* Téléphone en portrait : la place ne manque pas en hauteur, cibles de
+   44 px. Les montants restent sur une ligne qui défile : sur trois lignes
+   (enchère à 80), la barre cachait Est et Ouest. */
+@media (max-width: 700px) and (min-height: 501px) {
+  .cg-chip,
+  .cg-btn,
+  .cg-emotes .cg-emote {
+    min-height: 44px;
+  }
+  /* Même raison qu'en paysage : sans le titre, la barre laisse voir les
+     noms d'Est et d'Ouest. */
+  .cg-bidbar.is-open .cg-prompt {
+    display: none;
   }
 }
 /* Page de la coinche en plein écran (viewport-fit=cover) : le salon reste
@@ -3806,8 +3937,12 @@ body.is-playing .header {
 html {
   scroll-padding-top: calc(var(--header-h, 101px) + 16px); /* ancres sous l'en-tête */
 }
-html.is-chess-game {
-  overflow: hidden;
+/* Page figée en partie seulement quand tout tient à l'écran (même seuil que
+   echecs.js) ; sur téléphone, il faut pouvoir défiler. */
+@media (min-width: 901px) and (min-height: 501px) {
+  html.is-chess-game {
+    overflow: hidden;
+  }
 }
 .header {
   position: sticky;
@@ -4043,7 +4178,10 @@ html.is-chess-game {
   margin-top: 0;
 }
 .lx-link {
-  font-size: 0.8125rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--muted);
 }
@@ -4219,7 +4357,9 @@ html.is-chess-game {
   max-width: 100%;
 }
 .ct-mail a {
-  font-size: clamp(14px, 2vw, 18px);
+  display: inline-block;
+  padding-block: 12px;
+  font-size: clamp(15px, 2vw, 18px);
   font-weight: 700;
   color: var(--gold);
   overflow-wrap: anywhere;
@@ -4230,7 +4370,8 @@ html.is-chess-game {
   }
 }
 .ct-copy {
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 10px 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #181127;
@@ -4354,6 +4495,11 @@ html.is-chess-game {
     border: 0;
     border-top: 1px solid var(--line);
     border-radius: 0;
+  }
+  /* Les pastilles prennent toute la ligne au lieu d'une colonne de 230 px
+     à côté du bouton. */
+  .ct-formats ul {
+    flex: 1 0 100%;
   }
 }
 
@@ -4845,5 +4991,116 @@ button,
 @keyframes lightboxIn {
   from {
     opacity: 0;
+  }
+}
+
+/* Mentions légales et accessibilité : même colonne de lecture. */
+.legal {
+  max-width: 680px;
+  padding-block: 64px 48px;
+}
+.legal h1 {
+  font-size: clamp(2rem, 4vw, 2.6rem);
+}
+.legal dl {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.legal dt {
+  margin-top: 22px;
+  color: var(--gold);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.legal dd {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.legal a {
+  color: var(--text);
+}
+
+/* Lisibilité sur téléphone (portrait et paysage) ------------------------
+   Le texte courant ne descend pas sous 15-16 px : à bout de bras, 13-14 px
+   se lisait comme une légende. Les repères en monospace gardent leurs
+   11-12 px (DIRECTION_ARTISTIQUE.md). */
+@media (max-width: 760px), (max-height: 500px) {
+  .hero-copy > p,
+  .home-pillar p,
+  .lx-features li,
+  .lx-steps p,
+  .ct-grid p,
+  .event-banner p {
+    font-size: 1rem;
+  }
+  .home-event p,
+  .crew-card p,
+  .ct-formats li {
+    font-size: 0.9375rem;
+  }
+  .footer-inner > p {
+    font-size: 0.875rem;
+  }
+}
+/* Le bandeau poker : sur toute la largeur du téléphone, le texte passait
+   sur les jetons clairs de la photo. Voile du haut vers le bas. */
+@media (max-width: 760px) {
+  .event-banner {
+    background:
+      linear-gradient(180deg, #0c0914e6 0%, #0c0914b3 65%, #0c091466 100%),
+      url("../images/events/poker_baniere.JPG") 58% center / cover no-repeat;
+  }
+  .js .menu-toggle {
+    min-height: 48px;
+  }
+}
+/* Téléphone en paysage (390 px de haut) : l'en-tête collant prenait un
+   quart de l'écran et le premier écran n'avait plus que le titre. */
+@media (max-height: 500px) and (min-width: 761px) {
+  :root {
+    --header-h: 61px;
+  }
+  .header-inner {
+    min-height: 60px;
+  }
+  .brand img {
+    height: 40px;
+  }
+  .header nav a {
+    padding: 18px 0;
+  }
+  .header nav a[aria-current]:after {
+    bottom: 10px;
+  }
+  .hero {
+    min-height: 0;
+    padding: 32px 0;
+  }
+  .home-hero,
+  .page-intro {
+    padding-top: 28px;
+  }
+  .home-hero h1,
+  .hero h1,
+  .page-intro h1 {
+    font-size: clamp(2.2rem, 5vw, 3rem);
+  }
+}
+/* Paysage : lignes de 80 à 110 caractères sans limite, ramenées vers 68. */
+@media (max-height: 500px) {
+  .home-pillar p,
+  .lx-copy p,
+  .lx-features li,
+  .lx-steps p,
+  .ct-door p,
+  .ct-grid p,
+  .page-intro > p,
+  .hero-copy > p,
+  .pillar p,
+  .asso-split p {
+    max-width: 68ch;
   }
 }
