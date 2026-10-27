@@ -431,7 +431,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       }
       return `<div class="cg-bidbar"><span class="cg-prompt">Vous êtes coinchés</span>
         <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button>
-        <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${DURATION_MS.SURCOINCHE / 1000} s</b></div></div>`;
+        ${countHtml()}</div>`;
     }
     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
       // Seul, sur le côté : jamais à la place d'« Annoncer » ou « Passer ».
@@ -474,9 +474,17 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         ${options.length ? `<button type="button" class="cg-btn is-primary cg-take" data-action="encherir" data-focus-key="encherir"${ui.suit ? "" : ' aria-disabled="true"'}>Annoncer</button>` : ""}
         ${coinche || '<button type="button" class="cg-btn is-danger" disabled>Coincher</button>'}
       </div>
-      <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${DURATION_MS.ENCHERES / 1000} s</b></div>
+      ${countHtml()}
       ${ui.hint ? `<p class="cg-hint" role="alert">${esc(ui.hint)}</p>` : ""}
     </div>`;
+  }
+
+  // Jauge dessinée là où le décompte en est : un clic qui redessine la barre
+  // (− / +, atout) ne la remet pas à plein.
+  function countHtml() {
+    const total = DURATION_MS[G.phase];
+    const left = Math.max(0, total - (Date.now() - ui.countAt));
+    return `<div class="cg-count${left < 3000 ? " is-low" : ""}" aria-hidden="true"><span class="cg-count-bar"><i style="transform:scaleX(${left / total})"></i></span><b>${Math.ceil(left / 1000)} s</b></div>`;
   }
 
   // Décompte (surcoinche, ou ton tour d'enchère) : texte et jauge retouchés en
