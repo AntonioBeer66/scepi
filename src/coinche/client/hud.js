@@ -23,7 +23,6 @@ import {
 } from "../engine.js";
 import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
 
-const RED_SUITS = new Set(["H", "D"]);
 const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
 const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
 const RANK_SHORT = { J: "V", Q: "D", K: "R" }; // Valet, Dame, Roi (les autres : tels quels)
@@ -63,7 +62,7 @@ function bidReadout(value) {
 }
 
 function suitSpan(s) {
-  return `<span class="cg-suit${RED_SUITS.has(s) ? " is-red" : ""}">${SUIT_SYMBOL[s]}</span>`;
+  return `<span class="cg-suit s-${s}">${SUIT_SYMBOL[s]}</span>`;
 }
 
 export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard, onEmote, onChat }) {
@@ -453,7 +452,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       .join("");
     const suits = SUITS.map(
       (s) =>
-        `<button type="button" class="cg-chip cg-suitchip${RED_SUITS.has(s) ? " is-red" : ""}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
+        `<button type="button" class="cg-chip cg-suitchip s-${s}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
     ).join("");
     return `<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
       <span class="cg-prompt">À toi d’annoncer</span>

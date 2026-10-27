@@ -2583,12 +2583,16 @@ body.is-playing .header {
   border: 1px solid var(--line);
   font-weight: 600;
 }
-.cg-suit.is-red {
-  color: #ff6b6b;
-}
-.cg-contract .cg-suit.is-red {
-  color: #9d1c1c;
-}
+/* Quatre teintes d'atout (comme les bulles de la table) : ♥/♦ et ♠/♣ ne se
+   confondent plus en petit. Plus foncées sur la pastille dorée du contrat. */
+.cg-suit.s-H, .cg-chip.cg-suitchip.s-H { color: #ff6b7a; }
+.cg-suit.s-D, .cg-chip.cg-suitchip.s-D { color: #5aa9ff; }
+.cg-suit.s-C, .cg-chip.cg-suitchip.s-C { color: #4fd18b; }
+.cg-suit.s-S, .cg-chip.cg-suitchip.s-S { color: #ece8f7; }
+.cg-contract .cg-suit.s-H { color: #9d1c1c; }
+.cg-contract .cg-suit.s-D { color: #134a9a; }
+.cg-contract .cg-suit.s-C { color: #155e35; }
+.cg-contract .cg-suit.s-S { color: inherit; }
 .cg-sub {
   color: var(--muted);
   font-size: 13px;
@@ -3067,10 +3071,6 @@ body.is-playing .header {
 .cg-suitchip {
   padding: 0;
   font-size: 22px;
-}
-.cg-suitchip.is-red,
-.cg-suitchip.is-red[aria-pressed="true"] {
-  color: #ff6b6b;
 }
 .cg-actions {
   display: flex;
