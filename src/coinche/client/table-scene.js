@@ -51,6 +51,10 @@ const FONT = 'system-ui, "Segoe UI", sans-serif';
 
 const isRed = (s) => s === "H" || s === "D";
 
+// Fond de l'atout dans les bulles d'enchère : quatre teintes (jeu « quatre
+// couleurs » du poker en ligne), sinon ♥/♦ et ♠/♣ se confondent en petit.
+const BUBBLE_SUIT_COLOR = { H: 0xd8434f, D: 0x3b7bd4, C: 0x2f9461, S: 0x2b2346 };
+
 // roundRect du canevas 2D manque aux navigateurs mobiles anciens (Safari
 // < 16, Chrome < 99) : sans lui, aucune carte ne s'affichait. Coins droits alors.
 const roundRect = (ctx, x, y, w, h, r) =>
@@ -334,11 +338,12 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       return { t: G.belote.rebeloteDeclared ? "Rebelote ! +20" : "Belote !", lead: true };
     if (c?.preneur === seat && (bidding || G.phase === "JEU" || G.phase === "SCORE")) {
       const t = bidLabel(c.montant, c.atout) + (G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "");
-      return { t, lead: true };
+      return { t, suit: c.atout, lead: true };
     }
     if (!bidding) return null;
     const e = G.bidLog.filter((x) => x.seat === seat).pop();
-    return e ? { t: e.montant ? bidLabel(e.montant, e.atout) : "Passe" } : null;
+    if (!e) return null;
+    return e.montant ? { t: bidLabel(e.montant, e.atout), suit: e.atout } : { t: "Passe" };
   }
 
   // Redessinés seulement si ce qu'ils montrent a changé : pas de textes
@@ -450,13 +455,33 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
 
       const b = bubbleText(seat);
       if (b) {
-        const label = txt(0, 0, b.t, {
+        const style = {
           fontSize: "13px",
           fontStyle: "bold",
           color: b.alert ? "#ffffff" : COLORS.ink,
-        }).setOrigin(0.5);
-        const bw = label.width + 18;
-        const bh = label.height + 10;
+        };
+        // Étiquette en deux parties : l'atout, symbole blanc sur fond de sa
+        // couleur, à gauche ; le montant (et l'éventuel « ×2 ») à droite.
+        const S = b.suit ? 30 : 0;
+        const text = b.suit ? b.t.replace(SUIT_SYMBOL[b.suit], "").replace(/\s+/g, " ").trim() : b.t;
+        const words = txt(0, 0, text, style).setOrigin(0, 0.5);
+        const bw = S + words.width + (S ? 19 : 18);
+        const bh = words.height + 10;
+        words.setX(-bw / 2 + (S ? S + 8 : 9));
+        const pieces = [words];
+        if (S) {
+          const seg = scene.add.graphics();
+          const r = bh / 2;
+          seg.fillStyle(BUBBLE_SUIT_COLOR[b.suit], 1)
+            .fillRoundedRect(-bw / 2, -bh / 2, S, bh, { tl: r, bl: r, tr: 0, br: 0 });
+          const sym = txt(-bw / 2 + S / 2 + 1, 0, SUIT_SYMBOL[b.suit], {
+            ...style,
+            fontSize: "17px",
+            color: "#ffffff",
+          }).setOrigin(0.5);
+          pieces.unshift(seg, sym);
+        }
+        const label = scene.add.container(0, 0, pieces);
         // À côté de l'avatar, du côté du centre de la table.
         // Est et Ouest en paysage sur téléphone : au-dessus de l'avatar, sinon
         // la barre d'enchères cache leurs annonces pendant qu'on annonce ;
