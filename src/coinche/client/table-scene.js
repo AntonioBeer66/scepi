@@ -45,15 +45,15 @@ const COLORS = {
   danger: 0xff5b5b,
   avatar: 0x3c3489,
   avatarMe: 0x26215c,
-  bubble: 0xf7f4fc,
 };
 const FONT = 'system-ui, "Segoe UI", sans-serif';
 
 const isRed = (s) => s === "H" || s === "D";
 
-// Fond de l'atout dans les bulles d'enchère : quatre teintes (jeu « quatre
-// couleurs » du poker en ligne), sinon ♥/♦ et ♠/♣ se confondent en petit.
-const BUBBLE_SUIT_COLOR = { H: 0xd8434f, D: 0x3b7bd4, C: 0x2f9461, S: 0x2b2346 };
+// Symbole d'atout dans les bulles d'enchère : quatre teintes vives sur fond
+// sombre (jeu « quatre couleurs » du poker en ligne), sinon ♥/♦ et ♠/♣ se
+// confondent en petit.
+const BUBBLE_SUIT_COLOR = { H: "#ff6b7a", D: "#5aa9ff", C: "#4fd18b", S: "#ece8f7" };
 
 // roundRect du canevas 2D manque aux navigateurs mobiles anciens (Safari
 // < 16, Chrome < 99) : sans lui, aucune carte ne s'affichait. Coins droits alors.
@@ -458,30 +458,24 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         const style = {
           fontSize: "13px",
           fontStyle: "bold",
-          color: b.alert ? "#ffffff" : COLORS.ink,
+          color: b.alert ? "#ffffff" : b.lead ? COLORS.goldCss : b.suit ? COLORS.text : "#b9b2d0",
         };
-        // Étiquette en deux parties : l'atout, symbole blanc sur fond de sa
-        // couleur, à gauche ; le montant (et l'éventuel « ×2 ») à droite.
-        const S = b.suit ? 30 : 0;
-        const text = b.suit ? b.t.replace(SUIT_SYMBOL[b.suit], "").replace(/\s+/g, " ").trim() : b.t;
-        const words = txt(0, 0, text, style).setOrigin(0, 0.5);
-        const bw = S + words.width + (S ? 19 : 18);
-        const bh = words.height + 10;
-        words.setX(-bw / 2 + (S ? S + 8 : 9));
-        const pieces = [words];
-        if (S) {
-          const seg = scene.add.graphics();
-          const r = bh / 2;
-          seg.fillStyle(BUBBLE_SUIT_COLOR[b.suit], 1)
-            .fillRoundedRect(-bw / 2, -bh / 2, S, bh, { tl: r, bl: r, tr: 0, br: 0 });
-          const sym = txt(-bw / 2 + S / 2 + 1, 0, SUIT_SYMBOL[b.suit], {
-            ...style,
-            fontSize: "17px",
-            color: "#ffffff",
-          }).setOrigin(0.5);
-          pieces.unshift(seg, sym);
+        // Bulle sombre fondue dans le tapis ; seul le symbole d'atout, plus
+        // grand, prend sa couleur, entre le montant et l'éventuel « ×2 ».
+        const parts = b.suit ? b.t.split(SUIT_SYMBOL[b.suit]) : [b.t];
+        const pieces = parts.flatMap((p, i) => [
+          ...(i ? [txt(0, 0, SUIT_SYMBOL[b.suit], { ...style, fontSize: "17px", color: BUBBLE_SUIT_COLOR[b.suit] })] : []),
+          ...(p ? [txt(0, 0, p, style)] : []),
+        ]);
+        const lw = pieces.reduce((w, p) => w + p.width, 0);
+        let px = -lw / 2;
+        for (const p of pieces) {
+          p.setOrigin(0, 0.5).setX(px);
+          px += p.width;
         }
         const label = scene.add.container(0, 0, pieces);
+        const bw = lw + 22;
+        const bh = Math.max(...pieces.map((p) => p.height)) + 8;
         // À côté de l'avatar, du côté du centre de la table.
         // Est et Ouest en paysage sur téléphone : au-dessus de l'avatar, sinon
         // la barre d'enchères cache leurs annonces pendant qu'on annonce ;
@@ -493,10 +487,11 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
           : side * (L.r + 10 + bw / 2);
         const by = above ? -(L.r + bh / 2 + 6) : pos === 2 ? 0 : -L.r * 0.2;
         const bg = scene.add.graphics();
-        bg.fillStyle(0x000000, 0.3)
-          .fillRoundedRect(bx - bw / 2, by - bh / 2 + 3, bw, bh, bh / 2)
-          .fillStyle(b.alert ? COLORS.danger : b.lead ? COLORS.gold : COLORS.bubble, 1)
+        bg.fillStyle(b.alert ? COLORS.danger : 0x0c0914, b.alert ? 1 : 0.6)
           .fillRoundedRect(bx - bw / 2, by - bh / 2, bw, bh, bh / 2);
+        if (!b.alert)
+          bg.lineStyle(b.lead ? 1.5 : 1, b.lead ? COLORS.gold : 0xffffff, b.lead ? 1 : 0.16)
+            .strokeRoundedRect(bx - bw / 2, by - bh / 2, bw, bh, bh / 2);
         label.setPosition(bx, by);
         box.add([bg, label]);
         // Nouvelle bulle : petite apparition.
