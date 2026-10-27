@@ -3041,62 +3041,101 @@ body.is-playing .header {
 }
 /* Montant au − / +, puis l'atout en tuiles claires façon carte : gros
    symboles en quatre teintes, lisibles d'un coup d'œil. */
+/* Ton tour : panneau en colonne (montant, atout, Annoncer, temps, puis
+   Passer à gauche et Coincher à droite). */
+.cg-bidbar.is-open {
+  /* Centré sur le tapis (--cg-mid : son centre, compté depuis le bas,
+     posé par la table), remonté juste ce qu'il faut pour ne jamais toucher
+     l'éventail ; --cg-bid-h : sa hauteur. */
+  --cg-bid-h: 236px;
+  top: min(
+    calc(100% - var(--cg-mid, 60%)),
+    calc(100% - var(--cg-hand, 200px) - var(--cg-bid-h) / 2 - 8px)
+  );
+  bottom: auto;
+  translate: -50% -50%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: min(320px, calc(100vw - 16px));
+  padding: 12px 14px;
+}
+.cg-bidbar.is-open .cg-actions {
+  flex-wrap: nowrap;
+}
+.cg-bidbar.is-open .cg-actions .cg-btn {
+  padding: 0 12px;
+}
+.cg-bidbar.is-open .cg-actions .is-danger {
+  margin-left: 0;
+}
+.cg-take {
+  flex: 1;
+}
+.cg-btn[aria-disabled="true"]:not(.is-arming),
+.cg-bidbar .cg-btn:disabled {
+  border-color: #ffffff26;
+  background: #ffffff14;
+  color: #ffffff59;
+  cursor: default;
+}
 .cg-bidrow {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px 18px;
+  gap: 12px 18px;
 }
 .cg-stepper {
   display: flex;
   align-items: center;
-  border: 1px solid #ffffff33;
-  border-radius: 12px;
-  overflow: hidden;
+  gap: 6px;
 }
 .cg-step {
-  width: 48px;
-  height: 52px;
+  width: 40px;
+  height: 40px;
   border: 0;
-  background: #ffffff14;
-  color: var(--text);
-  font-size: 26px;
-  font-weight: 700;
+  border-radius: 10px;
+  background: var(--gold);
+  box-shadow: 0 3px 0 #0006;
+  color: #241a00;
+  font-size: 24px;
+  font-weight: 800;
   line-height: 1;
   cursor: pointer;
 }
 .cg-step:disabled {
+  background: #ffffff1f;
+  box-shadow: none;
   color: #ffffff40;
   cursor: default;
 }
-@media (hover: hover) {
-  .cg-step:not(:disabled):hover {
-    background: #ffffff2b;
-  }
-}
 .cg-amount {
-  min-width: 96px;
-  padding: 0 8px;
-  color: var(--gold);
+  display: grid;
+  place-items: center;
+  min-width: 110px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: #f7f4fc;
+  color: #181127;
   font-size: 22px;
   font-weight: 800;
-  text-align: center;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .cg-suits {
   display: flex;
   gap: 8px;
 }
 .cg-suitchip {
-  width: 48px;
-  height: 56px;
+  width: 42px;
+  height: 48px;
   padding: 0;
   border: 2px solid transparent;
   border-radius: 10px;
   background: #f7f4fc;
   box-shadow: 0 3px 0 #0006;
-  font-size: 32px;
+  font-size: 27px;
   line-height: 1;
   cursor: pointer;
 }
@@ -3385,25 +3424,64 @@ body.is-playing .header {
   .cg-prompt {
     font-size: 13px;
   }
-  .cg-bidrow {
-    gap: 8px 12px;
+  /* Téléphone : grandes cibles au doigt. */
+  .cg-bidbar.is-open {
+    width: min(340px, calc(100% - 12px));
+    gap: 12px;
+    padding: 14px;
   }
   .cg-step {
-    width: 44px;
-    height: 46px;
+    width: 52px;
+    height: 52px;
+    font-size: 30px;
   }
   .cg-amount {
-    min-width: 84px;
-    font-size: 19px;
+    min-width: 140px;
+    height: 52px;
+    font-size: 28px;
   }
   .cg-suitchip {
-    width: 44px;
-    height: 50px;
-    font-size: 28px;
+    width: 56px;
+    height: 64px;
+    font-size: 36px;
   }
   .cg-btn {
     min-height: 40px;
     padding: 0 14px;
+  }
+}
+/* Téléphone en paysage : la colonne serait trop haute ; montant et atout sur
+   une ligne, Annoncer / Passer / Coincher sur la suivante, la jauge dessous. */
+@media (max-height: 500px) {
+  .cg-bidbar.is-open {
+    --cg-bid-h: 144px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px 10px;
+    width: min(560px, calc(100% - 12px));
+    padding: 8px 10px;
+  }
+  .cg-step {
+    width: 44px;
+    height: 44px;
+  }
+  .cg-amount {
+    height: 44px;
+  }
+  .cg-suitchip {
+    width: 48px;
+    height: 52px;
+    font-size: 30px;
+  }
+  .cg-bidbar.is-open .cg-bidrow {
+    flex-basis: 100%;
+    flex-direction: row;
+    justify-content: center;
+  }
+  .cg-bidbar.is-open .cg-actions {
+    flex: 1;
   }
 }
 /* Téléphone en portrait : la place ne manque pas en hauteur, cibles de
@@ -3419,6 +3497,26 @@ body.is-playing .header {
      noms d'Est et d'Ouest. */
   .cg-bidbar.is-open .cg-prompt {
     display: none;
+  }
+  /* Le panneau, aussi large que l'écran, cacherait Est et Ouest au centre
+     du tapis : posé juste au-dessus de l'éventail, sous eux. */
+  .cg-bidbar.is-open {
+    --cg-bid-h: 226px;
+    top: calc(100% - var(--cg-hand, 200px) - var(--cg-bid-h) / 2 - 8px);
+    gap: 10px;
+    padding: 12px;
+  }
+  .cg-step {
+    width: 48px;
+    height: 48px;
+  }
+  .cg-amount {
+    height: 48px;
+  }
+  .cg-suitchip {
+    width: 54px;
+    height: 58px;
+    font-size: 33px;
   }
 }
 /* Page de la coinche en plein écran (viewport-fit=cover) : le salon reste

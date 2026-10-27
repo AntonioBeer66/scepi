@@ -457,27 +457,37 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       (s) =>
         `<button type="button" class="cg-suitchip s-${s}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
     ).join("");
+    // Temps de parole : jauge comme pour la surcoinche (voir tickCount).
+    if (ui.countTour !== G.tour) {
+      ui.countTour = G.tour;
+      ui.countAt = Date.now();
+    }
+    // Panneau en colonne (montant, atout, puis Passer / Annoncer / Coincher et
+    // le temps) ; « Annoncer » reste grisé tant que l'atout n'est pas choisi,
+    // « Coincher » toujours au même endroit, grisé quand on ne peut pas.
     return `<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
       <span class="cg-prompt">À toi d’annoncer</span>
       ${options.length ? `<div class="cg-bidrow">${stepper}
       <div class="cg-suits" role="group" aria-label="Atout">${suits}</div></div>` : ""}
       <div class="cg-actions">
-        ${options.length ? '<button type="button" class="cg-btn is-primary" data-action="encherir" data-focus-key="encherir">Annoncer</button>' : ""}
         <button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">Passer</button>
-        ${coinche}
+        ${options.length ? `<button type="button" class="cg-btn is-primary cg-take" data-action="encherir" data-focus-key="encherir"${ui.suit ? "" : ' aria-disabled="true"'}>Annoncer</button>` : ""}
+        ${coinche || '<button type="button" class="cg-btn is-danger" disabled>Coincher</button>'}
       </div>
+      <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${DURATION_MS.ENCHERES / 1000} s</b></div>
       ${ui.hint ? `<p class="cg-hint" role="alert">${esc(ui.hint)}</p>` : ""}
     </div>`;
   }
 
-  // Décompte de la surcoinche : texte et jauge retouchés en place (cinq fois
-  // par seconde), sans redessiner la barre.
+  // Décompte (surcoinche, ou ton tour d'enchère) : texte et jauge retouchés en
+  // place (cinq fois par seconde), sans redessiner la barre.
   function tickCount() {
-    const el = G?.phase === "SURCOINCHE" && root.querySelector(".cg-count");
+    const total = DURATION_MS[G?.phase];
+    const el = total && root.querySelector(".cg-count");
     if (!el) return;
-    const left = Math.max(0, DURATION_MS.SURCOINCHE - (Date.now() - ui.countAt));
+    const left = Math.max(0, total - (Date.now() - ui.countAt));
     el.querySelector("b").textContent = `${Math.ceil(left / 1000)} s`;
-    el.querySelector("i").style.transform = `scaleX(${left / DURATION_MS.SURCOINCHE})`;
+    el.querySelector("i").style.transform = `scaleX(${left / total})`;
     el.classList.toggle("is-low", left < 3000);
   }
 

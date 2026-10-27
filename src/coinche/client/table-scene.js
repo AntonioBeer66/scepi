@@ -253,6 +253,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       W,
       H,
       low,
+      portrait,
       cx,
       cy,
       top,
@@ -477,11 +478,11 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         const bw = lw + 22;
         const bh = Math.max(...pieces.map((p) => p.height)) + 8;
         // À côté de l'avatar, du côté du centre de la table.
-        // Est et Ouest en paysage sur téléphone : au-dessus de l'avatar, sinon
-        // la barre d'enchères cache leurs annonces pendant qu'on annonce ;
-        // la bulle reste dans l'écran.
+        // Est et Ouest sur téléphone (paysage ou portrait) : au-dessus de
+        // l'avatar, sinon le panneau d'enchères cache leurs annonces pendant
+        // qu'on annonce ; la bulle reste dans l'écran.
         const side = pos === 1 ? -1 : 1;
-        const above = L.low && (pos === 1 || pos === 3);
+        const above = (L.low || L.portrait) && (pos === 1 || pos === 3);
         const bx = above
           ? Math.min(Math.max(0, L.left + bw / 2 - x), L.right - bw / 2 - x)
           : side * (L.r + 10 + bw / 2);
@@ -970,6 +971,9 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       "--cg-hand",
       `${Math.round(Math.max(L.cardH * 1.25 + 12, L.H - L.seat[0].y + L.r + 10))}px`,
     );
+    // Centre du tapis, compté depuis le bas comme --cg-hand (le haut du
+    // canevas est sous la barre de jeu) : le panneau d'enchères s'y centre.
+    parent.parentElement?.style.setProperty("--cg-mid", `${Math.round(L.H - L.cy)}px`);
     drawTable();
     if (!G) return;
     drawSeats(true);
