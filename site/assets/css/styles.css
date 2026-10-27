@@ -2362,7 +2362,8 @@ a {
 .button:active,
 .rules-btn:active,
 .cg-btn:active,
-.cg-chip:active,
+.cg-step:active,
+.cg-suitchip:active,
 .cg-icon:active,
 .ct-copy:active,
 .footer-app:active,
@@ -2585,10 +2586,10 @@ body.is-playing .header {
 }
 /* Quatre teintes d'atout (comme les bulles de la table) : ♥/♦ et ♠/♣ ne se
    confondent plus en petit. Plus foncées sur la pastille dorée du contrat. */
-.cg-suit.s-H, .cg-chip.cg-suitchip.s-H { color: #ff6b7a; }
-.cg-suit.s-D, .cg-chip.cg-suitchip.s-D { color: #5aa9ff; }
-.cg-suit.s-C, .cg-chip.cg-suitchip.s-C { color: #4fd18b; }
-.cg-suit.s-S, .cg-chip.cg-suitchip.s-S { color: #ece8f7; }
+.cg-suit.s-H { color: #ff6b7a; }
+.cg-suit.s-D { color: #5aa9ff; }
+.cg-suit.s-C { color: #4fd18b; }
+.cg-suit.s-S { color: #ece8f7; }
 .cg-contract .cg-suit.s-H { color: #9d1c1c; }
 .cg-contract .cg-suit.s-D { color: #134a9a; }
 .cg-contract .cg-suit.s-C { color: #155e35; }
@@ -2684,7 +2685,8 @@ body.is-playing .header {
   stroke-linejoin: round;
 }
 .cg-icon:focus-visible,
-.cg-chip:focus-visible,
+.cg-step:focus-visible,
+.cg-suitchip:focus-visible,
 .cg-btn:focus-visible {
   outline: 3px solid var(--gold);
   outline-offset: 2px;
@@ -3020,9 +3022,6 @@ body.is-playing .header {
   box-shadow: 0 14px 34px #000b;
   animation: bannerIn 0.2s var(--ease-out) both;
 }
-.cg-bidbar.is-open {
-  width: min(660px, calc(100vw - 16px));
-}
 /* « Coincher » seul (pas votre tour) : à droite, loin de l'endroit où
    étaient « Annoncer » et « Passer » ; dans la barre ouverte, à l'écart. */
 .cg-bidbar.is-coinche {
@@ -3040,37 +3039,83 @@ body.is-playing .header {
   font-weight: 800;
   text-align: center;
 }
-.cg-chips {
+/* Montant au − / +, puis l'atout en tuiles claires façon carte : gros
+   symboles en quatre teintes, lisibles d'un coup d'œil. */
+.cg-bidrow {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 10px 18px;
 }
-.cg-chip {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 10px;
+.cg-stepper {
+  display: flex;
+  align-items: center;
   border: 1px solid #ffffff33;
-  border-radius: 10px;
-  background: none;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cg-step {
+  width: 48px;
+  height: 52px;
+  border: 0;
+  background: #ffffff14;
   color: var(--text);
-  font-size: 14px;
+  font-size: 26px;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
+.cg-step:disabled {
+  color: #ffffff40;
+  cursor: default;
+}
 @media (hover: hover) {
-  .cg-chip:hover {
-    border-color: #ffffff66;
+  .cg-step:not(:disabled):hover {
+    background: #ffffff2b;
   }
 }
-.cg-chip[aria-pressed="true"] {
-  border-color: var(--gold);
-  background: #f4c6001f;
+.cg-amount {
+  min-width: 96px;
+  padding: 0 8px;
   color: var(--gold);
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+}
+.cg-suits {
+  display: flex;
+  gap: 8px;
 }
 .cg-suitchip {
+  width: 48px;
+  height: 56px;
   padding: 0;
-  font-size: 22px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: #f7f4fc;
+  box-shadow: 0 3px 0 #0006;
+  font-size: 32px;
+  line-height: 1;
+  cursor: pointer;
+}
+.cg-suitchip.s-H { color: #c8202f; }
+.cg-suitchip.s-D { color: #1d5bb5; }
+.cg-suitchip.s-C { color: #17703e; }
+.cg-suitchip.s-S { color: #181127; }
+@media (hover: hover) {
+  .cg-suitchip:hover {
+    transform: translateY(-2px);
+  }
+}
+.cg-suitchip[aria-pressed="true"] {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold), 0 3px 0 #0006;
+  transform: translateY(-3px);
+}
+.cg-suits:has([aria-pressed="true"]) [aria-pressed="false"] {
+  opacity: 0.55;
 }
 .cg-actions {
   display: flex;
@@ -3199,7 +3244,8 @@ body.is-playing .header {
 .cg-banner {
   background: #120d20f2;
 }
-.cg-chip,
+.cg-step,
+.cg-suitchip,
 .cg-btn,
 .cg-icon {
   transition:
@@ -3210,7 +3256,6 @@ body.is-playing .header {
     transform 0.15s;
 }
 @media (hover: hover) {
-  .cg-chip:hover,
   .cg-btn:hover {
     transform: translateY(-1px);
   }
@@ -3227,7 +3272,8 @@ body.is-playing .header {
   box-shadow: 0 6px 16px #0009;
 }
 @media (prefers-reduced-motion: reduce) {
-  .cg-chip,
+  .cg-step,
+  .cg-suitchip,
   .cg-btn,
   .cg-icon {
     transition: none;
@@ -3265,10 +3311,6 @@ body.is-playing .header {
   .cg-panel {
     top: 92px;
   }
-  .cg-chip {
-    min-width: 40px;
-    padding: 0 8px;
-  }
 }
 
 /* Téléphone : barre de jeu compacte en paysage, barre d'enchères resserrée
@@ -3282,7 +3324,8 @@ body.is-playing .header {
   touch-action: none; /* gestes gérés par la table (Phaser) */
 }
 .cg-icon,
-.cg-chip,
+.cg-step,
+.cg-suitchip,
 .cg-btn {
   touch-action: manipulation; /* pas de zoom au double tapotement */
 }
@@ -3339,28 +3382,24 @@ body.is-playing .header {
     padding: 8px;
     max-width: calc(100% - 12px);
   }
-  .cg-bidbar.is-open {
-    width: min(560px, calc(100% - 12px));
-  }
   .cg-prompt {
     font-size: 13px;
   }
-  .cg-chips[aria-label="Montant"] {
-    flex: 1 1 100%;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
+  .cg-bidrow {
+    gap: 8px 12px;
   }
-  .cg-chip {
-    flex: none;
-    min-width: 42px;
-    min-height: 40px;
-    padding: 0 9px;
-    font-size: 13px;
+  .cg-step {
+    width: 44px;
+    height: 46px;
+  }
+  .cg-amount {
+    min-width: 84px;
+    font-size: 19px;
   }
   .cg-suitchip {
-    font-size: 20px;
+    width: 44px;
+    height: 50px;
+    font-size: 28px;
   }
   .cg-btn {
     min-height: 40px;
@@ -3371,7 +3410,8 @@ body.is-playing .header {
    44 px. Les montants restent sur une ligne qui défile : sur trois lignes
    (enchère à 80), la barre cachait Est et Ouest. */
 @media (max-width: 700px) and (min-height: 501px) {
-  .cg-chip,
+  .cg-step,
+  .cg-suitchip,
   .cg-btn {
     min-height: 44px;
   }

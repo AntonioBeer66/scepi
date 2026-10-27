@@ -444,20 +444,23 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ui.amount = options[0] ?? null;
       ui.hint = "";
     }
-    const amounts = options
-      .map(
-        (v) =>
-          `<button type="button" class="cg-chip" data-amount="${v}" data-focus-key="amount-${v}" aria-pressed="${v === ui.amount}">${bidReadout(v)}</button>`,
-      )
-      .join("");
+    // Montant au − / + (capot et générale au bout), puis l'atout en tuiles.
+    const i = options.indexOf(ui.amount);
+    const step = (v, sign, label) =>
+      `<button type="button" class="cg-step" ${v == null ? "disabled" : `data-amount="${v}"`} data-focus-key="step${sign}" aria-label="${label}">${sign}</button>`;
+    const stepper = `<div class="cg-stepper" role="group" aria-label="Montant">
+        ${step(options[i - 1], "−", "Montant inférieur")}
+        <output class="cg-amount" aria-live="polite">${bidReadout(ui.amount)}</output>
+        ${step(options[i + 1], "+", "Montant supérieur")}
+      </div>`;
     const suits = SUITS.map(
       (s) =>
-        `<button type="button" class="cg-chip cg-suitchip s-${s}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
+        `<button type="button" class="cg-suitchip s-${s}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
     ).join("");
     return `<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
       <span class="cg-prompt">À toi d’annoncer</span>
-      ${options.length ? `<div class="cg-chips" role="group" aria-label="Montant">${amounts}</div>
-      <div class="cg-chips" role="group" aria-label="Atout">${suits}</div>` : ""}
+      ${options.length ? `<div class="cg-bidrow">${stepper}
+      <div class="cg-suits" role="group" aria-label="Atout">${suits}</div></div>` : ""}
       <div class="cg-actions">
         ${options.length ? '<button type="button" class="cg-btn is-primary" data-action="encherir" data-focus-key="encherir">Annoncer</button>' : ""}
         <button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">Passer</button>

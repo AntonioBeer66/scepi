@@ -32,10 +32,14 @@ Using the deprecated listGames method instead.`),this.listGames(e);console.error
             <figcaption>${Ka(C(t))}</figcaption></figure>`).join(``)}</div>
       </div>`}return``}function I(){let e=!_&&h.phase===`ENCHERES`&&h.contract&&!h.contract.coinche&&ji(r)!==h.contract.equipePreneur,t=!_&&h.phase===`SURCOINCHE`&&!h.contract.surcoinche&&ji(r)===h.contract.equipePreneur;e&&m.coincheFor!==h.contract.id&&(m.coincheFor=h.contract.id,m.coincheShownAt=Date.now());let n=e?Ba-(Date.now()-m.coincheShownAt):0;clearTimeout(m.armTimer),n>0&&(m.armTimer=setTimeout(()=>h&&H(),n+30));let i=e?`<button type="button" class="cg-btn is-danger${n>0?` is-arming`:``}" data-action="coincher" data-focus-key="coincher"${n>0?` aria-disabled="true" style="--arm-ms:${Ba}ms;--arm-at:${n-Ba}ms"`:``}>Coincher</button>`:``;if(t)return m.countTour!==h.tour&&(m.countTour=h.tour,m.countAt=Date.now()),`<div class="cg-bidbar"><span class="cg-prompt">Vous êtes coinchés</span>
         <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button>
-        <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${Ti.SURCOINCHE/1e3} s</b></div></div>`;if(h.phase!==`ENCHERES`||h.joueurActif!==r)return i?`<div class="cg-bidbar is-coinche">${i}</div>`:``;let a=h.contract?h.contract.montant:0,o=Ci.filter(e=>e>a);m.bidMin!==a&&(m.bidMin=a,m.amount=o[0]??null,m.hint=``);let s=o.map(e=>`<button type="button" class="cg-chip" data-amount="${e}" data-focus-key="amount-${e}" aria-pressed="${e===m.amount}">${qa(e)}</button>`).join(``),c=mi.map(e=>`<button type="button" class="cg-chip cg-suitchip s-${e}" data-suit="${e}" data-focus-key="suit-${e}" aria-pressed="${e===m.suit}" aria-label="${_i[e]}">${gi[e]}</button>`).join(``);return`<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
+        <div class="cg-count" aria-hidden="true"><span class="cg-count-bar"><i></i></span><b>${Ti.SURCOINCHE/1e3} s</b></div></div>`;if(h.phase!==`ENCHERES`||h.joueurActif!==r)return i?`<div class="cg-bidbar is-coinche">${i}</div>`:``;let a=h.contract?h.contract.montant:0,o=Ci.filter(e=>e>a);m.bidMin!==a&&(m.bidMin=a,m.amount=o[0]??null,m.hint=``);let s=o.indexOf(m.amount),c=(e,t,n)=>`<button type="button" class="cg-step" ${e==null?`disabled`:`data-amount="${e}"`} data-focus-key="step${t}" aria-label="${n}">${t}</button>`,l=`<div class="cg-stepper" role="group" aria-label="Montant">
+        ${c(o[s-1],`−`,`Montant inférieur`)}
+        <output class="cg-amount" aria-live="polite">${qa(m.amount)}</output>
+        ${c(o[s+1],`+`,`Montant supérieur`)}
+      </div>`,u=mi.map(e=>`<button type="button" class="cg-suitchip s-${e}" data-suit="${e}" data-focus-key="suit-${e}" aria-pressed="${e===m.suit}" aria-label="${_i[e]}">${gi[e]}</button>`).join(``);return`<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
       <span class="cg-prompt">À toi d’annoncer</span>
-      ${o.length?`<div class="cg-chips" role="group" aria-label="Montant">${s}</div>
-      <div class="cg-chips" role="group" aria-label="Atout">${c}</div>`:``}
+      ${o.length?`<div class="cg-bidrow">${l}
+      <div class="cg-suits" role="group" aria-label="Atout">${u}</div></div>`:``}
       <div class="cg-actions">
         ${o.length?`<button type="button" class="cg-btn is-primary" data-action="encherir" data-focus-key="encherir">Annoncer</button>`:``}
         <button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">Passer</button>
