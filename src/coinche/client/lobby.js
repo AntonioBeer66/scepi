@@ -119,6 +119,7 @@ function render() {
   const list = (tables || [])
     .filter(
       (t) =>
+        t.table ||
         t.phase === "ATTENTE" ||
         t.matchID === session?.matchID ||
         (!session && t.phase !== "TERMINEE"),

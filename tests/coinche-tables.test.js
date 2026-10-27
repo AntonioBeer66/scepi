@@ -65,9 +65,9 @@ assert.ok(!tables.move(t1, 1, "lancer", [seats]), "un siège de bot ne lance pas
 assert.ok(tables.move(t1, 0, "lancer", [seats]));
 assert.ok(!tables.move(t1, 0, "lancer", [seats]), "déjà lancée");
 
-// La table 1 jouée, l'entretien en rouvre une en attente.
+// La table 1 lancée garde sa place : pas de seconde table 1.
 tables.maintain();
-assert.strictEqual(list().filter((t) => t.table === 1).length, 2);
+assert.strictEqual(list().filter((t) => t.table === 1).length, 1);
 
 // Mains cachées.
 const host = tables.view(t1, 0).G;

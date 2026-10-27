@@ -173,12 +173,12 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
           (started && t - (m.activeAt ?? m.updatedAt) > AFK_MS) ||
           idle > IDLE_MS ||
           (!started && empty && !m.table && idle > EMPTY_MS) ||
-          (!started && m.table && waiting.has(m.table))
+          (m.table && waiting.has(m.table))
         ) {
           matches.delete(m.id);
           seen.delete(m.id);
           removed.push(m.id);
-        } else if (!started && m.table) waiting.add(m.table);
+        } else if (m.table) waiting.add(m.table); // en attente ou en jeu : le numéro reste à cette table
       }
       for (let n = 1; n <= PERMANENT_TABLES; n++)
         if (!waiting.has(n)) {
