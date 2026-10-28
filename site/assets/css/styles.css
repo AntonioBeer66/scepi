@@ -811,15 +811,40 @@ a {
   align-items: center;
   min-height: 44px;
 }
+/* Même pastille que le FR/EN de l'en-tête, avec le drapeau en plus ; mentions
+   légales et langue groupées à droite. */
+.footer-bottom {
+  column-gap: 20px;
+}
+.footer-bottom span:nth-child(2) {
+  margin-left: auto;
+}
 .footer-bottom .footer-lang {
-  min-width: 44px;
-  justify-content: center;
+  order: 99;
+  gap: 8px;
+  padding: 0 12px;
+  min-height: 36px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.footer-bottom .footer-lang:hover {
+  border-color: var(--text);
 }
 .footer-lang svg {
-  width: 28px;
-  height: 20px;
-  border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--line);
+  width: 20px;
+  height: 14px;
+  border-radius: 2px;
+}
+@media (max-width: 760px) {
+  .footer-bottom span:nth-child(2) {
+    margin-left: 0;
+  }
+  .footer-bottom .footer-lang {
+    align-self: flex-start;
+  }
 }
 
 /* Pages secondaires : intro, asso, contact --------------------------------- */
