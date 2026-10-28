@@ -227,16 +227,14 @@ a {
   color: var(--text);
 }
 .header nav a.lang-switch {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 500;
   letter-spacing: 0.08em;
-  border: 1px solid var(--muted);
-  border-radius: 6px;
-  padding: 4px 8px;
+  opacity: 0.55;
   margin-left: 6px;
 }
 .header nav a.lang-switch:hover {
-  border-color: var(--text);
+  opacity: 1;
 }
 .header nav a[aria-current]:after {
   content: "";
