@@ -1,6 +1,18 @@
 (function () {
   const board = document.querySelector("#chess-board");
   if (!board || typeof Chess !== "function") return;
+  // i18n vient de lang.js ; sans lui (page en cache), tout reste en français.
+  const i18n = window.i18n || { t: (fr) => fr };
+  // Ces libellés servent aussi de clés de comparaison : une seule source.
+  const T = {
+    yourTurn: i18n.t("À toi de jouer", "Your turn"),
+    history: i18n.t("Historique", "History"),
+    checkmate: i18n.t("Échec et mat", "Checkmate"),
+    gameOver: i18n.t("Partie terminée", "Game over"),
+    resigned: i18n.t("Partie abandonnée", "Game resigned"),
+    draw: i18n.t("Égalité", "Draw"),
+    noMoves: i18n.t("Aucun coup pour le moment.", "No moves yet."),
+  };
   const files = "abcdefgh",
     glyphs = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" },
     pieceSvg = (type, color = "w") =>
@@ -100,7 +112,7 @@
     const panel = document.querySelector(".chess-side-panel");
     if (!panel) return;
     panel.innerHTML =
-      '<div class="chess-bot-header"><span aria-hidden="true">🤖</span><h2>Jouer contre des robots</h2></div><div class="chess-bot-conversation"><div class="chess-bot-portrait" aria-hidden="true">♞</div><div class="chess-bot-message" id="chess-bot-message">Bonjour ! Prêt à jouer ?</div></div><div class="chess-bot-selection"><label class="chess-select-label" for="chess-profile">Adversaire</label><select id="chess-profile" class="chess-profile"><option value="chavent">Chavent</option><option value="mathieu_212">Mathieu 212</option></select><p id="chess-profile-copy" class="chess-profile-copy"></p></div><div class="chess-move-list"><div class="chess-list-heading"><span class="eyebrow">PARTIE EN COURS</span><span id="chess-move-count">0 coups</span></div><div id="chess-moves-list" class="chess-moves-list"><p class="chess-empty">Aucun coup pour le moment.</p></div></div><span id="chess-bot-name" hidden></span><span id="chess-moves" hidden></span><span id="chess-turn" hidden></span>';
+      `<div class="chess-bot-header"><span aria-hidden="true">🤖</span><h2>${i18n.t("Jouer contre des robots", "Play against bots")}</h2></div><div class="chess-bot-conversation"><div class="chess-bot-portrait" aria-hidden="true">♞</div><div class="chess-bot-message" id="chess-bot-message">${i18n.t("Bonjour ! Prêt à jouer ?", "Hello! Ready to play?")}</div></div><div class="chess-bot-selection"><label class="chess-select-label" for="chess-profile">${i18n.t("Adversaire", "Opponent")}</label><select id="chess-profile" class="chess-profile"><option value="chavent">Chavent</option><option value="mathieu_212">Mathieu 212</option></select><p id="chess-profile-copy" class="chess-profile-copy"></p></div><div class="chess-move-list"><div class="chess-list-heading"><span class="eyebrow">${i18n.t("PARTIE EN COURS", "GAME IN PROGRESS")}</span><span id="chess-move-count">${i18n.t("0 coups", "0 moves")}</span></div><div id="chess-moves-list" class="chess-moves-list"><p class="chess-empty">${T.noMoves}</p></div></div><span id="chess-bot-name" hidden></span><span id="chess-moves" hidden></span><span id="chess-turn" hidden></span>`;
   }
   function buildBoardPlayers() {
     const shell = document.querySelector(".chess-board-shell");
@@ -112,7 +124,7 @@
     );
     shell.insertAdjacentHTML(
       "afterend",
-      '<div class="chess-player chess-player-bottom"><div class="chess-player-avatar" aria-hidden="true">♙</div><div class="chess-player-info"><strong>Vous</strong><div class="chess-capture-line"><div class="chess-captures" id="chess-bottom-captures"></div><strong class="chess-material" id="chess-bottom-material"></strong></div></div></div>',
+      `<div class="chess-player chess-player-bottom"><div class="chess-player-avatar" aria-hidden="true">♙</div><div class="chess-player-info"><strong>${i18n.t("Vous", "You")}</strong><div class="chess-capture-line"><div class="chess-captures" id="chess-bottom-captures"></div><strong class="chess-material" id="chess-bottom-material"></strong></div></div></div>`,
     );
   }
   function buildBotSelection() {
@@ -120,7 +132,7 @@
     if (!selection || selection.dataset.gridBuilt) return;
     selection.dataset.gridBuilt = "true";
     selection.innerHTML +=
-      '<div class="chess-bot-grid"><button type="button" class="chess-bot-option is-selected" data-profile="chavent"><span class="chess-option-avatar">♞</span><strong>Chavent</strong><small>(1500)</small></button><button type="button" class="chess-bot-option" data-profile="mathieu_212"><span class="chess-option-avatar">♟</span><strong>Mathieu 212</strong><small>(1000)</small></button></div><button type="button" class="button chess-start-button" id="chess-start">Nouvelle partie</button>';
+      `<div class="chess-bot-grid"><button type="button" class="chess-bot-option is-selected" data-profile="chavent"><span class="chess-option-avatar">♞</span><strong>Chavent</strong><small>(1500)</small></button><button type="button" class="chess-bot-option" data-profile="mathieu_212"><span class="chess-option-avatar">♟</span><strong>Mathieu 212</strong><small>(1000)</small></button></div><button type="button" class="button chess-start-button" id="chess-start">${i18n.t("Nouvelle partie", "New game")}</button>`;
     selection.querySelectorAll(".chess-bot-option").forEach((option) =>
       option.addEventListener("click", () => {
         const profile = $("#chess-profile");
@@ -146,14 +158,14 @@
     const description = document.createElement("p");
     description.id = "chess-selection-description";
     description.className = "chess-selection-description";
-    description.textContent = "Description du bot à venir.";
+    description.textContent = i18n.t("Description du bot à venir.", "Bot description coming soon.");
     const grid = selection.querySelector(".chess-bot-grid");
     if (grid) grid.after(description);
     const update = () => {
       description.textContent =
         $("#chess-profile").value === "mathieu_212"
-          ? "Description de Mathieu 212 à venir."
-          : "Description de Chavent à venir.";
+          ? i18n.t("Description de Mathieu 212 à venir.", "Mathieu 212 description coming soon.")
+          : i18n.t("Description de Chavent à venir.", "Chavent description coming soon.");
     };
     $("#chess-profile").addEventListener("change", update);
     update();
@@ -165,7 +177,7 @@
     const modes = document.createElement("div");
     modes.className = "chess-color-modes";
     modes.innerHTML =
-      '<button type="button" class="chess-color-mode is-selected" data-color="w" aria-label="Jouer les blancs">♔</button><button type="button" class="chess-color-mode" data-color="random" aria-label="Couleur aléatoire">?</button><button type="button" class="chess-color-mode" data-color="b" aria-label="Jouer les noirs">♚</button>';
+      `<button type="button" class="chess-color-mode is-selected" data-color="w" aria-label="${i18n.t("Jouer les blancs", "Play white")}">♔</button><button type="button" class="chess-color-mode" data-color="random" aria-label="${i18n.t("Couleur aléatoire", "Random color")}">?</button><button type="button" class="chess-color-mode" data-color="b" aria-label="${i18n.t("Jouer les noirs", "Play black")}">♚</button>`;
     start.before(modes);
     modes.querySelectorAll(".chess-color-mode").forEach((button) =>
       button.addEventListener("click", () => {
@@ -494,14 +506,14 @@
     let modal = $("#chess-game-end-modal");
     const current = profiles[$("#chess-profile").value] || {};
     const lost =
-      title.includes("abandonnée") ||
+      title === T.resigned ||
       (game.is_checkmate() && game.turn() === playerColor);
     if (!modal) {
       modal = document.createElement("div");
       modal.id = "chess-game-end-modal";
       modal.className = "chess-game-end-modal";
       modal.innerHTML =
-        '<div class="chess-game-end-dialog" role="dialog" aria-modal="true" aria-labelledby="chess-game-end-title"><button type="button" class="chess-game-end-close" aria-label="Fermer">×</button><h2 id="chess-game-end-title"></h2><p class="chess-game-end-winner"></p><div class="chess-game-end-bot"><div class="chess-game-end-portrait"></div><div class="chess-game-end-message"></div></div><div class="chess-game-end-actions"><button type="button" data-end-action="bot">Jouer contre un autre bot</button><button type="button" data-end-action="revenge">Revanche</button></div><div class="chess-game-end-analysis"><span>Analyser la partie</span><button type="button" data-end-action="chess">Chess.com</button><button type="button" data-end-action="lichess">Lichess</button></div></div>';
+        `<div class="chess-game-end-dialog" role="dialog" aria-modal="true" aria-labelledby="chess-game-end-title"><button type="button" class="chess-game-end-close" aria-label="${i18n.t("Fermer", "Close")}">×</button><h2 id="chess-game-end-title"></h2><p class="chess-game-end-winner"></p><div class="chess-game-end-bot"><div class="chess-game-end-portrait"></div><div class="chess-game-end-message"></div></div><div class="chess-game-end-actions"><button type="button" data-end-action="bot">${i18n.t("Jouer contre un autre bot", "Play another bot")}</button><button type="button" data-end-action="revenge">${i18n.t("Revanche", "Rematch")}</button></div><div class="chess-game-end-analysis"><span>${i18n.t("Analyser la partie", "Analyze the game")}</span><button type="button" data-end-action="chess">Chess.com</button><button type="button" data-end-action="lichess">Lichess</button></div></div>`;
       document.querySelector(".chess-board-panel")?.appendChild(modal);
       const close = () => modal.classList.remove("is-visible");
       modal
@@ -547,13 +559,13 @@
       portrait.style.backgroundImage = `url(${current.picture})`;
     if (message)
       message.textContent = lost
-        ? "Bien joué… Cette fois, la victoire est à toi. Une revanche ?"
-        : "Quelle partie ! Je prends ma revanche dès que tu veux.";
+        ? i18n.t("Bien joué… Cette fois, la victoire est à toi. Une revanche ?", "Well played… This time, the win is yours. A rematch?")
+        : i18n.t("Quelle partie ! Je prends ma revanche dès que tu veux.", "What a game! I'll take my revenge whenever you like.");
     $("#chess-game-end-title").textContent = title;
     if (winner)
       winner.textContent = lost
-        ? `${current.name || "Le bot"} a gagné`
-        : "Tu as gagné";
+        ? i18n.t(`${current.name || "Le bot"} a gagné`, `${current.name || "The bot"} won`)
+        : i18n.t("Tu as gagné", "You won");
     modal.classList.add("is-visible");
   }
   function endGame(title) {
@@ -562,12 +574,12 @@
     // Sur la page : le pied (Abandonner / Nouvelle partie) peut vivre dans
     // l'un ou l'autre panneau selon la largeur.
     document.querySelector(".chess-page")?.classList.add("is-game-ended");
-    status("Historique");
+    status(T.history);
     const renderEndStatus = () => {
       const statusArea = $("#chess-status");
       if (!statusArea) return;
       statusArea.innerHTML =
-        '<button type="button" class="button outline chess-toggle-end">Résultat</button>';
+        `<button type="button" class="button outline chess-toggle-end">${i18n.t("Résultat", "Result")}</button>`;
       statusArea.querySelector(".chess-toggle-end").addEventListener("click", () => {
         const modal = $("#chess-game-end-modal");
         if (modal?.classList.contains("is-visible")) modal.classList.remove("is-visible");
@@ -590,8 +602,8 @@
       now = new Date(),
       date = now.toISOString().slice(0, 10).replaceAll("-", "."),
       time = now.toISOString().slice(11, 19),
-      white = playerColor === "w" ? "Toi" : current.name || "Bot",
-      black = playerColor === "b" ? "Toi" : current.name || "Bot",
+      white = playerColor === "w" ? i18n.t("Toi", "You") : current.name || "Bot",
+      black = playerColor === "b" ? i18n.t("Toi", "You") : current.name || "Bot",
       checkmate =
         typeof game.in_checkmate === "function" && game.in_checkmate(),
       result = checkmate ? (game.turn() === "w" ? "0-1" : "1-0") : "*",
@@ -625,7 +637,7 @@
   function updateEndDialogue(title) {
     const current = profiles[$("#chess-profile").value] || {};
     const botWon =
-      title.includes("abandonnée") ||
+      title === T.resigned ||
       (typeof game.in_checkmate === "function" &&
         game.in_checkmate() &&
         game.turn() === playerColor);
@@ -671,10 +683,13 @@
     const history = game.history();
     $("#chess-moves").textContent = history.length;
     $("#chess-move-count").textContent =
-      `${history.length} coup${history.length === 1 ? "" : "s"}`;
+      i18n.t(
+        `${history.length} coup${history.length === 1 ? "" : "s"}`,
+        `${history.length} move${history.length === 1 ? "" : "s"}`,
+      );
     const list = $("#chess-moves-list");
     if (!history.length) {
-      list.innerHTML = '<p class="chess-empty">Aucun coup pour le moment.</p>';
+      list.innerHTML = `<p class="chess-empty">${T.noMoves}</p>`;
       return;
     }
     list.innerHTML = "";
@@ -714,7 +729,7 @@
         cell.setAttribute("role", "gridcell");
         cell.setAttribute(
           "aria-label",
-          `${square}${piece ? ` ${piece.color === "w" ? "blanc" : "noir"}` : " vide"}`,
+          `${square}${piece ? ` ${piece.color === "w" ? i18n.t("blanc", "white") : i18n.t("noir", "black")}` : i18n.t(" vide", " empty")}`,
         );
         if (square === selected) cell.classList.add("is-selected");
         if (targets.has(square))
@@ -789,11 +804,14 @@
     circles = [];
     render();
     if (game.game_over())
-      endGame(game.is_checkmate() ? "Échec et mat" : "Partie terminée");
+      endGame(game.is_checkmate() ? T.checkmate : T.gameOver);
     else if (game.turn() !== playerColor) {
-      status("Le profil réfléchit…", "Il cherche un coup à son image");
+      status(
+        i18n.t("Le profil réfléchit…", "The profile is thinking…"),
+        i18n.t("Il cherche un coup à son image", "It is looking for a move in its own style"),
+      );
       botTimer = setTimeout(botMove, 240);
-    } else status("À toi de jouer", `${played.from} → ${played.to}`);
+    } else status(T.yourTurn, `${played.from} → ${played.to}`);
     return true;
   }
   function clearSelection() {
@@ -868,10 +886,13 @@
         : null;
     render();
     status(
-      index === timeline.length - 1 ? "À toi de jouer" : "Historique",
+      index === timeline.length - 1 ? T.yourTurn : T.history,
       index
-        ? `${index} demi-coup${index === 1 ? "" : "s"} joué${index === 1 ? "" : "s"}`
-        : "Position initiale",
+        ? i18n.t(
+            `${index} demi-coup${index === 1 ? "" : "s"} joué${index === 1 ? "" : "s"}`,
+            `${index} half-move${index === 1 ? "" : "s"} played`,
+          )
+        : i18n.t("Position initiale", "Starting position"),
     );
   }
   const isPromotionSquare = (square) =>
@@ -898,10 +919,10 @@
       ["q", "n", "r", "b"]
         .map(
           (type) =>
-            `<button type="button" data-promotion="${type}" aria-label="Promouvoir en ${type === "q" ? "dame" : type === "n" ? "cavalier" : type === "r" ? "tour" : "fou"}">${pieceSvg(type, playerColor)}</button>`,
+            `<button type="button" data-promotion="${type}" aria-label="${i18n.t("Promouvoir en", "Promote to")} ${type === "q" ? i18n.t("dame", "queen") : type === "n" ? i18n.t("cavalier", "knight") : type === "r" ? i18n.t("tour", "rook") : i18n.t("fou", "bishop")}">${pieceSvg(type, playerColor)}</button>`,
         )
         .join("") +
-      '<button type="button" class="chess-promotion-cancel" aria-label="Annuler">×</button>';
+      `<button type="button" class="chess-promotion-cancel" aria-label="${i18n.t("Annuler", "Cancel")}">×</button>`;
     board.appendChild(chooser);
     chooser.querySelectorAll("[data-promotion]").forEach((button) =>
       button.addEventListener("click", () => {
@@ -1093,8 +1114,8 @@
       animation = { from: fallback.from, to: fallback.to };
       render();
       if (game.game_over())
-        endGame(isCheckmate() ? "Échec et mat" : "Partie terminée");
-      else status("À toi de jouer", `${fallback.from} → ${fallback.to}`);
+        endGame(isCheckmate() ? T.checkmate : T.gameOver);
+      else status(T.yourTurn, `${fallback.from} → ${fallback.to}`);
       return;
     }
     const rates = profile.rates_per_own_move || {};
@@ -1183,8 +1204,8 @@
     animation = { from: chosen.from, to: chosen.to };
     render();
     if (game.game_over())
-      endGame(isCheckmate() ? "Échec et mat" : "Partie terminée");
-    else status("À toi de jouer", `${chosen.from} → ${chosen.to}`);
+      endGame(isCheckmate() ? T.checkmate : T.gameOver);
+    else status(T.yourTurn, `${chosen.from} → ${chosen.to}`);
   }
   async function loadProfile(value) {
     const profile = profiles[value];
@@ -1204,8 +1225,11 @@
     reset();
     if (window.location.protocol === "file:") {
       status(
-        "Serveur local requis",
-        "Lancez « python3 -m http.server 8000 --directory site » puis ouvrez http://127.0.0.1:8000.",
+        i18n.t("Serveur local requis", "Local server required"),
+        i18n.t(
+          "Lancez « python3 -m http.server 8000 --directory site » puis ouvrez http://127.0.0.1:8000.",
+          "Run “python3 -m http.server 8000 --directory site” then open http://127.0.0.1:8000.",
+        ),
       );
       return;
     }
@@ -1240,8 +1264,8 @@
     timelineIndex = 0;
     animation = null;
     $("#chess-position-title").textContent =
-      `Défi · ${profiles[$("#chess-profile").value]?.name ?? "Bot"}`;
-    status("À toi de jouer", "Les blancs commencent");
+      `${i18n.t("Défi", "Challenge")} · ${profiles[$("#chess-profile").value]?.name ?? "Bot"}`;
+    status(T.yourTurn, i18n.t("Les blancs commencent", "White moves first"));
     render();
   }
   function addNavigation() {
@@ -1249,11 +1273,11 @@
       navigation = document.createElement("div");
     navigation.className = "chess-navigation";
     navigation.innerHTML =
-      '<button class="button outline chess-nav-button" id="chess-first" type="button" aria-label="Revenir au début">|‹</button><button class="button outline chess-nav-button" id="chess-previous" type="button" aria-label="Coup précédent">←</button><button class="button outline chess-nav-button" id="chess-next" type="button" aria-label="Coup suivant">→</button><button class="button outline chess-nav-button" id="chess-last" type="button" aria-label="Aller à la fin">›|</button>';
+      `<button class="button outline chess-nav-button" id="chess-first" type="button" aria-label="${i18n.t("Revenir au début", "Back to the start")}">|‹</button><button class="button outline chess-nav-button" id="chess-previous" type="button" aria-label="${i18n.t("Coup précédent", "Previous move")}">←</button><button class="button outline chess-nav-button" id="chess-next" type="button" aria-label="${i18n.t("Coup suivant", "Next move")}">→</button><button class="button outline chess-nav-button" id="chess-last" type="button" aria-label="${i18n.t("Aller à la fin", "Go to the end")}">›|</button>`;
     resetButton.parentNode.insertBefore(navigation, resetButton);
     resetButton.insertAdjacentHTML(
       "beforebegin",
-      '<button class="button outline chess-give-up" id="chess-give-up" type="button">Abandonner</button>',
+      `<button class="button outline chess-give-up" id="chess-give-up" type="button">${i18n.t("Abandonner", "Resign")}</button>`,
     );
     $("#chess-give-up").addEventListener("click", () => {
       if (!gameStarted || game.game_over()) return;
@@ -1261,7 +1285,7 @@
       if (engine?.worker) engine.worker.postMessage("stop");
       botThinking = false;
       gameStarted = false;
-      endGame("Partie abandonnée");
+      endGame(T.resigned);
     });
     $("#chess-first").addEventListener("click", () =>
       restoreTimeline(0, false),
@@ -1840,10 +1864,13 @@
     const history = moveHistory;
     $("#chess-moves").textContent = history.length;
     $("#chess-move-count").textContent =
-      `${timelineIndex} / ${history.length} coups`;
+      i18n.t(
+        `${timelineIndex} / ${history.length} coups`,
+        `${timelineIndex} / ${history.length} moves`,
+      );
     const list = $("#chess-moves-list");
     if (!history.length) {
-      list.innerHTML = '<p class="chess-empty">Aucun coup pour le moment.</p>';
+      list.innerHTML = `<p class="chess-empty">${T.noMoves}</p>`;
       return;
     }
     list.innerHTML = "";
@@ -1861,10 +1888,13 @@
     $("#chess-moves").textContent = history.length;
     const currentPly = Math.min(timelineIndex, history.length);
     $("#chess-move-count").textContent =
-      `${currentPly} / ${history.length} coups`;
+      i18n.t(
+        `${currentPly} / ${history.length} coups`,
+        `${currentPly} / ${history.length} moves`,
+      );
     const list = $("#chess-moves-list");
     if (!history.length) {
-      list.innerHTML = '<p class="chess-empty">Aucun coup pour le moment.</p>';
+      list.innerHTML = `<p class="chess-empty">${T.noMoves}</p>`;
       return;
     }
     list.innerHTML = "";
@@ -1903,17 +1933,17 @@
     originalShowGameEndModal = showGameEndModal,
     originalUpdateEndDialogue = updateEndDialogue;
   endGame = function (title) {
-    endGameWithDraws(title === "Partie terminée" ? "Égalité" : title);
+    endGameWithDraws(title === T.gameOver ? T.draw : title);
   };
   showGameEndModal = function (title) {
     originalShowGameEndModal(title);
-    if (title === "Égalité") {
+    if (title === T.draw) {
       const winner = document.querySelector(".chess-game-end-winner");
-      if (winner) winner.textContent = "Égalité";
+      if (winner) winner.textContent = T.draw;
     }
   };
   updateEndDialogue = function (title) {
-    if (title !== "Égalité") return originalUpdateEndDialogue(title);
+    if (title !== T.draw) return originalUpdateEndDialogue(title);
     const current = profiles[$("#chess-profile").value] || {},
       lines = current.draw_dialogue;
     const message = randomDialogue(lines);
@@ -2081,8 +2111,11 @@
     })
     .catch(() =>
       status(
-        "Profils indisponibles",
-        "Impossible de charger la configuration des bots.",
+        i18n.t("Profils indisponibles", "Profiles unavailable"),
+        i18n.t(
+          "Impossible de charger la configuration des bots.",
+          "Could not load the bot configuration.",
+        ),
       ),
     );
 })();

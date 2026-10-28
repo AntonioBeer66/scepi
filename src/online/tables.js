@@ -13,25 +13,29 @@
 // à l'heure at, le serveur joue l'action par défaut (expire).
 // players[s] = { name, credentials } (name null : place libre) ; code :
 // celui d'une table privée (absent : table ouverte).
+import { t } from "../coinche/client/i18n.js";
+
 export const MAX_NAME = 18; // pseudo
 
 // Émoticônes rapides (bouton en bas à droite de la table) : seules celles-ci
 // circulent entre joueurs ; chacune avec sa petite phrase de provocation.
+// Les clés (émojis) sont seules à voyager et à compter côté serveur : la
+// phrase, traduite selon la langue de la page, ne sert qu'à l'affichage.
 export const EMOTES = new Map([
   ["😂", "Skill issue"],
-  ["😭", "Ouin ouin"],
+  ["😭", t("Ouin ouin", "Boo hoo")],
   ["🤡", "L bozo"],
   ["🎬", "Absolutes kino"],
   ["🥱", "GG EZ"],
-  ["😳", "Eh beh"],
-  ["💪", "Solide"],
+  ["😳", t("Eh beh", "Well, well")],
+  ["💪", t("Solide", "Solid")],
   ["🗿", "Built different"],
-  ["💣", "Terroriste"],
+  ["💣", t("Terroriste", "Menace")],
   ["😔", "Sadge"],
-  ["🅰️", "Sous A"],
+  ["🅰️", t("Sous A", "On A")],
   ["❓", "???"],
   ["🤔", "Hmmmmm"],
-  ["🤷", "Bah"],
+  ["🤷", t("Bah", "Meh")],
 ]);
 
 // Message libre d'un joueur (palette des émoticônes) : une ligne, sans

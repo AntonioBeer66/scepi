@@ -11,10 +11,11 @@ import { sameName } from "../../online/tables.js";
 import { botEmote } from "./bot-emotes.js";
 import { createHud } from "./hud.js";
 import { OnlineClient } from "./online-client.js";
+import { EN, t } from "./i18n.js";
 import { createTable } from "./table-scene.js";
 
 const SOLO_SEATS = [
-  { type: "human", name: "Toi" },
+  { type: "human", name: t("Toi", "You") },
   { type: "bot" },
   { type: "bot" },
   { type: "bot" },
@@ -80,6 +81,7 @@ export function startSession({
       if (!hostWorker) {
         hostWorker = new Worker(new URL("./host-worker.js", import.meta.url), {
           type: "module",
+          name: EN ? "en" : "fr", // langue du worker (voir i18n.js)
         });
         hostWorker.onmessage = ({ data }) => {
           // Décision prise sur un état déjà dépassé (le jeu a avancé pendant
@@ -229,8 +231,13 @@ export function startSession({
     client.onGone((why) => {
       stop();
       if (why === "PSEUDO_PRIS")
-        window.alert("Ce pseudo est déjà pris à cette table : choisis-en un autre.");
-      if (why === "EXPULSE") window.alert("Tu as été expulsé de la table.");
+        window.alert(
+          t(
+            "Ce pseudo est déjà pris à cette table : choisis-en un autre.",
+            "That nickname is already taken at this table: pick another one.",
+          ),
+        );
+      if (why === "EXPULSE") window.alert(t("Tu as été expulsé de la table.", "You have been kicked out of the table."));
     });
   }
   // La partie (et ses délais, et les enchères à l'écran) ne démarre qu'une

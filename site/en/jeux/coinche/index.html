@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0914" />
+    <script src="/assets/js/lang.js"></script>
+    <meta
+      name="description"
+      content="Play coinche online for free, no sign-up: a table with your friends, bots to fill the empty seats, or a solo game against the computer."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SCEP Invaders" />
+    <meta property="og:title" content="Free online coinche: with friends or against bots – SCEP Invaders" />
+    <meta property="og:description" content="Play coinche online for free, no sign-up: a table with your friends, bots to fill the empty seats, or a solo game against the computer." />
+    <meta property="og:url" content="https://www.scepinvaders.com/en/jeux/coinche/" />
+    <meta property="og:image" content="https://www.scepinvaders.com/assets/images/og-coinche.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="alternate" hreflang="fr" href="https://www.scepinvaders.com/jeux/coinche/" />
+    <link rel="alternate" hreflang="en" href="https://www.scepinvaders.com/en/jeux/coinche/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.scepinvaders.com/jeux/coinche/" />
+    <link rel="icon" type="image/png" sizes="48x48" href="../../../assets/images/favicon-48.png" /><link rel="icon" type="image/png" sizes="96x96" href="../../../assets/images/favicon-96.png" /><link rel="icon" type="image/png" sizes="192x192" href="../../../assets/images/favicon-192.png" /><link rel="canonical" href="https://www.scepinvaders.com/en/jeux/coinche/" /><title>Free online coinche: with friends or against bots – SCEP Invaders</title>
+    <link rel="icon" href="../../../assets/images/favicon.ico" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="../../../assets/images/favicon-32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="64x64"
+      href="../../../assets/images/favicon-64.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="../../../assets/images/apple-touch-icon.png"
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="../../../assets/css/styles.css" />
+    <script src="../../../assets/js/main.js" defer></script>
+    <script src="../../../assets/js/coinche-rules.js" defer></script>
+    <script src="../../../assets/js/coinche-stats.js" defer></script>
+    <!-- Jeu compilé depuis src/coinche (npm run build) -->
+    <script type="module" src="../../../assets/js/coinche/coinche.js"></script>
+      <script type="application/ld+json">{"@context":"https://schema.org","@type":["VideoGame","WebApplication"],"name":"Online Coinche","alternateName":["Coinche","Coinche belote","Multiplayer coinche","Coinche against the computer"],"description":"Play coinche online for free, no sign-up: a table with your friends, bots to fill the empty seats, or a solo game against the computer.","url":"https://www.scepinvaders.com/en/jeux/coinche/","image":"https://www.scepinvaders.com/assets/images/og-coinche.jpg","inLanguage":"en","genre":["Card game","Belote"],"gamePlatform":["Web browser","Android"],"applicationCategory":"GameApplication","operatingSystem":"Any (web browser)","playMode":["MultiPlayer","SinglePlayer"],"numberOfPlayers":{"@type":"QuantitativeValue","minValue":1,"maxValue":4},"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"author":{"@type":"Organization","name":"SCEP Invaders","url":"https://www.scepinvaders.com/"}}</script>
+  </head>
+  <body class="coinche-page">
+    <a class="skip-link" href="#contenu">Skip to content</a>
+    <button
+      type="button"
+      class="rules-btn"
+      id="rules-btn"
+      aria-expanded="false"
+      aria-controls="rules-panel"
+    >
+      Rules <span aria-hidden="true">?</span>
+    </button>
+    <div
+      class="rules-panel"
+      id="rules-panel"
+      role="region"
+      aria-labelledby="rules-panel-title"
+      hidden
+    >
+      <div class="rules-panel-head">
+        <h2 id="rules-panel-title">Coinche, explained</h2>
+        <button
+          type="button"
+          class="rules-panel-close"
+          id="rules-panel-close"
+          aria-label="Close the rules"
+        >
+          ✕
+        </button>
+      </div>
+      <p>
+        A card game for four, in two teams of two (players sitting opposite
+        each other are partners), played with a 32-card deck (7 to Ace).
+      </p>
+      <h3>The goal</h3>
+      <p>
+        One team announces a contract (“we’ll make at least 100 points”) and
+        then tries to fulfill it. If it succeeds, it scores the points it bid;
+        if it fails, the opposing team scores 160 points. Coinche and
+        surcoinche multiply these gains. The first team to reach 1,010 points
+        wins.
+      </p>
+      <h3>Card strength and value</h3>
+      <p>
+        In trump: Jack (20 points), 9 (14), Ace (11), 10 (10), King (4),
+        Queen (3), 8 and 7 (0), from strongest to weakest.<br />In the other
+        suits: Ace (11), 10 (10), King (4), Queen (3), Jack (2), 9, 8 and 7
+        (0).
+      </p>
+      <h3>Bidding</h3>
+      <p>
+        In turn, each player bids a number of points (from 80 to 160, in steps
+        of 10) and a trump suit, or passes. Above that, in this order: the
+        capot (250, the team wins all eight tricks), the capot + belote (270,
+        all eight tricks and the belote), the Générale (250: the taker wins
+        all eight tricks alone, with no trick for their partner) and the
+        Générale + belote (270: the same, with the belote). On a Générale, the
+        taker leads the first trick.
+        Each bid must beat the previous one; you may outbid your own
+        partner. Three passes after a bid close the bidding: the team that
+        made the last bid must reach its contract. Four passes with no bid:
+        the cards are redealt.
+      </p>
+      <h3>Coinche and surcoinche</h3>
+      <p>
+        During the bidding, an opponent of the taker can “coinche”, even out
+        of turn: the points at stake double and the bidding closes. The team
+        that made the bid then has 10 seconds to “surcoinche”: the points
+        quadruple.
+      </p>
+      <h3>Playing the cards</h3>
+      <p>
+        The player after the dealer leads (on a Générale, the taker). You must
+        follow the suit led if you can. When trump is led, you must go higher
+        (play a stronger trump) if possible, even over your partner. If you
+        cannot follow suit, you must trump, and overtrump if a trump is
+        already on the table (otherwise play a lower trump), unless your
+        partner is winning the trick: then you play whatever you like. With
+        neither the suit nor a trump, any card.
+      </p>
+      <h3>The belote</h3>
+      <p>
+        The King and Queen of trump in the hand of the taker or their partner
+        are announced automatically when played (“Belote” on the first,
+        “Rebelote” on the second). If the team that took the bid makes at
+        least 81 points in tricks, the belote adds 20 points to its count for
+        the deal, which helps it reach its contract; it adds nothing to the
+        game score. On defense, the belote does not count.
+      </p>
+      <h3>Scoring</h3>
+      <p>
+        162 points are shared out on each deal (152 in the cards + 10 for the
+        last trick). To make an 80 contract, you need at least 82 points in
+        tricks. The capot requires the team to win all eight tricks, the
+        Générale requires the taker alone to win all eight; their belote
+        versions also require the belote, with no fallback to 250 on failure.
+      </p>
+      <h3>Time</h3>
+      <p>
+        You have 20 seconds to bid or play a card: after that, the computer
+        passes or plays a random legal card for you. A seat left mid-game is
+        taken over by the computer, and you can come back and sit in it
+        again.
+      </p>
+      <div class="rules-bots">
+        <h3>How the bots play</h3>
+        <p>
+          All the bots play with the same system of bids and signals, and read
+          yours with the same grid, allowing for a human who does not follow
+          it to the letter. They never see your hand: everything they know
+          about you comes from your bids and the cards played. In the same
+          situation, a bot always makes the same decision, whatever device is
+          running the table.
+        </p>
+        <h3>Opening: the number is a code</h3>
+        <ul>
+          <li>
+            <b>80</b>: a trump holding (three trumps with the Jack, three
+            trumps with the 9 and the Ace, four trumps with the Ace and the 10,
+            or the Jack with the belote) and an outside Ace; with no Ace, four
+            trumps including the Jack or the 9. It is not a promise of 80
+            points. The bot also opens 80 when its calculations show it
+            winning 7 times out of 10, always with an outside Ace. In 4th
+            position, after three passes, its 80 can be lighter: at least two
+            trumps including the Jack or the 9, and an Ace.
+          </li>
+          <li>
+            <b>90</b>: the Jack and the 9 of trump, with at least three trumps,
+            and four or more “losers” (see 110).
+          </li>
+          <li>
+            <b>100</b>: length. Four trumps with the Jack or the 9, plus the
+            Ace or the 10, and an outside Ace (or five trumps); or five trumps
+            with the belote and an Ace. A 100 never has the Jack and the 9
+            together: it is not “stronger” than the 90.
+          </li>
+          <li>
+            <b>110, 120, 130</b>: the Jack and the 9 of trump, with 3, 2 or 1
+            losers: the non-trump cards that will not win a trick by
+            themselves, that is, anything that does not head an Ace, 10, King
+            sequence.
+          </li>
+          <li>
+            <b>160</b>: the Jack and the 9 with no loser at all.
+            <b>Capot</b>: the same hand with five trumps, if its calculations
+            make it succeed at least 7 times out of 10.
+          </li>
+          <li>
+            If its calculations give its level fewer than 6 chances out of 10,
+            it steps down the levels, then tries another suit, before
+            passing.
+          </li>
+        </ul>
+        <h3>Supporting: the raise</h3>
+        <p>
+          When its partner has opened, the bot counts what its hand adds and
+          bids the opening plus that total (160 at most), once per deal.
+        </p>
+        <ul>
+          <li>
+            +10 per outside Ace, +20 the Jack of trump, +10 the 9 of trump
+            (with at least two trumps, or even bare on an 80), +20 the belote;
+            on an 80, the Jack and the 9 together are worth 10 more. It only
+            raises with a trump honor (Jack, 9 or Ace) or two trumps.
+          </li>
+          <li>
+            Its raise is read literally: “+20” means 20 points, which may be
+            the Jack, two Aces or the belote. It reads yours the same way.
+          </li>
+          <li>
+            Capot: if its Aces outnumber the losers of your opening (110: 3,
+            120: 2, 130: 1) and its calculations confirm it, it bids the
+            capot.
+          </li>
+          <li>If its own suit is worth more than the raise, it suggests it.</li>
+          <li>
+            It reads your 90, or your 110 and up, as “I have the Jack”; a
+            simple raise does not say so.
+          </li>
+        </ul>
+        <h3>Outbidding the opponent</h3>
+        <ul>
+          <li>
+            It compares, based on its calculations, what it earns by letting
+            the opponent play versus outbidding, and only outbids if the gap is
+            clear. It then bids the minimum, or its scale’s level if it makes
+            it 6 times out of 10.
+          </li>
+          <li>
+            In its partner’s suit, it needs an honor (Jack, 9 or Ace) or two
+            trumps; in another suit, at least three cards including the Jack
+            or the 9.
+          </li>
+          <li>
+            It can also force: raise to the minimum when its hand is worth that
+            minimum minus 10, with the Jack or the Ace of trump, at most twice
+            per side and per deal.
+          </li>
+        </ul>
+        <h3>Coinche and surcoinche</h3>
+        <p>
+          A bot coinches on its turn to speak, instead of passing, when its
+          calculations (possible hands consistent with the bids) give the
+          contract little chance of success: under 32% at 80, 22% at 120, 15%
+          at 160. A coinche therefore does not promise a trump holding.
+          Against a capot or a Générale, it only coinches with a sure trump
+          trick (the Jack, or the 9 second).
+        </p>
+        <p>
+          It only surcoinches an almost certain contract: 95% success at 80 or
+          100, 90% at 130, 74% for a capot. Late in the game, the score comes
+          first: against a contract that would make the opponent win, it
+          always coinches; if a coinched failure by its side would make the
+          opponent win anyway, it surcoinches.
+        </p>
+        <h3>Call and refusal</h3>
+        <ul>
+          <li>
+            <b>Call</b>: a 7 or an 8 deliberately discarded (when it could have
+            thrown another suit), during the first three tricks, in a suit
+            whose Ace has not fallen. It means “I have the Ace, lead this suit
+            again”.
+          </li>
+          <li>
+            <b>Refusal</b>: a King or a Queen discarded the same way: “don’t
+            lead this suit”.
+          </li>
+          <li>
+            The 9, 10, Jack and Ace say nothing, nor does a forced discard
+            (only one suit possible), a discard after the 3rd trick or a card
+            played automatically. Without the Ace, a bot throws a 9 rather than
+            a 7 that would look like a call.
+          </li>
+          <li>
+            The latest signal replaces the previous one: a call erases the
+            refusal for the same suit, and vice versa.
+          </li>
+          <li>
+            The bots read your discards the same way, without ever saying what
+            they make of them.
+          </li>
+        </ul>
+        <h3>Leading</h3>
+        <ul>
+          <li>
+            When its side took the bid: it draws trumps in the first two
+            tricks, then leads the suit its partner called. As a taker at 110
+            or more with the Jack, it always leads trump.
+          </li>
+          <li>
+            On defense: it does not lead trump, cashes its Aces (except an Ace
+            whose 10 is still out, on the first lead), leads the suit called
+            or announced by its partner, and leads a singleton to trump in
+            later.
+          </li>
+          <li>
+            These are its habits: it only departs from them if its
+            calculations see a clear gain, which happens mostly for a taker at
+            80 or 90 holding only three trumps.
+          </li>
+        </ul>
+      </div>
+    </div>
+    <header class="header">
+      <div class="header-inner">
+        <a
+          class="brand"
+          href="../../index.html"
+          aria-label="SCEP Invaders, home"
+          ><img
+            src="../../../assets/images/logo-header.png"
+            alt=""
+            width="161"
+            height="144"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        >
+        <button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="navigation"
+        >
+          Menu <span aria-hidden="true">☰</span>
+        </button>
+        <nav id="navigation" aria-label="Main navigation">
+          <a href="../../index.html">Home</a
+          ><a href="../../asso/index.html">About us</a
+          ><a href="../index.html" aria-current="page">Games</a
+          ><a href="../../evenements/index.html">Our events</a
+          ><a href="../../contact/index.html">Contact</a
+          ><a class="lang-switch" data-lang="fr" lang="fr" hreflang="fr" href="/jeux/coinche/" aria-label="Version française">FR</a>
+        </nav>
+
+      </div>
+    </header>
+    <main id="contenu" class="container">
+      <section class="page-intro coinche-intro">
+        <div>
+          <span class="eyebrow green">COINCHE</span>
+          <h1>
+            The cards change.<br /><span class="green">The spirit stays.</span>
+          </h1>
+          <p>
+            Coinche has moved in. Sit down at a table with your friends and
+            let the computer fill the empty seats, or play solo against three
+            bots.
+          </p>
+          <ul class="cq-facts">
+            <li><b>Free</b>, no account</li>
+            <li><b>1 to 4</b> players</li>
+            <li><b>20 s</b> per move</li>
+          </ul>
+        </div>
+        <div class="cq-art" aria-hidden="true">
+          <div class="lx-fan">
+            <img src="../../../assets/images/coinche/cards/JH.webp" alt="" /><img
+              src="../../../assets/images/coinche/cards/9H.webp"
+              alt=""
+            /><img src="../../../assets/images/coinche/cards/AH.webp" alt="" /><img
+              src="../../../assets/images/coinche/cards/10H.webp"
+              alt=""
+            /><img src="../../../assets/images/coinche/cards/KH.webp" alt="" />
+          </div>
+          <span class="lx-chip">Coinched?</span>
+        </div>
+      </section>
+      <section class="section cq-lobby" id="lobby-section">
+        <div class="section-heading">
+          <div>
+            <h2>Pick your table.</h2>
+            <ol class="cq-steps">
+              <li>A nickname, a seat</li>
+              <li>Start the game</li>
+              <li>The computer fills in</li>
+            </ol>
+          </div>
+          <!-- Activé par le jeu une fois chargé (lobby.js). -->
+          <button type="button" class="button primary" id="solo-btn" disabled>
+            Play solo against the computer
+          </button>
+        </div>
+        <p class="caption cq-status" id="lobby-status" role="status"></p>
+        <div class="lobby-grid" id="lobby-grid"></div>
+        <noscript
+          ><div class="lobby-grid">
+            <article class="lobby">
+              <span class="eyebrow">LOBBY 01</span>
+              <h3>Table 1</h3>
+              <div class="empty-seats" aria-hidden="true">○ ○ ○ ○</div>
+              <p>4 seats · 2 teams</p>
+              <button class="button unavailable" disabled>
+                Enable JavaScript to join
+              </button>
+            </article>
+            <article class="lobby">
+              <span class="eyebrow">LOBBY 02</span>
+              <h3>Table 2</h3>
+              <div class="empty-seats" aria-hidden="true">○ ○ ○ ○</div>
+              <p>4 seats · 2 teams</p>
+              <button class="button unavailable" disabled>
+                Enable JavaScript to join
+              </button>
+            </article>
+            <article class="lobby">
+              <span class="eyebrow">LOBBY 03</span>
+              <h3>Table 3</h3>
+              <div class="empty-seats" aria-hidden="true">○ ○ ○ ○</div>
+              <p>4 seats · 2 teams</p>
+              <button class="button unavailable" disabled>
+                Enable JavaScript to join
+              </button>
+            </article>
+            <article class="lobby">
+              <span class="eyebrow">LOBBY 04</span>
+              <h3>Table 4</h3>
+              <div class="empty-seats" aria-hidden="true">○ ○ ○ ○</div>
+              <p>4 seats · 2 teams</p>
+              <button class="button unavailable" disabled>
+                Enable JavaScript to join
+              </button>
+            </article>
+          </div></noscript
+        >
+        <div class="cq-tools">
+          <div class="cq-tool">
+            <h3>One more table</h3>
+            <p class="caption">
+              A temporary lobby, deleted automatically if it stays empty or is
+              abandoned.
+            </p>
+            <button type="button" class="button outline" id="new-lobby-btn">
+              + New lobby
+            </button>
+          </div>
+          <form class="cq-tool private-form" id="private-form">
+            <h3><label for="private-code">Private table</label></h3>
+            <p class="caption">
+              Hidden from the lobby: only people with the code can see it.
+            </p>
+            <div class="cq-code">
+              <input id="private-code" name="code" type="text" minlength="4" maxlength="20" placeholder="Code, e.g. THURSDAY" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" required>
+              <button type="submit" class="button outline">Join</button>
+              <button type="button" class="button outline" id="private-create-btn">Create</button>
+            </div>
+          </form>
+        </div>
+        <!-- Rempli par coinche-stats.js (GET /api/stats) ; reste caché sans chiffres. -->
+        <div class="cq-stats" id="coinche-stats" hidden>
+          <h3>Coinche in numbers</h3>
+          <p class="caption" data-stats-intro></p>
+          <dl class="cq-stats-grid" data-stats-grid></dl>
+          <p class="caption">
+            Totals from the anonymous log of deals played on the site (see the
+            <a href="../../confidentialite/index.html">privacy page</a>),
+            recalculated a few times a day.
+          </p>
+        </div>
+      </section>
+      <section
+        class="game-view"
+        id="game-view"
+        aria-label="Coinche game"
+        hidden
+      >
+        <div id="game-hud"></div>
+        <div class="coinche-stage" id="coinche-stage"></div>
+        <p class="visually-hidden" id="game-announce" aria-live="polite"></p>
+      </section>
+    </main>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <a class="brand" href="../../index.html"
+          ><img
+            src="../../../assets/images/logo-header.png"
+            alt=""
+            width="161"
+            height="144"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        >
+        <p>A shared passion. A whole universe.</p>
+        <div class="footer-social">
+          <a
+            href="https://www.instagram.com/scepinvaders/?hl=fr"
+            target="_blank"
+            rel="noopener"
+            >Instagram</a
+          ><a
+            href="https://www.linkedin.com/company/scep-invaders"
+            target="_blank"
+            rel="noopener"
+            >LinkedIn</a
+          >
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <span>SCEP Invaders · ESCP student society</span
+        ><span
+          ><a href="/api/historique.csv" download title="Online games finished this week (CSV, reset every Monday)"
+            >History</a
+          >
+          · <a href="../../mentions-legales/index.html">Legal notice</a></span
+        >
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c0914" />
+    <script src="/assets/js/lang.js"></script>
+    <meta
+      name="description"
+      content="SCEP Invaders events at ESCP: tournaments, laser tag, a Nintendo stand at the Career Fair, an integration weekend and game nights."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SCEP Invaders" />
+    <meta property="og:title" content="Our events — SCEP Invaders" />
+    <meta property="og:description" content="SCEP Invaders events at ESCP: tournaments, laser tag, a Nintendo stand at the Career Fair, an integration weekend and game nights." />
+    <meta property="og:url" content="https://www.scepinvaders.com/en/evenements/" />
+    <meta property="og:image" content="https://www.scepinvaders.com/assets/images/og-scepi.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://www.scepinvaders.com/en/evenements/" />
+    <link rel="alternate" hreflang="fr" href="https://www.scepinvaders.com/evenements/" />
+    <link rel="alternate" hreflang="en" href="https://www.scepinvaders.com/en/evenements/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.scepinvaders.com/evenements/" />
+    <title>Our events — SCEP Invaders</title>
+    <link rel="icon" href="../../assets/images/favicon.ico" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="../../assets/images/favicon-32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="64x64"
+      href="../../assets/images/favicon-64.png"
+    />
+    <link rel="icon" type="image/png" sizes="48x48" href="../../assets/images/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="../../assets/images/favicon-96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="../../assets/images/favicon-192.png" />
+    <link rel="apple-touch-icon" href="../../assets/images/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="../../assets/css/styles.css" />
+    <script src="../../assets/js/main.js" defer></script>
+    <style>
+
+      .event-carousel {
+        position: relative;
+        overflow: hidden;
+        aspect-ratio: 3 / 2;
+        background: #181127;
+      }
+      .event-carousel img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0;
+        transform: scale(1.04);
+        transition:
+          opacity 0.9s ease 0.9s,
+          transform 0.9s ease 0.9s;
+      }
+      .event-carousel img.is-active {
+        z-index: 2;
+        opacity: 1;
+        transform: scale(1);
+        transition:
+          opacity 0.9s ease,
+          transform 4.9s ease-out;
+      }
+      .event-carousel img.is-leaving {
+        z-index: 1;
+      }
+      .event-carousel-dots {
+        position: absolute;
+        z-index: 3; /* au-dessus de la photo active (z-index 2) */
+        bottom: 12px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+      }
+      .event-carousel-dots button {
+        /* point de 8px, zone tactile de 32px */
+        width: 32px;
+        height: 32px;
+        min-height: 32px;
+        padding: 12px;
+        border: 0;
+        border-radius: 50%;
+        background: #f7f4fc content-box;
+        opacity: 0.55;
+        cursor: pointer;
+      }
+      .event-carousel-dots button.is-active {
+        background-color: #f4c600;
+        opacity: 1;
+      }
+      .event-carousel-arrow {
+        position: absolute;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 14%;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        color: #fff;
+        font-size: 32px;
+        line-height: 1;
+        opacity: 0;
+        cursor: pointer;
+        transition:
+          opacity 0.35s ease,
+          background 0.2s ease;
+      }
+      .event-carousel-arrow--previous,
+      .event-carousel-arrow--next {
+        background: transparent;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+      .event-carousel-arrow--previous {
+        justify-content: flex-start;
+        padding-left: 12px;
+      }
+      .event-carousel-arrow--next {
+        justify-content: flex-end;
+        padding-right: 12px;
+      }
+      .event-carousel:hover .event-carousel-arrow,
+      .event-carousel-arrow:focus-visible {
+        opacity: 0.65;
+      }
+      .event-carousel-arrow--previous:hover,
+      .event-carousel-arrow--next:hover {
+        background: transparent;
+        opacity: 1;
+      }
+      .event-carousel-arrow--previous {
+        left: 0;
+      }
+      .event-carousel-arrow--next {
+        right: 0;
+      }
+      /* Au doigt : on glisse la photo ; les flèches invisibles prenaient
+         les bords de l'image et changeaient de photo au lieu de l'ouvrir. */
+      .event-carousel {
+        touch-action: pan-y;
+      }
+      @media (hover: none) {
+        .event-carousel-arrow {
+          display: none;
+        }
+      }
+      .highlight-grid .is-wide {
+        grid-column: 1 / -1;
+      }
+      .extra-card {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 32px;
+        align-items: center;
+      }
+      .extra-mosaic {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        grid-template-rows: repeat(2, 150px);
+        gap: 10px;
+      }
+      .extra-mosaic img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+      .extra-mosaic img:first-child {
+        grid-row: span 2;
+      }
+      /* Frise : un rail vertical, un point par événement. */
+      .year-list {
+        position: relative;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .year-list::before {
+        content: "";
+        position: absolute;
+        left: 178px;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        background: linear-gradient(var(--gold), #7f5cff 60%, transparent);
+      }
+      .year-list li {
+        position: relative;
+        display: grid;
+        grid-template-columns: 170px 1fr;
+        gap: 44px;
+        align-items: center;
+        padding: 16px 0;
+      }
+      .year-list li::before {
+        content: "";
+        position: absolute;
+        left: 173px;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        margin-top: -6px;
+        border-radius: 50%;
+        background: var(--bg);
+        border: 2px solid var(--gold);
+        box-shadow: 0 0 0 4px #f4c60026;
+      }
+      .year-list li > div,
+      .year-list li > p {
+        padding: 14px 18px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #120d1d;
+      }
+      .year-list time {
+        color: var(--gold);
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .year-list b {
+        display: block;
+        font-size: 17px;
+        margin-bottom: 4px;
+      }
+      .year-list span {
+        color: var(--muted);
+        font-size: 0.9375rem;
+      }
+      @media (max-width: 760px) {
+        .year-list::before {
+          left: 5px;
+        }
+        .year-list li {
+          grid-template-columns: 1fr;
+          gap: 8px;
+          padding-left: 26px;
+        }
+        .year-list li::before {
+          left: 0;
+          top: 22px;
+        }
+        .year-list time {
+          grid-column: 1 / -1;
+        }
+        .year-list li > div,
+        .year-list li > p {
+          padding: 0;
+          border: 0;
+          background: none;
+        }
+        .extra-card {
+          grid-template-columns: 1fr;
+          gap: 18px;
+        }
+        .extra-mosaic {
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 180px repeat(2, 110px);
+        }
+        .extra-mosaic img:first-child {
+          grid-row: auto;
+          grid-column: span 2;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .event-carousel img {
+          transition: none;
+        }
+      }
+      /* Appel final vers Instagram */
+      .ev-next {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px 40px;
+        margin-top: 76px;
+        padding: 40px 44px;
+        border: 1px solid #f4c60033;
+        border-radius: 18px;
+        background: #120d1d;
+      }
+      .ev-next h2 {
+        margin-bottom: 10px;
+      }
+      .ev-next p {
+        max-width: 520px;
+        margin: 0;
+      }
+      @media (max-width: 760px) {
+        .ev-next {
+          padding: 28px 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenu">Skip to content</a>
+    <header class="header">
+      <div class="header-inner">
+        <a
+          class="brand"
+          href="../index.html"
+          aria-label="SCEP Invaders, home"
+          ><img
+            src="../../assets/images/logo-header.png"
+            alt=""
+            width="161"
+            height="144"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        ><button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="navigation"
+        >
+          Menu <span aria-hidden="true">☰</span>
+        </button>
+        <nav id="navigation" aria-label="Main navigation">
+          <a href="../index.html">Home</a
+          ><a href="../asso/index.html">About us</a
+          ><a href="../jeux/index.html">Games</a
+          ><a href="../evenements/index.html" aria-current="page"
+            >Our events</a
+          ><a href="../contact/index.html">Contact</a
+          ><a class="lang-switch" data-lang="fr" lang="fr" hreflang="fr" href="/evenements/" aria-label="Version française">FR</a>
+        </nav>
+
+      </div>
+    </header>
+    <main id="contenu" class="container">
+      <section class="page-intro">
+        <h1>
+          Beyond the games…<br /><span>wonderful moments.</span>
+        </h1>
+        <p>Find all the events organized by SCEPI.</p>
+      </section>
+      <article class="event-banner reveal">
+        <div>
+          <h2>The ESCP Poker<br />Championship.</h2>
+          <p>
+            A Texas Hold’em tournament in 3 stages (qualifiers, semi-final,
+            final), free to enter, with over €1,000 in prizes, funded by the
+            CVEC (the student and campus life fund) and backed by a
+            responsible gaming charter co-written with the Autorité Nationale
+            des Jeux, the French gambling authority.
+          </p>
+          <span class="pill">Next edition coming soon</span>
+        </div>
+      </article>
+      <section class="section">
+        <div class="section-heading">
+          <div>
+            <h2>What has already brought the society to life.</h2>
+          </div>
+        </div>
+        <div class="crew-grid highlight-grid reveal-stagger">
+          <article class="crew-card">
+            <div
+              class="event-carousel"
+              data-carousel
+              aria-label="Photos of the ESCP Poker Championship"
+            >
+              <img
+                class="is-active"
+                src="../../assets/images/events/Poker%20Championship/poker_1.jpg"
+                alt="Poker table during the ESCP Poker Championship"
+              /><img
+                src="../../assets/images/events/Poker%20Championship/poker_2.jpg"
+                alt="Participants around a poker table"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Poker%20Championship/poker_3.jpg"
+                alt="Atmosphere at the poker tournament"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Poker%20Championship/poker_4.jpg"
+                alt="Poker table during the tournament"
+                loading="lazy"
+              />
+              <div
+                class="event-carousel-dots"
+                aria-label="Choose a photo"
+              ></div>
+            </div>
+            <h3>ESCP Poker Championship</h3>
+            <p>
+              Our flagship tournament in 3 stages — qualifiers, semi-final,
+              final — with more than 100 participants.
+            </p>
+          </article>
+          <article class="crew-card">
+            <div
+              class="event-carousel"
+              data-carousel
+              aria-label="Photos of the Intergenerational Weekend, May 2026"
+            >
+              <img
+                class="is-active"
+                src="../../assets/images/events/WEI/wei_1.JPG"
+                alt="Intergenerational Weekend, May 2026, photo 1"
+              /><img
+                src="../../assets/images/events/WEI/wei_2.JPG"
+                alt="Intergenerational Weekend, May 2026, photo 2"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/WEI/wei_3.JPG"
+                alt="Intergenerational Weekend, May 2026, photo 3"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/WEI/wei_4.JPG"
+                alt="Intergenerational Weekend, May 2026, photo 4"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/WEI/wei_5.JPG"
+                alt="Intergenerational Weekend, May 2026, photo 5"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/WEI/wei_6.JPG"
+                alt="Intergenerational Weekend, May 2026, photo 6"
+                loading="lazy"
+              />
+              <div
+                class="event-carousel-dots"
+                aria-label="Choose a photo"
+              ></div>
+            </div>
+            <h3>Intergenerational Weekend, May 2026</h3>
+            <p>Great times spent together with SCEPI alumni</p>
+          </article>
+          <article class="crew-card">
+            <div
+              class="event-carousel"
+              data-carousel
+              aria-label="Photos of the Nintendo Career Fair"
+            >
+              <img
+                class="is-active"
+                src="../../assets/images/events/Nintendo%20Career%20Fair/nintendo_1.jpeg"
+                alt="Nintendo Career Fair, photo 1"
+              /><img
+                src="../../assets/images/events/Nintendo%20Career%20Fair/nintendo_2.jpeg"
+                alt="Nintendo Career Fair, photo 2"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Nintendo%20Career%20Fair/nintendo_3.jpg"
+                alt="Nintendo Career Fair, photo 3"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Nintendo%20Career%20Fair/nintendo_4.jpg"
+                alt="Nintendo Career Fair, photo 4"
+                loading="lazy"
+              />
+              <div
+                class="event-carousel-dots"
+                aria-label="Choose a photo"
+              ></div>
+            </div>
+            <h3>Nintendo stand</h3>
+            <p>Game stations and networking at the ESCP Career Fair.</p>
+          </article>
+          <article class="crew-card">
+            <div
+              class="event-carousel"
+              data-carousel
+              aria-label="Photos of the October 2025 laser tag"
+            >
+              <img
+                class="is-active"
+                src="../../assets/images/events/Laser%20tag/lasertag_1.jpg"
+                alt="Group photo of the laser tag players"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Laser%20tag/lasertag_2.jpg"
+                alt="Player lying in wait behind an inflatable wall"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Laser%20tag/lasertag_3.jpg"
+                alt="Player aiming through a window in the set"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Laser%20tag/lasertag_4.jpg"
+                alt="Laser tag game in a campus corridor"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Laser%20tag/lasertag_5.jpg"
+                alt="Laser tag game in the half-light"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Laser%20tag/lasertag_6.jpg"
+                alt="Handing out the laser tag equipment"
+                loading="lazy"
+              />
+              <div
+                class="event-carousel-dots"
+                aria-label="Choose a photo"
+              ></div>
+            </div>
+            <h3>Laser tag at Champerret</h3>
+            <p>
+              The campus turned into an arena, in October 2025, with the CVEC
+              and ESCP.
+            </p>
+          </article>
+          <article class="crew-card is-wide extra-card">
+            <div>
+              <h3>And plenty of other activities together</h3>
+              <p>
+                Game nights by the river, hikes, all-you-can-eat
+                restaurants…
+              </p>
+            </div>
+            <div class="extra-mosaic">
+              <img
+                src="../../assets/images/events/Extra/extra_1.jpg"
+                alt="Game night among members"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Extra/extra_2.jpg"
+                alt="Board game in progress"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Extra/extra_3.jpg"
+                alt="A moment shared between members"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Extra/extra_4.JPG"
+                alt="Outing between members"
+                loading="lazy"
+              /><img
+                src="../../assets/images/events/Extra/extra_5.JPEG"
+                alt="Activity among members"
+                loading="lazy"
+              />
+            </div>
+          </article>
+        </div>
+      </section>
+      <section class="section year reveal" aria-labelledby="year-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="year-title">A year with SCEPI.</h2>
+          </div>
+        </div>
+        <ol class="year-list">
+          <li>
+            <time>March – April 2025</time>
+            <div>
+              <b>Inter-campus chess tournament</b
+              ><span>ESCP’s campuses face to face on the chessboard.</span>
+            </div>
+          </li>
+          <li>
+            <time>October 2025</time>
+            <div>
+              <b>Laser tag at Champerret</b
+              ><span
+                >An inflatable arena in the heart of the campus, with the CVEC
+                and ESCP.</span
+              >
+            </div>
+          </li>
+          <li>
+            <time>Late November 2025</time>
+            <div>
+              <b>Christmas integration weekend</b
+              ><span>A weekend among members before the holidays.</span>
+            </div>
+          </li>
+          <li>
+            <time>Late 2025</time>
+            <div>
+              <b>ESCP’s most essential society</b
+              ><span>Students vote us Essential Society.</span>
+            </div>
+          </li>
+          <li>
+            <time>January 2026</time>
+            <div>
+              <b>Nintendo stand at the Career Fair</b
+              ><span
+                >Switch 2 open to everyone and an introduction to the
+                start-up BetterWorld.</span
+              >
+            </div>
+          </li>
+          <li>
+            <time>March 2026</time>
+            <div>
+              <b>Responsible gaming conference</b
+              ><span>45 attendees, with the Autorité Nationale des Jeux.</span>
+            </div>
+          </li>
+          <li>
+            <time>March – April 2026</time>
+            <div>
+              <b>ESCP Poker Championship</b
+              ><span>Six evenings and 104 players, all the way to the final.</span>
+            </div>
+          </li>
+          <li>
+            <time>May 2026</time>
+            <div>
+              <b>Intergenerational weekend</b
+              ><span
+                >20 alumni and 15 newcomers together over the May 1st
+                weekend.</span
+              >
+            </div>
+          </li>
+          <li>
+            <time>June 2026</time>
+            <div>
+              <b>The Switch at the oral exams</b
+              ><span
+                >Lent to the BDE (the student union) to help the shortlisted
+                candidates unwind during the ACA.</span
+              >
+            </div>
+          </li>
+          <li>
+            <time>September 2026</time>
+            <div>
+              <b>Games tent at the SMAQ</b
+              ><span>At the integration weekend for all the pre-master students.</span>
+            </div>
+          </li>
+        </ol>
+      </section>
+      <section class="ev-next reveal">
+        <div>
+          <h2>Don’t miss the next one.</h2>
+          <p>
+            Tournaments, game nights, outings: every event is announced first
+            on Instagram.
+          </p>
+        </div>
+        <a
+          class="button primary"
+          href="https://www.instagram.com/scepinvaders/?hl=fr"
+          target="_blank"
+          rel="noopener"
+          >Follow @scepinvaders <span aria-hidden="true">↗</span></a
+        >
+      </section>
+    </main>
+    <footer class="footer">
+      <div class="container footer-inner">
+        <a class="brand" href="../index.html"
+          ><img
+            src="../../assets/images/logo-header.png"
+            alt=""
+            width="161"
+            height="144"
+          /><span>SCEP<span class="brand-sub">INVADERS</span></span></a
+        >
+        <p>Just to make sure we tag everyone.</p>
+        <div class="footer-social">
+          <a
+            href="https://www.instagram.com/scepinvaders/?hl=fr"
+            target="_blank"
+            rel="noopener"
+            >Instagram</a
+          ><a
+            href="https://www.linkedin.com/company/scep-invaders"
+            target="_blank"
+            rel="noopener"
+            >LinkedIn</a
+          >
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <span>SCEP Invaders · ESCP student society</span
+        ><span
+          ><a href="../mentions-legales/index.html">Legal notice</a></span
+        >
+      </div>
+    </footer>
+    <script>
+
+      const carousels = [...document.querySelectorAll("[data-carousel]")].map(
+        (carousel) => {
+          const images = [...carousel.querySelectorAll("img")];
+          const dots = carousel.querySelector(".event-carousel-dots");
+          let current = 0;
+          const show = (index) => {
+            const next = (index + images.length) % images.length;
+            if (
+              next === current &&
+              images[current].classList.contains("is-active")
+            )
+              return;
+            images.forEach((image) => image.classList.remove("is-leaving"));
+            images[current].classList.remove("is-active");
+            images[current].classList.add("is-leaving");
+            current = next;
+            images[current].classList.remove("is-leaving");
+            images[current].classList.add("is-active");
+            dots
+              .querySelectorAll("button")
+              .forEach((dot, i) =>
+                dot.classList.toggle("is-active", i === current),
+              );
+          };
+          images.forEach((_, i) => {
+            const dot = document.createElement("button");
+            dot.type = "button";
+            dot.ariaLabel = "Show photo " + (i + 1);
+            dot.addEventListener("click", () => show(i));
+            dots.append(dot);
+          });
+          const previous = document.createElement("button");
+          previous.type = "button";
+          previous.className =
+            "event-carousel-arrow event-carousel-arrow--previous";
+          previous.ariaLabel = "Previous photo";
+          previous.innerHTML = "&#8249;";
+          previous.addEventListener("click", () => show(current - 1));
+          const next = document.createElement("button");
+          next.type = "button";
+          next.className = "event-carousel-arrow event-carousel-arrow--next";
+          next.ariaLabel = "Next photo";
+          next.innerHTML = "&#8250;";
+          next.addEventListener("click", () => show(current + 1));
+          carousel.append(previous, next);
+          images[0].classList.add("is-active");
+          return {
+            carousel,
+            show,
+            get current() {
+              return current;
+            },
+          };
+        },
+      );
+
+      // Défilement automatique des seuls diaporamas à l'écran, onglet visible,
+      // et jamais si l'utilisateur a demandé moins d'animations.
+      const onScreen = new Set();
+      if ("IntersectionObserver" in window) {
+        const io = new IntersectionObserver((entries) =>
+          entries.forEach((e) =>
+            e.isIntersecting
+              ? onScreen.add(e.target)
+              : onScreen.delete(e.target),
+          ),
+        );
+        carousels.forEach(({ carousel }) => io.observe(carousel));
+      } else carousels.forEach(({ carousel }) => onScreen.add(carousel));
+      let timer;
+      const start = () => {
+        clearInterval(timer);
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        timer = setInterval(() => {
+          if (document.hidden) return;
+          carousels.forEach(({ carousel, show, current }) => {
+            if (onScreen.has(carousel)) show(current + 1);
+          });
+        }, 4000);
+      };
+      const stop = () => clearInterval(timer);
+      // Qui feuillette lui-même garde la main : plus de défilement auto.
+      let browsed = false;
+      carousels.forEach((c) => {
+        const { carousel, show } = c;
+        carousel.addEventListener("mouseenter", stop);
+        carousel.addEventListener("mouseleave", () => browsed || start());
+        carousel.addEventListener("click", (e) => {
+          if (e.target.closest("button")) {
+            browsed = true;
+            stop();
+          }
+        });
+        let x0 = null;
+        let t0 = 0;
+        carousel.addEventListener(
+          "touchstart",
+          (e) => {
+            x0 = e.touches.length === 1 ? e.touches[0].clientX : null;
+            t0 = performance.now();
+          },
+          { passive: true },
+        );
+        carousel.addEventListener("touchend", (e) => {
+          if (x0 === null) return;
+          const dx = e.changedTouches[0].clientX - x0;
+          const fast = Math.abs(dx) / (performance.now() - t0) > 0.4;
+          x0 = null;
+          if (Math.abs(dx) > 50 || (fast && Math.abs(dx) > 20)) {
+            show(c.current + (dx < 0 ? 1 : -1));
+            browsed = true;
+            stop();
+          }
+        });
+      });
+      start();
+    </script>
+  </body>
+</html>

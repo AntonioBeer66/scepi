@@ -13,19 +13,26 @@
 // imaginés) dérive de ce qu'ils savent : la même situation donne toujours
 // la même décision, sur un PC comme sur un téléphone lent (voir withSeed).
 
+import { t } from "./client/i18n.js";
+
 export const SUITS = ["H", "D", "C", "S"];
 export const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
 export const SUIT_SYMBOL = { H: "♥", D: "♦", C: "♣", S: "♠" };
-export const SUIT_NAME = { H: "Cœur", D: "Carreau", C: "Trèfle", S: "Pique" };
+export const SUIT_NAME = {
+  H: t("Cœur", "Hearts"),
+  D: t("Carreau", "Diamonds"),
+  C: t("Trèfle", "Clubs"),
+  S: t("Pique", "Spades"),
+};
 const RANK_NAME = {
   7: "7",
   8: "8",
   9: "9",
   10: "10",
-  J: "Valet",
-  Q: "Dame",
-  K: "Roi",
-  A: "As",
+  J: t("Valet", "Jack"),
+  Q: t("Dame", "Queen"),
+  K: t("Roi", "King"),
+  A: t("As", "Ace"),
 };
 const TRUMP_POINTS = { J: 20, 9: 14, A: 11, 10: 10, K: 4, Q: 3, 8: 0, 7: 0 };
 const PLAIN_POINTS = { A: 11, 10: 10, K: 4, Q: 3, J: 2, 9: 0, 8: 0, 7: 0 };
@@ -119,7 +126,10 @@ function deal(deck, donneur) {
 }
 
 function cardLabel(card) {
-  return `${RANK_NAME[card.rank]} de ${SUIT_NAME[card.suit]}`;
+  return t(
+    `${RANK_NAME[card.rank]} de ${SUIT_NAME[card.suit]}`,
+    `${RANK_NAME[card.rank]} of ${SUIT_NAME[card.suit]}`,
+  );
 }
 
 // Score d'une carte pour déterminer le maître d'un pli en cours (-1 = ne peut pas être maître)

@@ -226,6 +226,18 @@ a {
 .header nav a[aria-current] {
   color: var(--text);
 }
+.header nav a.lang-switch {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-left: 6px;
+}
+.header nav a.lang-switch:hover {
+  border-color: var(--text);
+}
 .header nav a[aria-current]:after {
   content: "";
   position: absolute;
@@ -2859,79 +2871,6 @@ body.is-playing .header {
   margin: 10px 0 0;
   color: var(--muted);
   font-size: 13px;
-}
-/* Cartes tombées : 4 couleurs de 8 cartes, de la plus forte à la plus faible. */
-.cg-fallen {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.cg-fallen-row {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  align-items: center;
-  gap: 6px;
-}
-.cg-fallen-suit {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 20px;
-  line-height: 1;
-}
-.cg-fallen-suit small {
-  margin-top: 3px;
-  color: var(--gold);
-  font: 700 11px Consolas, monospace;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.cg-fallen-row ol {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 3px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.cg-fallen-row ol li {
-  padding: 6px 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
-.cg-fallen-row.is-trump ol li {
-  background: #f4c60014;
-}
-.cg-fallen-row ol li.is-fallen,
-.cg-legend .is-fallen {
-  color: var(--muted);
-  text-decoration: line-through;
-}
-.cg-fallen-row ol li.is-fallen {
-  border-style: dashed;
-  opacity: 0.65;
-}
-.cg-fallen-row ol li.is-mine,
-.cg-legend .is-mine {
-  border-color: var(--gold);
-  color: var(--gold);
-}
-.cg-fallen-sum {
-  margin: 0 0 10px;
-  font-size: 13px;
-}
-.cg-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 12px;
 }
 
 /* Résultat de la donne, au centre de la table */

@@ -11,25 +11,23 @@ import {
   DURATION_MS,
   GENERALE,
   GENERALE_BELOTE,
-  PLAIN_FORCE,
-  RANKS,
   SUITS,
   SUIT_NAME,
   SUIT_SYMBOL,
-  TRUMP_FORCE,
   cardLabel,
   computeLegal,
   teamOf,
 } from "../engine.js";
 import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
+import { t } from "./i18n.js";
 
 const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
 const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
 const RANK_SHORT = { J: "V", Q: "D", K: "R" }; // Valet, Dame, Roi (les autres : tels quels)
-const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
+const COMPASS = [t("Sud", "South"), t("Est", "East"), t("Nord", "North"), t("Ouest", "West")]; // position vue du joueur
 const FLASH = {
-  coinche: { src: "../../assets/images/coinche/coinched.mp4", ms: 1100 },
-  surcoinche: { src: "../../assets/images/coinche/surcoinched.mp4", ms: 1700 },
+  coinche: { src: "/assets/images/coinche/coinched.mp4", ms: 1100 },
+  surcoinche: { src: "/assets/images/coinche/surcoinched.mp4", ms: 1700 },
 };
 const ICONS = {
   history:
@@ -55,9 +53,9 @@ function esc(s) {
 
 function bidReadout(value) {
   if (value === 250) return "Capot";
-  if (value === 270) return "Capot beloté";
+  if (value === 270) return t("Capot beloté", "Capot + belote");
   if (value === GENERALE) return "Générale";
-  if (value === GENERALE_BELOTE) return "Générale belotée";
+  if (value === GENERALE_BELOTE) return t("Générale belotée", "Générale + belote");
   return String(value);
 }
 
@@ -81,7 +79,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     bidMin: undefined,
     hint: "",
     panel: null, // "history" | "trick" | null
-    tab: null, // onglet de l'historique : "bids" | "cards" | "donnes" (null : enchères)
+    tab: null, // onglet de l'historique : "bids" | "donnes" (null : enchères)
   };
   let G = null;
   const flashBlobs = {};
@@ -90,11 +88,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   const spectator = me < 0;
   const anchor = spectator ? 0 : me;
   const ours = spectator ? 0 : teamOf(me);
-  const [US, THEM] = spectator ? ["Nord-Sud", "Est-Ouest"] : ["Nous", "Eux"];
+  const [US, THEM] = spectator ? [t("Nord-Sud", "North-South"), t("Est-Ouest", "East-West")] : [t("Nous", "Us"), t("Eux", "Them")];
   const compass = (s) => COMPASS[(s - anchor + 4) % 4];
   const seatName = (s) =>
     s === me
-      ? "Toi"
+      ? t("Toi", "You")
       : G.seats[s].type === "bot" && G.seats[s].name === "Ordinateur"
         ? `Bot ${compass(s)}`
         : G.seats[s].name; // joueur, ou bot qui l'a remplacé : « Bob (bot) »
@@ -109,52 +107,60 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   function announce(prev) {
     const out = [];
     if (prev && prev.donneNumero !== G.donneNumero)
-      out.push(`Nouvelle donne. ${who(G.donneur)} donne.`);
+      out.push(t(`Nouvelle donne. ${who(G.donneur)} donne.`, `New deal. ${who(G.donneur)} deals.`));
     const same = prev && prev.donneNumero === G.donneNumero;
     if (same && G.bidLog.length > prev.bidLog.length) {
       for (const e of G.bidLog.slice(prev.bidLog.length))
         out.push(
           e.montant
-            ? `${who(e.seat)} : ${bidReadout(e.montant)} ${SUIT_NAME[e.atout]}`
-            : `${who(e.seat)} : passe`,
+            ? t(`${who(e.seat)} : ${bidReadout(e.montant)} ${SUIT_NAME[e.atout]}`, `${who(e.seat)}: ${bidReadout(e.montant)} ${SUIT_NAME[e.atout]}`)
+            : t(`${who(e.seat)} : passe`, `${who(e.seat)}: pass`),
         );
     }
     if (G.contract?.coinche && !prev?.contract?.coinche)
       out.push(
         !spectator && teamOf(me) === G.contract.equipePreneur
-          ? `Coinché ! Tu as ${DURATION_MS.SURCOINCHE / 1000} secondes pour surcoincher.`
-          : "Coinché !",
+          ? t(`Coinché ! Tu as ${DURATION_MS.SURCOINCHE / 1000} secondes pour surcoincher.`, `Coinched! You have ${DURATION_MS.SURCOINCHE / 1000} seconds to surcoinche.`)
+          : t("Coinché !", "Coinched!"),
       );
     if (G.contract?.surcoinche && !prev?.contract?.surcoinche)
-      out.push("Surcoinché !");
+      out.push(t("Surcoinché !", "Surcoinched!"));
     if (same)
       for (const s of [0, 1, 2, 3])
         for (const c of G.playedBy[s].slice(prev.playedBy[s].length))
-          out.push(`${who(s)} : ${cardLabel(c)}`);
+          out.push(t(`${who(s)} : ${cardLabel(c)}`, `${who(s)}: ${cardLabel(c)}`));
     if (G.belote.beloteDeclared && !(same && prev.belote.beloteDeclared))
-      out.push("Belote !");
+      out.push(t("Belote !", "Belote!"));
     if (G.belote.rebeloteDeclared && !(same && prev.belote.rebeloteDeclared))
-      out.push("Rebelote !");
+      out.push(t("Rebelote !", "Rebelote!"));
     if (same && G.plisJoues > prev.plisJoues)
       out.push(
-        `${G.lastTrick.winnerSeat === me ? "Tu remportes" : `${who(G.lastTrick.winnerSeat)} remporte`} le pli (${G.lastTrick.points} points).`,
+        G.lastTrick.winnerSeat === me
+          ? t(`Tu remportes le pli (${G.lastTrick.points} points).`, `You win the trick (${G.lastTrick.points} points).`)
+          : t(`${who(G.lastTrick.winnerSeat)} remporte le pli (${G.lastTrick.points} points).`, `${who(G.lastTrick.winnerSeat)} wins the trick (${G.lastTrick.points} points).`),
       );
     if (G.phase === "SCORE" && prev?.phase !== "SCORE" && G.dernierResultat) {
       const r = G.dernierResultat;
       out.push(
-        `${r.reussi ? "Contrat réussi" : "Contrat chuté"} : ${r.gain} points. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
+        t(
+          `${r.reussi ? "Contrat réussi" : "Contrat chuté"} : ${r.gain} points. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
+          `${r.reussi ? "Contract made" : "Contract failed"}: ${r.gain} points. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
+        ),
       );
     }
     if (G.phase === "TERMINEE" && prev?.phase !== "TERMINEE")
       out.push(
-        `Partie terminée. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
+        t(
+          `Partie terminée. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
+          `Game over. ${US} ${G.scores[ours]}, ${THEM} ${G.scores[1 - ours]}.`,
+        ),
       );
     if (
       (G.phase === "ENCHERES" || G.phase === "JEU") &&
       G.joueurActif === me &&
       G.tour !== prev?.tour
     )
-      out.push("À toi de jouer.");
+      out.push(t("À toi de jouer.", "Your turn."));
     if (out.length) announcer.textContent = out.join(" ");
   }
 
@@ -202,55 +208,54 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   function renderContract() {
     const c = G.contract;
     if (!c)
-      return `<span class="cg-contract is-empty">Enchères</span>`;
+      return `<span class="cg-contract is-empty">${t("Enchères", "Bidding")}</span>`;
     const label = bidReadout(c.montant);
     const mult = G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "";
-    const state = c.surcoinche ? " · surcoinché" : c.coinche ? " · coinché" : "";
+    const state = c.surcoinche ? t(" · surcoinché", " · surcoinched") : c.coinche ? t(" · coinché", " · coinched") : "";
     return `<span class="cg-contract">${suitSpan(c.atout)} ${label}${mult}</span>
-      <span class="cg-sub">${c.preneur === me ? "Tu prends" : `${esc(seatName(c.preneur))} prend`}${state}</span>`;
+      <span class="cg-sub">${c.preneur === me ? t("Tu prends", "You take") : t(`${esc(seatName(c.preneur))} prend`, `${esc(seatName(c.preneur))} takes`)}${state}</span>`;
   }
 
   function renderTopbar() {
     const us = ours;
     const phase = {
-      ENCHERES: "Enchères",
-      SURCOINCHE: "Surcoinche possible",
-      JEU: `Pli ${Math.min(G.plisJoues + 1, 8)}/8`,
-      SCORE: "Résultat",
-      TERMINEE: "Partie terminée",
+      ENCHERES: t("Enchères", "Bidding"),
+      SURCOINCHE: t("Surcoinche possible", "Surcoinche open"),
+      JEU: t(`Pli ${Math.min(G.plisJoues + 1, 8)}/8`, `Trick ${Math.min(G.plisJoues + 1, 8)}/8`),
+      SCORE: t("Résultat", "Result"),
+      TERMINEE: t("Partie terminée", "Game over"),
     }[G.phase];
     const live = G.phase === "JEU" && G.contract;
     const belote =
       live && G.belote.rebeloteDeclared ? G.contract.equipePreneur : -1;
     // Décompte de la donne en cours : la belote des preneurs y compte (+20),
     // pas au score de la partie.
-    const score = (t, label) =>
-      `<span class="cg-score${t === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[t]}</b>${live ? `<em${t === belote ? ` title="Dont ${BELOTE_BONUS} de belote"` : ""}>+${G.pointsPlis[t] + (t === belote ? BELOTE_BONUS : 0)}${t === belote ? " <i>♛</i>" : ""}</em>` : ""}</span>`;
+    const score = (tm, label) =>
+      `<span class="cg-score${tm === us ? " is-us" : ""}"><small>${label}</small><b>${G.scores[tm]}</b>${live ? `<em${tm === belote ? ` title="${t(`Dont ${BELOTE_BONUS} de belote`, `Includes ${BELOTE_BONUS} for belote`)}"` : ""}>+${G.pointsPlis[tm] + (tm === belote ? BELOTE_BONUS : 0)}${tm === belote ? " <i>♛</i>" : ""}</em>` : ""}</span>`;
     const iconBtn = (action, icon, label, pressed) =>
       `<button type="button" class="cg-icon" data-action="${action}" data-focus-key="${action}" aria-label="${label}"${pressed === undefined ? "" : ` aria-expanded="${pressed}"`}>${ICONS[icon]}<span>${label}</span></button>`;
     return `<div class="cg-topbar">
       <div class="cg-top-left">${renderContract()}</div>
-      <div class="cg-top-mid">${spectator ? '<span class="cg-watch" title="Touche un joueur pour voir ses cartes">Spectateur · touche un joueur</span>' : ""}<span class="cg-phase">Donne ${G.donneNumero - 1} · ${esc(phase)}</span>${
+      <div class="cg-top-mid">${spectator ? `<span class="cg-watch" title="${t("Touche un joueur pour voir ses cartes", "Tap a player to see their cards")}">${t("Spectateur · touche un joueur", "Spectator · tap a player")}</span>` : ""}<span class="cg-phase">${t(`Donne ${G.donneNumero - 1}`, `Deal ${G.donneNumero - 1}`)} · ${esc(phase)}</span>${
         (G.phase === "ENCHERES" || G.phase === "JEU") && G.joueurActif === me
-          ? '<span class="cg-yourturn">À toi</span>'
+          ? `<span class="cg-yourturn">${t("À toi", "Your turn")}</span>`
           : ""
       }</div>
       <div class="cg-top-right">
         ${score(us, US)}${score(1 - us, THEM)}
-        ${iconBtn("toggle-history", "history", "Historique", ui.panel === "history")}
-        ${G.lastTrick ? iconBtn("toggle-trick", "trick", "Dernier pli", ui.panel === "trick") : ""}
-        ${iconBtn("rules", "rules", "Règles")}
-        ${iconBtn("quit", "quit", "Quitter")}
+        ${iconBtn("toggle-history", "history", t("Historique", "History"), ui.panel === "history")}
+        ${G.lastTrick ? iconBtn("toggle-trick", "trick", t("Dernier pli", "Last trick"), ui.panel === "trick") : ""}
+        ${iconBtn("rules", "rules", t("Règles", "Rules"))}
+        ${iconBtn("quit", "quit", t("Quitter", "Quit"))}
       </div>
     </div>`;
   }
 
-  // Historique à trois onglets : les enchères de la donne (G.bidLog), les
-  // cartes tombées (G.playedBy) et les donnes terminées (G.history).
+  // Historique à deux onglets : les enchères de la donne (G.bidLog) et les
+  // donnes terminées (G.history).
   const TABS = [
-    ["bids", "Enchères"],
-    ["cards", "Cartes"],
-    ["donnes", "Donnes"],
+    ["bids", t("Enchères", "Bids")],
+    ["donnes", t("Donnes", "Deals")],
   ];
 
   // Une colonne par siège (toi en premier), une ligne par tour de table,
@@ -259,7 +264,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   function renderBids() {
     const cols = [0, 1, 2, 3].map((p) => (anchor + p) % 4);
     const waiting = G.phase === "ENCHERES" ? { seat: G.joueurActif, wait: true } : null;
-    if (!G.bidLog.length && !waiting) return `<p class="cg-empty">Personne n’a encore parlé.</p>`;
+    if (!G.bidLog.length && !waiting) return `<p class="cg-empty">${t("Personne n’a encore parlé.", "No one has bid yet.")}</p>`;
     let lead = null;
     for (const e of G.bidLog) if (e.montant) lead = e;
     const rows = [];
@@ -276,19 +281,19 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         : e.wait
           ? '<td class="is-wait" aria-hidden="true">…</td>'
           : !e.montant
-            ? '<td class="is-pass">Passe</td>'
+            ? `<td class="is-pass">${t("Passe", "Pass")}</td>`
             : `<td${e === lead ? ' class="is-lead"' : ""}>${bidReadout(e.montant)} ${suitSpan(e.atout)}</td>`;
     const head = cols
       .map((s) => {
         const note = [
           s === me
-            ? "toi"
+            ? t("toi", "you")
             : !spectator && s === (me + 2) % 4
-              ? "partenaire"
+              ? t("partenaire", "partner")
               : G.seats[s].type === "human"
                 ? G.seats[s].name
                 : "",
-          s === G.donneur ? "donneur" : "",
+          s === G.donneur ? t("donneur", "dealer") : "",
         ]
           .filter(Boolean)
           .join(" · ");
@@ -296,47 +301,15 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       })
       .join("");
     const c = G.contract;
-    const verb = (s, v) => (s === me ? `Tu ${v}s` : `${esc(seatName(s))} ${v}`);
+    const verb = (s, v) =>
+      s === me ? t(`Tu ${v}s`, `You ${v}`) : t(`${esc(seatName(s))} ${v}`, `${esc(seatName(s))} ${v}s`);
     const calls = [];
     if (c?.coinche && c.coincheur != null) calls.push(verb(c.coincheur, "coinche"));
     if (c?.surcoinche && c.surcoincheur != null) calls.push(verb(c.surcoincheur, "surcoinche"));
-    return `<table class="cg-bids" aria-label="Enchères de la donne">
+    return `<table class="cg-bids" aria-label="${t("Enchères de la donne", "Bids this deal")}">
       <thead><tr>${head}</tr></thead>
       <tbody>${rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody>
     </table>${calls.length ? `<p class="cg-bids-note">${calls.join(" · ")}</p>` : ""}`;
-  }
-
-  // Les 32 cartes par couleur, l'atout en premier, de la plus forte à la
-  // plus faible : barrées une fois tombées, cerclées d'or si elles sont dans
-  // ta main. Ce que les bots lisent dans les défausses reste secret.
-  function renderCards() {
-    const atout = G.contract?.atout;
-    const fallen = new Set();
-    for (const list of G.playedBy) for (const c of list) fallen.add(c.id);
-    const mine = new Set(
-      ((me >= 0 && G.hands[me]) || []).filter(Boolean).map((c) => c.id),
-    );
-    const force = (s) => (s === atout ? TRUMP_FORCE : PLAIN_FORCE);
-    const rows = (atout ? [atout, ...SUITS.filter((s) => s !== atout)] : SUITS)
-      .map((s) => {
-        const cells = RANKS.slice()
-          .sort((a, b) => force(s)[b] - force(s)[a])
-          .map((r) => {
-            const st = fallen.has(r + s) ? "fallen" : mine.has(r + s) ? "mine" : "out";
-            const label = `${cardLabel({ rank: r, suit: s })} : ${{ fallen: "tombée", mine: "dans ta main", out: "pas encore jouée" }[st]}`;
-            return `<li class="is-${st}" aria-label="${esc(label)}">${RANK_SHORT[r] ?? r}</li>`;
-          })
-          .join("");
-        return `<li class="cg-fallen-row${s === atout ? " is-trump" : ""}"><span class="cg-fallen-suit">${suitSpan(s)}${s === atout ? "<small>atout</small>" : ""}</span><ol>${cells}</ol></li>`;
-      })
-      .join("");
-    let sum = "";
-    if (atout) {
-      const left = RANKS.filter((r) => !fallen.has(r + atout) && !mine.has(r + atout)).length;
-      sum = `<p class="cg-fallen-sum">${suitSpan(atout)} ${left ? `${left} atout${left > 1 ? "s" : ""} encore chez les autres` : "Plus d’atout chez les autres"}</p>`;
-    }
-    return `${sum}<ul class="cg-fallen">${rows}</ul>
-      <p class="cg-legend">${me >= 0 ? '<span class="is-mine">dans ta main</span>' : ""}<span class="is-fallen">tombée</span><span>pas encore jouée</span></p>`;
   }
 
   function renderDonnes() {
@@ -349,11 +322,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
           <span>#${h.donne}</span>
           <span>${bidReadout(h.montant)} ${suitSpan(h.atout)}${h.multiplicateur > 1 ? ` ×${h.multiplicateur}` : ""}</span>
           <span>${esc(seatName(h.preneur))}</span>
-          <span>${h.reussi ? "réussi" : "chuté"} · ${h.pointsFaits} pts</span>
+          <span>${h.reussi ? t("réussi", "made") : t("chuté", "failed")} · ${h.pointsFaits} pts</span>
         </li>`,
               )
               .join("")}</ol>`
-          : `<p class="cg-empty">Aucune donne terminée pour l’instant.</p>`
+          : `<p class="cg-empty">${t("Aucune donne terminée pour l’instant.", "No deals finished yet.")}</p>`
       }`;
   }
 
@@ -361,13 +334,12 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     if (ui.panel === "history") {
       const tab = ui.tab ?? "bids";
       const name = {
-        bids: "Historique des enchères",
-        cards: "Cartes tombées",
-        donnes: "Historique des donnes",
+        bids: t("Historique des enchères", "Bid history"),
+        donnes: t("Historique des donnes", "Deal history"),
       }[tab];
-      const body = { bids: renderBids, cards: renderCards, donnes: renderDonnes }[tab]();
+      const body = { bids: renderBids, donnes: renderDonnes }[tab]();
       return `<div class="cg-panel" role="region" aria-label="${name}">
-        <div class="cg-tabs" role="group" aria-label="Contenu de l’historique">${TABS.map(
+        <div class="cg-tabs" role="group" aria-label="${t("Contenu de l’historique", "History contents")}">${TABS.map(
           ([k, label]) =>
             `<button type="button" class="cg-tab" data-tab="${k}" data-focus-key="tab-${k}" aria-pressed="${k === tab}">${label}</button>`,
         ).join("")}</div>
@@ -379,12 +351,12 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       G.lastTrick.cards.forEach((e) => {
         bySeat[e.siege] = e.carte;
       });
-      return `<div class="cg-panel" role="region" aria-label="Dernier pli">
+      return `<div class="cg-panel" role="region" aria-label="${t("Dernier pli", "Last trick")}">
         <div class="cg-lasttrick">${[0, 1, 2, 3]
           .map((p) => (anchor + p) % 4)
           .map(
             (s) => `<figure class="${s === G.lastTrick.winnerSeat ? "is-winner" : ""}">
-            <img src="../../assets/images/coinche/cards/${bySeat[s].id}.webp" alt="${esc(cardLabel(bySeat[s]))}">
+            <img src="/assets/images/coinche/cards/${bySeat[s].id}.webp" alt="${esc(cardLabel(bySeat[s]))}">
             <figcaption>${esc(seatName(s))}</figcaption></figure>`,
           )
           .join("")}</div>
@@ -420,7 +392,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     clearTimeout(ui.armTimer);
     if (armLeft > 0) ui.armTimer = setTimeout(() => G && render(), armLeft + 30);
     const coinche = canCoinche
-      ? `<button type="button" class="cg-btn is-danger${armLeft > 0 ? " is-arming" : ""}" data-action="coincher" data-focus-key="coincher"${armLeft > 0 ? ` aria-disabled="true" style="--arm-ms:${COINCHE_ARM_MS}ms;--arm-at:${armLeft - COINCHE_ARM_MS}ms"` : ""}>Coincher</button>`
+      ? `<button type="button" class="cg-btn is-danger${armLeft > 0 ? " is-arming" : ""}" data-action="coincher" data-focus-key="coincher"${armLeft > 0 ? ` aria-disabled="true" style="--arm-ms:${COINCHE_ARM_MS}ms;--arm-at:${armLeft - COINCHE_ARM_MS}ms"` : ""}>${t("Coincher", "Coinche")}</button>`
       : "";
     if (canSurcoinche) {
       // La fenêtre dure DURATION_MS.SURCOINCHE ; comptée ici dès qu'elle
@@ -429,8 +401,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         ui.countTour = G.tour;
         ui.countAt = Date.now();
       }
-      return `<div class="cg-bidbar"><span class="cg-prompt">Vous êtes coinchés</span>
-        <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">Surcoincher</button>
+      return `<div class="cg-bidbar"><span class="cg-prompt">${t("Vous êtes coinchés", "You've been coinched")}</span>
+        <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">${t("Surcoincher", "Surcoinche")}</button>
         ${countHtml()}</div>`;
     }
     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
@@ -448,10 +420,10 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const i = options.indexOf(ui.amount);
     const step = (v, sign, label) =>
       `<button type="button" class="cg-step" ${v == null ? "disabled" : `data-amount="${v}"`} data-focus-key="step${sign}" aria-label="${label}">${sign}</button>`;
-    const stepper = `<div class="cg-stepper" role="group" aria-label="Montant">
-        ${step(options[i - 1], "−", "Montant inférieur")}
+    const stepper = `<div class="cg-stepper" role="group" aria-label="${t("Montant", "Amount")}">
+        ${step(options[i - 1], "−", t("Montant inférieur", "Lower amount"))}
         <output class="cg-amount" aria-live="polite">${bidReadout(ui.amount)}</output>
-        ${step(options[i + 1], "+", "Montant supérieur")}
+        ${step(options[i + 1], "+", t("Montant supérieur", "Higher amount"))}
       </div>`;
     const suits = SUITS.map(
       (s) =>
@@ -465,14 +437,14 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     // Panneau en colonne (montant, atout, puis Passer / Annoncer / Coincher et
     // le temps) ; « Annoncer » reste grisé tant que l'atout n'est pas choisi,
     // « Coincher » toujours au même endroit, grisé quand on ne peut pas.
-    return `<div class="cg-bidbar is-open" role="group" aria-label="Ton enchère">
-      <span class="cg-prompt">À toi d’annoncer</span>
+    return `<div class="cg-bidbar is-open" role="group" aria-label="${t("Ton enchère", "Your bid")}">
+      <span class="cg-prompt">${t("À toi d’annoncer", "Your turn to bid")}</span>
       ${options.length ? `<div class="cg-bidrow">${stepper}
-      <div class="cg-suits" role="group" aria-label="Atout">${suits}</div></div>` : ""}
+      <div class="cg-suits" role="group" aria-label="${t("Atout", "Trump")}">${suits}</div></div>` : ""}
       <div class="cg-actions">
-        <button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">Passer</button>
-        ${options.length ? `<button type="button" class="cg-btn is-primary cg-take" data-action="encherir" data-focus-key="encherir"${ui.suit ? "" : ' aria-disabled="true"'}>Annoncer</button>` : ""}
-        ${coinche || '<button type="button" class="cg-btn is-danger" disabled>Coincher</button>'}
+        <button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">${t("Passer", "Pass")}</button>
+        ${options.length ? `<button type="button" class="cg-btn is-primary cg-take" data-action="encherir" data-focus-key="encherir"${ui.suit ? "" : ' aria-disabled="true"'}>${t("Annoncer", "Bid")}</button>` : ""}
+        ${coinche || `<button type="button" class="cg-btn is-danger" disabled>${t("Coincher", "Coinche")}</button>`}
       </div>
       ${countHtml()}
       ${ui.hint ? `<p class="cg-hint" role="alert">${esc(ui.hint)}</p>` : ""}
@@ -506,7 +478,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     void btn.offsetWidth; // relance l'animation
     btn.classList.add("is-nope");
     setTimeout(() => btn.classList.remove("is-nope"), 400);
-    announcer.textContent = "Coincher : un instant, le bouton s’arme.";
+    announcer.textContent = t("Coincher : un instant, le bouton s’arme.", "Coinche: one moment, the button is arming.");
   }
 
   // ---- Résultat ------------------------------------------------------------------
@@ -521,27 +493,27 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         `<tr><th scope="row">${label}</th><td>${a}</td><td>${b}</td></tr>`;
       // Belote des preneurs : +20 dès 81 points de plis ; déjà comprise
       // dans un capot beloté.
-      const beloteCell = (res, t) =>
-        teamOf(res.preneur) !== t
+      const beloteCell = (res, tm) =>
+        teamOf(res.preneur) !== tm
           ? ""
           : res.beloteBonus
             ? `+${res.beloteBonus}`
             : res.montant === 270
-              ? "comprise"
-              : "non comptée (moins de 81)";
+              ? t("comprise", "included")
+              : t("non comptée (moins de 81)", "not counted (under 81)");
       return `<div class="cg-banner cg-recap ${won ? "is-win" : "is-loss"}">
-        <b>${r.reussi ? "Contrat réussi" : "Contrat chuté"}</b>
-        <span>${bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${r.preneur === me ? "tu prenais" : `${esc(seatName(r.preneur))} prenait`}</span>
+        <b>${r.reussi ? t("Contrat réussi", "Contract made") : t("Contrat chuté", "Contract failed")}</b>
+        <span>${bidReadout(r.montant)} ${suitSpan(r.atout)}${r.multiplicateur > 1 ? ` ×${r.multiplicateur}` : ""} · ${r.preneur === me ? t("tu prenais", "you took") : t(`${esc(seatName(r.preneur))} prenait`, `${esc(seatName(r.preneur))} took`)}</span>
         ${
           r.points
             ? `<table class="cg-recap-table">
           <thead><tr><td></td><th scope="col">${US}</th><th scope="col">${THEM}</th></tr></thead>
           <tbody>
-            ${row("Points des plis", r.points[us], r.points[them])}
-            ${row("Plis", r.plis[us], r.plis[them])}
+            ${row(t("Points des plis", "Trick points"), r.points[us], r.points[them])}
+            ${row(t("Plis", "Tricks"), r.plis[us], r.plis[them])}
             ${r.belote ? row("Belote", beloteCell(r, us), beloteCell(r, them)) : ""}
-            ${r.beloteBonus ? row("Décompte", r.points[us] + (teamOf(r.preneur) === us ? r.beloteBonus : 0), r.points[them] + (teamOf(r.preneur) === them ? r.beloteBonus : 0)) : ""}
-            ${row("Marqué", `+${r.gains[us]}`, `+${r.gains[them]}`)}
+            ${r.beloteBonus ? row(t("Décompte", "Count"), r.points[us] + (teamOf(r.preneur) === us ? r.beloteBonus : 0), r.points[them] + (teamOf(r.preneur) === them ? r.beloteBonus : 0)) : ""}
+            ${row(t("Marqué", "Scored"), `+${r.gains[us]}`, `+${r.gains[them]}`)}
           </tbody>
           <tfoot>${row("Total", G.scores[us], G.scores[them])}</tfoot>
         </table>`
@@ -552,9 +524,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     if (G.phase === "TERMINEE") {
       const win = G.scores[us] > G.scores[1 - us];
       return `<div class="cg-banner ${win ? "is-win" : "is-loss"}">
-        <b>${spectator ? `Victoire ${win ? US : THEM}` : win ? "Victoire !" : "Défaite"}</b>
+        <b>${spectator ? t(`Victoire ${win ? US : THEM}`, `${win ? US : THEM} win`) : win ? t("Victoire !", "Victory!") : t("Défaite", "Defeat")}</b>
         <span>${US} ${G.scores[us]} · ${THEM} ${G.scores[1 - us]}</span>
-        ${spectator ? "" : '<button type="button" class="cg-btn is-primary" data-action="restart" data-focus-key="restart">Nouvelle partie</button>'}
+        ${spectator ? "" : `<button type="button" class="cg-btn is-primary" data-action="restart" data-focus-key="restart">${t("Nouvelle partie", "New game")}</button>`}
       </div>`;
     }
     return "";
@@ -564,10 +536,10 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   function renderHandButtons() {
     if (G.phase !== "JEU" || G.joueurActif !== me) return "";
     const legal = computeLegal(G.hands[me], G.pliCourant, G.contract.atout, me);
-    return `<div class="hand-buttons" role="group" aria-label="Cartes jouables">${legal
+    return `<div class="hand-buttons" role="group" aria-label="${t("Cartes jouables", "Playable cards")}">${legal
       .map(
         (c) =>
-          `<button type="button" data-card="${c.id}" data-focus-key="card-${c.id}">Jouer ${esc(cardLabel(c))}</button>`,
+          `<button type="button" data-card="${c.id}" data-focus-key="card-${c.id}">${t(`Jouer ${esc(cardLabel(c))}`, `Play ${esc(cardLabel(c))}`)}</button>`,
       )
       .join("")}</div>`;
   }
@@ -646,7 +618,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const action = btn.dataset.action;
     if (action === "encherir") {
       if (!ui.suit) {
-        ui.hint = "Choisis d’abord une couleur d’atout.";
+        ui.hint = t("Choisis d’abord une couleur d’atout.", "First pick a trump suit.");
         render();
         return;
       }
@@ -698,7 +670,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   let addChat = () => {};
   let setWatchers = () => {};
   if (!spectator || onChat) {
-    const label = spectator ? "Messages" : "Émoticônes et messages";
+    const label = spectator ? "Messages" : t("Émoticônes et messages", "Emotes and messages");
     const box = document.createElement("div");
     box.className = "cg-emotes";
     box.innerHTML = `<div class="cg-emote-list${spectator ? " is-chat-only" : ""}" hidden>${
@@ -707,15 +679,15 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         : [...EMOTES]
             .map(
               ([e, taunt]) =>
-                `<button type="button" class="cg-emote" data-emote="${e}" aria-label="Envoyer ${e} ${taunt}"><span aria-hidden="true">${e}</span><b>${taunt}</b></button>`,
+                `<button type="button" class="cg-emote" data-emote="${e}" aria-label="${t(`Envoyer ${e} ${taunt}`, `Send ${e} ${taunt}`)}"><span aria-hidden="true">${e}</span><b>${taunt}</b></button>`,
             )
             .join("")
     }${
       onChat
-        ? `<p class="cg-chat-watchers">👀 Aucun spectateur</p>
-      <ol class="cg-chat-log" aria-label="Messages de la table" aria-live="polite" hidden></ol>
-      <form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="Message à la table" aria-label="Message à la table"><button type="submit" aria-label="Envoyer le message">➤</button></form>
-      <label class="cg-chat-off"><input type="checkbox"${chatOff ? " checked" : ""}> Masquer les messages des autres</label>`
+        ? `<p class="cg-chat-watchers">${t("👀 Aucun spectateur", "👀 No spectators")}</p>
+      <ol class="cg-chat-log" aria-label="${t("Messages de la table", "Table messages")}" aria-live="polite" hidden></ol>
+      <form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="${t("Message à la table", "Message the table")}" aria-label="${t("Message à la table", "Message the table")}"><button type="submit" aria-label="${t("Envoyer le message", "Send message")}">➤</button></form>
+      <label class="cg-chat-off"><input type="checkbox"${chatOff ? " checked" : ""}> ${t("Masquer les messages des autres", "Hide other players’ messages")}</label>`
         : ""
     }</div>
       <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="${label}">${spectator ? "💬" : "😈"}<span class="cg-badge" hidden></span></button>`;
@@ -793,12 +765,14 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       unread++;
       badge.textContent = unread > 9 ? "9+" : String(unread);
       badge.hidden = false;
-      toggle.setAttribute("aria-label", `${label}, ${unread} non lu${unread > 1 ? "s" : ""}`);
+      toggle.setAttribute("aria-label", t(`${label}, ${unread} non lu${unread > 1 ? "s" : ""}`, `${label}, ${unread} unread`));
     };
     const watchersLine = box.querySelector(".cg-chat-watchers");
     setWatchers = (names) => {
       if (watchersLine)
-        watchersLine.textContent = names.length ? `👀 Spectateurs : ${names.join(", ")}` : "👀 Aucun spectateur";
+        watchersLine.textContent = names.length
+          ? t(`👀 Spectateurs : ${names.join(", ")}`, `👀 Spectators: ${names.join(", ")}`)
+          : t("👀 Aucun spectateur", "👀 No spectators");
     };
   }
 
@@ -812,8 +786,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     watchers: (names) => setWatchers(names),
     waiting() {
       paint([
-        `<div class="cg-topbar"><div class="cg-top-left"><span class="cg-contract is-empty">Table en préparation</span></div>
-        <div class="cg-top-right"><button type="button" class="cg-icon" data-action="quit" aria-label="Quitter">${ICONS.quit}<span>Quitter</span></button></div></div>`,
+        `<div class="cg-topbar"><div class="cg-top-left"><span class="cg-contract is-empty">${t("Table en préparation", "Setting up the table")}</span></div>
+        <div class="cg-top-right"><button type="button" class="cg-icon" data-action="quit" aria-label="${t("Quitter", "Quit")}">${ICONS.quit}<span>${t("Quitter", "Quit")}</span></button></div></div>`,
         "",
         "",
         "",
@@ -825,23 +799,25 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       // L'hôte de la partie peut bannir du chat (worker/tables.js).
       const chatInput = root.querySelector(".cg-chat input");
       if (chatInput)
-        chatInput.placeholder = G.hote === me ? "Message, /ban, /deban ou /kick pseudo" : "Message à la table";
+        chatInput.placeholder = G.hote === me
+          ? t("Message, /ban, /deban ou /kick pseudo", "Message, /ban, /deban or /kick nickname")
+          : t("Message à la table", "Message the table");
       if (prev && prev.donneNumero !== G.donneNumero && ui.panel === "trick")
         ui.panel = null;
       if (prev && G.contract?.coinche && !prev.contract?.coinche) flash("coinche");
       if (prev && G.contract?.surcoinche && !prev.contract?.surcoinche)
         flash("surcoinche");
       if (prev && prev.donneNumero === G.donneNumero) {
-        if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast("Belote !");
+        if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast(t("Belote !", "Belote!"));
         if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)
-          toast(`Rebelote ! +${BELOTE_BONUS}`);
+          toast(t(`Rebelote ! +${BELOTE_BONUS}`, `Rebelote! +${BELOTE_BONUS}`));
       }
       // Joueur parti en cours de partie : un bot prend sa place.
       for (const s of [0, 1, 2, 3])
         if (prev?.seats?.[s].type === "human" && G.seats[s].type === "bot")
-          toast(`${prev.seats[s].name} a quitté : un bot le remplace`);
+          toast(t(`${prev.seats[s].name} a quitté : un bot le remplace`, `${prev.seats[s].name} left: a bot takes over`));
         else if (prev?.seats?.[s].type === "bot" && G.seats[s].type === "human")
-          toast(`${G.seats[s].name} prend la place du bot`);
+          toast(t(`${G.seats[s].name} prend la place du bot`, `${G.seats[s].name} takes the bot's place`));
       announce(prev);
       render();
     },

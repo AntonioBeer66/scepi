@@ -7,13 +7,18 @@
   var box = document.getElementById("coinche-stats");
   if (!box || !window.fetch) return;
   var MIN_DONNES = 50;
-  var SUITS = { H: "Cœur", D: "Carreau", C: "Trèfle", S: "Pique" };
+  var SUITS = {
+    H: i18n.t("Cœur", "Hearts"),
+    D: i18n.t("Carreau", "Diamonds"),
+    C: i18n.t("Trèfle", "Clubs"),
+    S: i18n.t("Pique", "Spades"),
+  };
   var PALIERS = { 80: "80-90", 100: "100-110", 120: "120-130", 140: "140-160", capot: "Capot", generale: "Générale" };
   var nf = function (n) {
-    return Number(n).toLocaleString("fr-FR");
+    return Number(n).toLocaleString(i18n.t("fr-FR", "en-GB"));
   };
   var pct = function (a, b) {
-    return b ? Math.round((100 * a) / b) + "\u00a0%" : "—";
+    return b ? Math.round((100 * a) / b) + i18n.t("\u00a0%", "%") : "—";
   };
 
   fetch("/api/stats", { headers: { accept: "application/json" } })
@@ -29,15 +34,24 @@
         return s.paliers[b].n - s.paliers[a].n;
       })[0];
       var items = [
-        [nf(s.donnes), "donnes jouées"],
-        [pct(s.reussies, s.jouees), "des contrats réussis"],
-        [pct(s.passees, s.donnes), "des donnes passées (quatre passes)"],
-        [pct(s.coinchees, s.jouees), "des contrats coinchés"],
-        [pct(s.coinchesGagnantes, s.coinchees), "des coinches gagnantes"],
-        [SUITS[atout], "l’atout le plus pris (" + pct(s.atouts[atout], s.jouees) + ")"],
+        [nf(s.donnes), i18n.t("donnes jouées", "deals played")],
+        [pct(s.reussies, s.jouees), i18n.t("des contrats réussis", "of contracts made")],
+        [pct(s.passees, s.donnes), i18n.t("des donnes passées (quatre passes)", "of deals passed (four passes)")],
+        [pct(s.coinchees, s.jouees), i18n.t("des contrats coinchés", "of contracts coinched")],
+        [pct(s.coinchesGagnantes, s.coinchees), i18n.t("des coinches gagnantes", "of coinches that won")],
+        [
+          SUITS[atout],
+          i18n.t(
+            "l’atout le plus pris (" + pct(s.atouts[atout], s.jouees) + ")",
+            "the most chosen trump (" + pct(s.atouts[atout], s.jouees) + ")",
+          ),
+        ],
         [
           PALIERS[palier],
-          "les annonces les plus courantes, réussies à " + pct(s.paliers[palier].reussies, s.paliers[palier].n),
+          i18n.t(
+            "les annonces les plus courantes, réussies à " + pct(s.paliers[palier].reussies, s.paliers[palier].n),
+            "the most common bids, made " + pct(s.paliers[palier].reussies, s.paliers[palier].n) + " of the time",
+          ),
         ],
       ];
       box.querySelector("[data-stats-grid]").innerHTML = items
@@ -45,8 +59,10 @@
           return "<div><dt>" + i[1] + "</dt><dd>" + i[0] + "</dd></div>";
         })
         .join("");
-      box.querySelector("[data-stats-intro]").textContent =
-        "Ce que donnent " + nf(s.donnes) + " donnes jouées sur le site, " + pct(s.modes.ligne, s.donnes) + " en ligne.";
+      box.querySelector("[data-stats-intro]").textContent = i18n.t(
+        "Ce que donnent " + nf(s.donnes) + " donnes jouées sur le site, " + pct(s.modes.ligne, s.donnes) + " en ligne.",
+        "What " + nf(s.donnes) + " deals played on the site tell us, " + pct(s.modes.ligne, s.donnes) + " of them online.",
+      );
       box.hidden = false;
     })
     .catch(function () {});

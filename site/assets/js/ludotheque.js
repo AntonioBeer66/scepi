@@ -8,11 +8,12 @@
       return response.json();
     })
     .then(({ profiles = [] }) => {
+      // Pages anglaises dans /en/jeux/ : les images sont un cran plus haut.
       grid.innerHTML = profiles
         .map(
           (profile) => `
             <article class="lx-bot-card">
-              <img src="..${profile.picture}" alt="" loading="lazy" />
+              <img src="${i18n.en ? "../.." : ".."}${profile.picture}" alt="" loading="lazy" />
               <strong>${profile.name}</strong>
             </article>`,
         )

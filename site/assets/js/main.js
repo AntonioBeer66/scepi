@@ -20,21 +20,26 @@ const siteRoot = (
   (brandLink && brandLink.getAttribute("href")) || "/index.html"
 ).replace(/index\.html$/, "");
 
+// Les pages anglaises sont dans /en/ : assets/ est un cran plus haut que leurs pages.
+const assetsRoot = i18n.en ? `../${siteRoot}` : siteRoot;
+
 // Lien transversal vers la rubrique Actualités, y compris sur les pages
 // historiques qui partagent le même script de navigation.
+// Le sélecteur de langue est le dernier lien du menu : « Actus » s'insère avant
+// le dernier vrai lien (Contact), pas avant lui.
+const actusLabel = i18n.t("Actus", "News");
+const navLinks = navigation ? [...navigation.querySelectorAll("a:not(.lang-switch)")] : [];
 if (
   navigation &&
-  ![...navigation.querySelectorAll("a")].some(
-    (link) => link.textContent.trim().toLowerCase() === "actus",
-  )
+  !navLinks.some((link) => link.textContent.trim().toLowerCase() === actusLabel.toLowerCase())
 ) {
   const actusLink = document.createElement("a");
   actusLink.href = `${siteRoot}actus/index.html`;
-  actusLink.textContent = "Actus";
+  actusLink.textContent = actusLabel;
   if (window.location.pathname.includes("/actus/")) {
     actusLink.setAttribute("aria-current", "page");
   }
-  navigation.insertBefore(actusLink, navigation.lastElementChild);
+  navigation.insertBefore(actusLink, navLinks[navLinks.length - 1]);
 }
 
 // Bouton « Appli Android » en bas de chaque page (APK compilé depuis
@@ -47,7 +52,7 @@ const footerBottom = document.querySelector(".footer-bottom");
 if (footerBottom && !footerBottom.querySelector("[data-legal-links]")) {
   const legalLinks = document.createElement("span");
   legalLinks.dataset.legalLinks = "";
-  legalLinks.innerHTML = `<a href="${siteRoot}confidentialite/index.html">Confidentialité</a> · <a href="${siteRoot}cookies/index.html">Cookies</a> · <a href="${siteRoot}accessibilite/index.html">Accessibilité</a>`;
+  legalLinks.innerHTML = `<a href="${siteRoot}confidentialite/index.html">${i18n.t("Confidentialité", "Privacy")}</a> · <a href="${siteRoot}cookies/index.html">Cookies</a> · <a href="${siteRoot}accessibilite/index.html">${i18n.t("Accessibilité", "Accessibility")}</a>`;
   footerBottom.append(legalLinks);
 }
 if (
@@ -57,9 +62,9 @@ if (
 ) {
   const app = document.createElement("a");
   app.className = "footer-app";
-  app.href = `${siteRoot}assets/app/scepinvaders.apk`;
+  app.href = `${assetsRoot}assets/app/scepinvaders.apk`;
   app.setAttribute("download", "");
-  app.innerHTML = '<span aria-hidden="true">↓</span> Appli Android';
+  app.innerHTML = `<span aria-hidden="true">↓</span> ${i18n.t("Appli Android", "Android app")}`;
   footerSocial.after(app);
 }
 
@@ -128,7 +133,7 @@ if (matchMedia("(hover: hover)").matches) {
 // jeu ; rien ne s'affiche s'il ne répond pas (fichiers ouverts en local).
 const liveTables = document.querySelectorAll("[data-live-tables]");
 if (liveTables.length && /^https?:$/.test(location.protocol)) {
-  const plural = (n, word) => `${n} ${word}${n > 1 ? "s" : ""}`;
+  const plural = (n, word) => `${n} ${word}${(i18n.en ? n !== 1 : n > 1) ? "s" : ""}`;
   fetch("/api/tables?compteur") // mis en cache quelques secondes (worker/index.js)
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then((tables) => {
@@ -139,10 +144,16 @@ if (liveTables.length && /^https?:$/.test(location.protocol)) {
         for (const p of t.players) if (p.name && p.isConnected) players++;
       }
       const text = games
-        ? `${plural(games, "partie")} de coinche en cours · ${plural(players, "joueur")} en ligne`
+        ? i18n.t(
+            `${plural(games, "partie")} de coinche en cours · ${plural(players, "joueur")} en ligne`,
+            `${plural(games, "coinche game")} in progress · ${plural(players, "player")} online`,
+          )
         : players
-          ? `${plural(players, "joueur")} autour des tables : rejoins-les`
-          : "Tables libres : lance la première partie";
+          ? i18n.t(
+              `${plural(players, "joueur")} autour des tables : rejoins-les`,
+              `${plural(players, "player")} at the tables: join them`,
+            )
+          : i18n.t("Tables libres : lance la première partie", "Tables are free: start the first game");
       liveTables.forEach((el) => {
         el.textContent = text;
         el.hidden = false;
@@ -159,12 +170,12 @@ const galleryImages = document.querySelectorAll(
 if (galleryImages.length && window.HTMLDialogElement) {
   const box = document.createElement("dialog");
   box.className = "lightbox";
-  box.setAttribute("aria-label", "Photo en grand");
+  box.setAttribute("aria-label", i18n.t("Photo en grand", "Enlarged photo"));
   box.innerHTML =
     "<figure><figcaption></figcaption></figure>" +
-    '<button type="button" class="lightbox-prev" aria-label="Photo précédente">‹</button>' +
-    '<button type="button" class="lightbox-next" aria-label="Photo suivante">›</button>' +
-    '<button type="button" class="lightbox-close" aria-label="Fermer">✕</button>';
+    `<button type="button" class="lightbox-prev" aria-label="${i18n.t("Photo précédente", "Previous photo")}">‹</button>` +
+    `<button type="button" class="lightbox-next" aria-label="${i18n.t("Photo suivante", "Next photo")}">›</button>` +
+    `<button type="button" class="lightbox-close" aria-label="${i18n.t("Fermer", "Close")}">✕</button>`;
   document.body.append(box);
   const caption = box.querySelector("figcaption");
   const big = new Image(); // source posée à l'ouverture
@@ -271,13 +282,13 @@ for (const btn of document.querySelectorAll("[data-copy]")) {
   btn.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(btn.dataset.copy);
-      btn.textContent = "Copié !";
+      btn.textContent = i18n.t("Copié !", "Copied!");
       btn.classList.add("is-done");
     } catch {
-      btn.textContent = "Sélectionnez l’adresse";
+      btn.textContent = i18n.t("Sélectionnez l’adresse", "Select the address");
     }
     setTimeout(() => {
-      btn.textContent = "Copier";
+      btn.textContent = i18n.t("Copier", "Copy");
       btn.classList.remove("is-done");
     }, 2000);
   });

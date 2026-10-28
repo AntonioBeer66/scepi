@@ -27,6 +27,7 @@ import {
 } from "../engine.js";
 import { trickPause } from "../host.js";
 import { EMOTES } from "../../online/tables.js";
+import { t } from "./i18n.js";
 
 const CARD_PX = { w: 320, h: 491 }; // taille des images de cartes
 const CARD_RATIO = CARD_PX.h / CARD_PX.w;
@@ -36,7 +37,7 @@ const DRAG_MIN = 8; // px : en deçà, un clic ; au-delà, un glisser
 const COLLECT_MS = 300; // ramassage du pli, à la fin de trickPause (host.js)
 const CARD_IDS = SUITS.flatMap((s) => RANKS.map((r) => r + s));
 const FAN_STEP = Phaser.Math.DegToRad(6.5);
-const COMPASS = ["Sud", "Est", "Nord", "Ouest"]; // position vue du joueur
+const COMPASS = [t("Sud", "South"), t("Est", "East"), t("Nord", "North"), t("Ouest", "West")]; // position vue du joueur
 const COLORS = {
   text: "#f7f4fc",
   ink: "#181127",
@@ -98,13 +99,13 @@ function initials(name) {
 function bidLabel(montant, atout) {
   const m =
     montant === 250
-      ? "Capot"
+      ? t("Capot", "Capot")
       : montant === 270
-        ? "Capot beloté"
+        ? t("Capot beloté", "Capot + belote")
         : montant === GENERALE
-          ? "Générale"
+          ? t("Générale", "Générale")
           : montant === GENERALE_BELOTE
-            ? "Générale belotée"
+            ? t("Générale belotée", "Générale + belote")
             : montant;
   return `${m} ${SUIT_SYMBOL[atout]}`;
 }
@@ -336,7 +337,10 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     // Belote (preneur ou partenaire) : bulle chez son détenteur, bien
     // visible (le contrat reste affiché en haut de l'écran).
     if (G.belote.holder === seat && !bidding && G.belote.beloteDeclared)
-      return { t: G.belote.rebeloteDeclared ? "Rebelote ! +20" : "Belote !", lead: true };
+      return {
+        t: G.belote.rebeloteDeclared ? t("Rebelote ! +20", "Rebelote! +20") : t("Belote !", "Belote!"),
+        lead: true,
+      };
     if (c?.preneur === seat && (bidding || G.phase === "JEU" || G.phase === "SCORE")) {
       const t = bidLabel(c.montant, c.atout) + (G.multiplicateur > 1 ? ` ×${G.multiplicateur}` : "");
       return { t, suit: c.atout, lead: true };
@@ -344,7 +348,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     if (!bidding) return null;
     const e = G.bidLog.filter((x) => x.seat === seat).pop();
     if (!e) return null;
-    return e.montant ? { t: bidLabel(e.montant, e.atout), suit: e.atout } : { t: "Passe" };
+    return e.montant ? { t: bidLabel(e.montant, e.atout), suit: e.atout } : { t: t("Passe", "Pass") };
   }
 
   // Redessinés seulement si ce qu'ils montrent a changé : pas de textes
@@ -372,7 +376,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
       // son pseudo marqué « (bot) » (voir devenirBot dans game.js).
       const name =
         seat === me
-          ? "Toi"
+          ? t("Toi", "You")
           : bot && G.seats[seat].name === "Ordinateur"
             ? `Bot ${compassOf(seat)}`
             : G.seats[seat].name;
@@ -417,7 +421,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
         box.add(hit);
       }
       box.add(
-        txt(0, 0, seat === me ? "Toi" : bot ? "IA" : initials(name), {
+        txt(0, 0, seat === me ? t("Toi", "You") : bot ? t("IA", "AI") : initials(name), {
           // Pas sous 12 px : « Toi » tombait à 10 px au téléphone (r = 20).
           fontSize: `${Math.max(12, Math.round(L.r * (seat === me ? 0.5 : 0.62)))}px`,
           fontStyle: "bold",
@@ -993,8 +997,8 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
   class TableScene extends Phaser.Scene {
     preload() {
       for (const id of CARD_IDS)
-        this.load.image(id, `../../assets/images/coinche/cards/${id}.webp`);
-      this.load.svg("back", "../../assets/images/coinche/cards/back.svg", {
+        this.load.image(id, `/assets/images/coinche/cards/${id}.webp`);
+      this.load.svg("back", "/assets/images/coinche/cards/back.svg", {
         width: CARD_PX.w,
         height: CARD_PX.h,
       });

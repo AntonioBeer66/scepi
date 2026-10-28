@@ -1,3 +1,33 @@
+import { EN } from "./i18n.js";
+
+// Messages système du serveur (worker/tables.js, seat et name null) : il ne
+// connaît pas la langue de la page, donc il les écrit en français et on les
+// traduit ici à la réception ; ce qui ne correspond à aucun modèle (et tout
+// en français) passe tel quel. $1 : le pseudo cité par le message.
+const SERVER_CHAT = [
+  [/^Pas si vite : attends un peu avant d'écrire\.$/, "Not so fast: wait a moment before writing."],
+  [/^Tu es banni du chat de cette table\.$/, "You are banned from this table's chat."],
+  [
+    /^Seul l'hôte de la table peut bannir, débannir ou expulser \(tout joueur peut expulser quelqu'un qui n'a pas joué\)\.$/,
+    "Only the table host can ban, unban or kick (any player can kick someone who hasn't played).",
+  ],
+  [/^Écris \/(ban|deban|kick) suivi du pseudo\.$/, "Type /$1 followed by the name."],
+  [/^Tu ne peux pas t'expulser toi-même\.$/, "You can't kick yourself."],
+  [/^Tu ne peux pas te bannir toi-même\.$/, "You can't ban yourself."],
+  [/^Personne ne s'appelle « (.+) » à cette table\.$/, 'Nobody at this table is called "$1".'],
+  [/^(.+) est expulsé par l'hôte\.$/, "$1 was kicked by the host."],
+  [/^(.+) est expulsé pour absence\.$/, "$1 was kicked for being absent."],
+  [/^« (.+) » n'est pas banni\.$/, '"$1" is not banned.'],
+  [/^(.+) peut de nouveau écrire\.$/, "$1 can write again."],
+  [/^(.+) est banni du chat par l'hôte\.$/, "$1 was banned from the chat by the host."],
+  [/^(.+) n'a pas joué : tout le monde peut l'expulser avec \/kick \1\.$/, "$1 didn't play: anyone can kick them with /kick $1."],
+];
+const serverChat = (text) => {
+  if (!EN || typeof text !== "string") return text;
+  const hit = SERVER_CHAT.find(([fr]) => fr.test(text));
+  return hit ? text.replace(hit[0], hit[1]) : text;
+};
+
 // Client d'une partie en ligne (WebSocket vers worker/tables.js), avec la
 // même interface que le client boardgame.io qu'utilise session.js :
 // moves.<coup>(...args), subscribe(fn), getState(), matchData, start(), stop().
@@ -94,7 +124,8 @@ export function OnlineClient({ api, matchID, playerID, credentials, name }) {
         return;
       }
       if (msg.type === "emote") return emoteFn?.(msg.seat, msg.emote);
-      if (msg.type === "chat") return chatFn?.(msg.seat, msg.name, msg.text);
+      if (msg.type === "chat")
+        return chatFn?.(msg.seat, msg.name, msg.seat == null && msg.name == null ? serverChat(msg.text) : msg.text);
       if (msg.type === "watchers") return watchersFn?.(msg.names);
       if (msg.type !== "state") return;
       client.matchData = msg.players;
