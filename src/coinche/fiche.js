@@ -30,7 +30,11 @@ export const coinche = {
   // pas affiché). Rend le nouvel état, ou null avant le lancement.
   takeSeat(G, seat, name) {
     if (!G.seats?.[seat]) return null;
-    return { ...G, seats: G.seats.map((s, i) => (i === seat ? { type: "human", name } : s)) };
+    return {
+      ...G,
+      seats: G.seats.map((s, i) => (i === seat ? { type: "human", name } : s)),
+      absent: G.absent?.map((a, i) => a && i !== seat), // le nouveau n'a rien manqué
+    };
   },
 
   // Spectateur : la seule main du joueur qu'il regarde (peek), même si

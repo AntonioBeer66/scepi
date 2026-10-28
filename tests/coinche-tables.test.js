@@ -237,6 +237,33 @@ assert.ok(tables.join(priv.id, 0, "Alice").credentials, "on s'y assoit comme ail
   assert.strictEqual(tables.get(id).deadline.key, tables.get(id).G.tour);
 }
 
+// Joueur absent : son délai écoulé le marque (G.absent, d'où le /kick de
+// tout joueur, voir worker/tables.js), son prochain vrai coup l'efface, et
+// celui qui reprend sa place repart à neuf. Les bots ne sont jamais absents.
+{
+  const id = tables.create().id;
+  const eve = tables.join(id, 0, "Eve").credentials;
+  assert.ok(tables.move(id, 0, "lancer", [botSeats]));
+  const g = () => tables.get(id).G;
+  const waitFor = (done) => {
+    for (let i = 0; i < 12 && !done(); i++) {
+      now = tables.get(id).deadline.at;
+      tables.expire();
+    }
+    assert.ok(done(), "délai atteint");
+  };
+  waitFor(() => g().absent[0]);
+  assert.deepStrictEqual(g().absent.slice(1), [false, false, false]);
+  waitFor(() => g().joueurActif === 0);
+  assert.ok(g().absent[0], "toujours absent tant qu'il n'a pas joué");
+  assert.ok(tables.move(id, 0, "agir", [{ type: "PASSER" }]));
+  assert.ok(!g().absent[0], "il a joué : de retour");
+  waitFor(() => g().absent[0]);
+  tables.leave(id, 0, eve);
+  tables.join(id, 0, "Fay");
+  assert.ok(!g().absent[0], "le nouveau n'a rien manqué");
+}
+
 // Plafond par personne : salons et tables privées confondus.
 for (let i = 0; i < MAX_PER_OWNER; i++) assert.ok(tables.create("ip-a"));
 assert.strictEqual(tables.create("ip-a"), null, "plafond personnel atteint");

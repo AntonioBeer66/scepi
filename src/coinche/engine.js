@@ -221,6 +221,9 @@ function newGame(seats) {
     // jeu, surcoinche, affichage du score) : un TIMEOUT ne vaut que pour
     // la fenêtre qu'il vise, jamais pour la suivante.
     tour: 0,
+    // Sièges humains qui ont laissé passer leur tour (enchère ou carte jouée
+    // d'office) et n'ont pas rejoué depuis : tout joueur peut les expulser.
+    absent: [false, false, false, false],
   };
   startNewDonne();
   return G;
@@ -2591,6 +2594,8 @@ function computeScore() {
 function applyAction(seat, action) {
   if (!G || G.phase === "TERMINEE") return "PARTIE_TERMINEE";
   const error = act(seat, action);
+  // Un vrai coup (pas celui d'office) : le siège est de retour.
+  if (!error && !action.auto && action.type !== "TIMEOUT" && G.absent) G.absent[seat] = false;
   if (!error && action.memo && G.seats[seat]?.type === "bot") {
     G.bidMemo[seat] = action.memo.bidMemo;
     G.forced = action.memo.forced;
@@ -2601,6 +2606,9 @@ function applyAction(seat, action) {
 function act(seat, action) {
   if (action.type === "TIMEOUT") {
     if (action.tour !== G.tour) return "DELAI_EXPIRE";
+    // Parties enregistrées avant ce champ : créé ici.
+    if ((G.phase === "ENCHERES" || G.phase === "JEU") && G.seats?.[G.joueurActif]?.type === "human")
+      (G.absent ??= [false, false, false, false])[G.joueurActif] = true;
     if (G.phase === "ENCHERES")
       return act(G.joueurActif, { type: "PASSER", auto: true });
     if (G.phase === "JEU") {

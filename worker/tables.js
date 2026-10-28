@@ -22,7 +22,9 @@
 // (cleanChat) ; un spectateur peut écrire s'il a donné son pseudo (hello.name,
 // unique à la table : sinon fermée en 4409). { type: "watchers", names } :
 // spectateurs, à chaque arrivée ou départ. L'hôte écrit « /ban pseudo »,
-// « /deban pseudo » ou « /kick pseudo » (connexions fermées en 4403) ;
+// « /deban pseudo » ou « /kick pseudo » (connexions fermées en 4403) ; un
+// joueur qui a laissé passer son tour (G.absent) peut être expulsé par
+// n'importe quel joueur assis ;
 // messages système : { type: "chat", seat: null, name: null }.
 // Spectateur : { type: "peek", seat } (null : aucune) choisit la main montrée.
 // Délais : le serveur les tient seul, avec une alarme pour tout le salon ;
@@ -186,10 +188,18 @@ export class Tables extends DurableObject {
 
   async alarm() {
     this.alarmAt = null; // l'alarme qui sonne n'est plus programmée
+    const was = new Map(this.tables.all().map((m) => [m.id, m.G.absent])); // expire() remplace G
     for (const id of this.tables.expire()) {
       await this.save(id);
-      if (FICHE.finished(this.tables.get(id).G)) await this.record(id);
+      const m = this.tables.get(id);
+      if (FICHE.finished(m.G)) await this.record(id);
       this.broadcast(id);
+      // Un joueur vient de laisser passer son tour : la table le sait.
+      m.G.absent?.forEach((gone, s) => {
+        const name = m.players[s].name;
+        if (gone && name && !was.get(id)?.[s])
+          this.relay(id, { type: "chat", seat: null, name: null, text: `${name} n'a pas joué : tout le monde peut l'expulser avec /kick ${name}.` });
+      });
     }
     await this.maintain(); // reprogramme l'alarme
   }
@@ -401,11 +411,15 @@ export class Tables extends DurableObject {
       if (bans.some((b) => sameName(b, name))) return tell("Tu es banni du chat de cette table.");
       // « /ban pseudo », « /deban pseudo », « /kick pseudo » : l'hôte de la
       // partie (G.hote) seulement ; la liste des bannis est enregistrée avec
-      // la table.
+      // la table. Exception : tout joueur assis peut expulser un joueur
+      // absent (G.absent : il a laissé passer son tour, voir engine.js).
       const command = text.match(/^\/(ban|deban|kick)\b\s*(.*)$/i);
       if (command) {
         const [, verb, target] = command;
-        if (!seated || att.seat !== m.G?.hote) return tell("Seul l'hôte de la table peut bannir, débannir ou expulser.");
+        const byHost = seated && att.seat === m.G?.hote;
+        const absent = m.G?.absent?.[m.players.findIndex((p) => sameName(p.name, target))];
+        if (!byHost && !(seated && verb.toLowerCase() === "kick" && absent))
+          return tell("Seul l'hôte de la table peut bannir, débannir ou expulser (tout joueur peut expulser quelqu'un qui n'a pas joué).");
         if (!target) return tell(`Écris /${verb.toLowerCase()} suivi du pseudo.`);
         // Expulsé : sa place est libérée (l'hôte la confie à l'ordinateur si
         // la partie est lancée, voir session.js) et ses connexions fermées ;
@@ -428,7 +442,7 @@ export class Tables extends DurableObject {
           }
           this.broadcast(id);
           this.relay(id, { type: "watchers", names: this.watchers(id) });
-          this.relay(id, { type: "chat", seat: null, name: null, text: `${target} est expulsé par l'hôte.` });
+          this.relay(id, { type: "chat", seat: null, name: null, text: `${target} est expulsé ${byHost ? "par l'hôte" : "pour absence"}.` });
           await this.maintain();
           return;
         }
