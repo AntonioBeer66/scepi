@@ -811,6 +811,16 @@ a {
   align-items: center;
   min-height: 44px;
 }
+.footer-bottom .footer-lang {
+  min-width: 44px;
+  justify-content: center;
+}
+.footer-lang svg {
+  width: 28px;
+  height: 20px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--line);
+}
 
 /* Pages secondaires : intro, asso, contact --------------------------------- */
 
