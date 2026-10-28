@@ -24,10 +24,12 @@ export const coinche = {
   // rend false si la fenêtre était déjà fermée.
   timeout: (G, key, random) => !actOn(G, G.joueurActif ?? 0, { type: "TIMEOUT", tour: key }, random),
 
-  // Un humain s'assoit pendant la partie : il prend la main du bot qui
-  // tenait la place. Rend le nouvel état, ou null si rien ne change.
+  // Un humain s'assoit pendant la partie (place libre dans le salon) : il
+  // prend la main du bot qui la tenait, ou la place d'un joueur parti que
+  // l'hôte n'a pas encore confiée à l'ordinateur (son ancien pseudo ne reste
+  // pas affiché). Rend le nouvel état, ou null avant le lancement.
   takeSeat(G, seat, name) {
-    if (G.seats?.[seat]?.type !== "bot") return null;
+    if (!G.seats?.[seat]) return null;
     return { ...G, seats: G.seats.map((s, i) => (i === seat ? { type: "human", name } : s)) };
   },
 

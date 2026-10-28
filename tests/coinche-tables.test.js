@@ -160,6 +160,23 @@ tables.leave(t2, 0, a2);
 tables.maintain();
 assert.ok(!tables.get(t2), "plus personne : partie arrêtée");
 
+// Joueur parti, place reprise avant que l'hôte la confie à l'ordinateur : la
+// partie affiche le pseudo du nouveau, pas celui de l'ancien. Partie terminée :
+// les places des bots se prennent encore.
+{
+  const id = tables.create().id;
+  tables.join(id, 0, "Alice");
+  const bob = tables.join(id, 1, "Bob").credentials;
+  const seats = [{ type: "human", name: "Alice" }, { type: "human", name: "Bob" }, { type: "bot" }, { type: "bot" }];
+  assert.ok(tables.move(id, 0, "lancer", [seats]));
+  tables.leave(id, 1, bob);
+  tables.join(id, 1, "Carol");
+  assert.deepStrictEqual(tables.get(id).G.seats[1], { type: "human", name: "Carol" });
+  tables.get(id).G.phase = "TERMINEE";
+  tables.join(id, 2, "Dave");
+  assert.deepStrictEqual(tables.get(id).G.seats[2], { type: "human", name: "Dave" });
+}
+
 // Humains assis mais tous déconnectés (onglets fermés) : arrêtée après
 // ABANDON_MS, pas avant.
 const t3 = tables.create().id;

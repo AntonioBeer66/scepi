@@ -141,11 +141,12 @@ function render() {
       const mine = session?.matchID === t.matchID;
       // Partie en cours chez d'autres : on peut la regarder.
       const live = t.phase !== "ATTENTE" && !mine;
-      // Places tenues par un bot : on peut les reprendre en cours de partie.
+      // Places tenues par un bot : on peut les reprendre en cours de partie,
+      // et même terminée (la table reste ouverte tant qu'un humain y est).
       const seats = live
         ? t.players
             .map((p, i) =>
-              p.name || session || t.phase === "TERMINEE"
+              p.name || session
                 ? `<li class="seat-row is-taken"><span class="seat-tag"><b>${SEAT_LABELS[i]}</b><small>${SEAT_TEAM[i]}</small></span>
             <span class="seat-occupant">${p.name ? esc(p.name) : "Ordinateur"}</span></li>`
                 : seatMarkup(t, p, i, "Remplacer le bot"),
