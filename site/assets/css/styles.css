@@ -811,8 +811,8 @@ a {
   align-items: center;
   min-height: 44px;
 }
-/* Même pastille que le FR/EN de l'en-tête, avec le drapeau en plus ; mentions
-   légales et langue groupées à droite. */
+/* Discret : même texte que le reste du pied de page, contour au survol ;
+   mentions légales et langue groupées à droite. */
 .footer-bottom {
   column-gap: 20px;
 }
@@ -821,22 +821,25 @@ a {
 }
 .footer-bottom .footer-lang {
   order: 99;
-  gap: 8px;
-  padding: 0 12px;
-  min-height: 36px;
-  border: 1px solid var(--muted);
+  gap: 6px;
+  padding: 0 8px;
+  min-height: 44px;
+  border: 1px solid transparent;
   border-radius: 6px;
-  color: var(--text);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  color: inherit;
 }
 .footer-bottom .footer-lang:hover {
-  border-color: var(--text);
+  border-color: var(--line);
+  color: var(--text);
 }
 .footer-lang svg {
-  width: 20px;
-  height: 14px;
+  width: 16px;
+  height: 11px;
   border-radius: 2px;
+  opacity: 0.7;
+}
+.footer-lang:hover svg {
+  opacity: 1;
 }
 @media (max-width: 760px) {
   .footer-bottom span:nth-child(2) {
@@ -844,6 +847,7 @@ a {
   }
   .footer-bottom .footer-lang {
     align-self: flex-start;
+    margin-left: -9px;
   }
 }
 
