@@ -548,11 +548,6 @@ a {
   transform: rotate(-3deg);
   box-shadow: 0 2px 6px #0008;
 }
-.affreux-motto {
-  margin: -6px 0 14px;
-  color: var(--muted);
-  font-style: italic;
-}
 .affreux-flamme {
   transform-box: fill-box;
   transform-origin: 50% 100%;

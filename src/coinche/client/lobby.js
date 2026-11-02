@@ -223,7 +223,6 @@ function render() {
       ${isAffreux(t) ? AFFREUX_SCENE : ""}
       <span class="eyebrow">${tr("SALON", "ROOM")} ${String(n).padStart(2, "0")}${tag}${live ? ` <span class="lobby-live-tag">${tr("EN JEU", "IN PLAY")}</span>` : ""}</span>
       <h3>${esc(tableLabel(t, ephemeral))}</h3>
-      ${isAffreux(t) ? `<p class="affreux-motto">${tr("Tenez bien vos cartes : ici, on vous vole jusqu’au dernier pli.", "Hold on to your cards: here they’ll steal every last trick.")}</p>` : ""}
       <ul class="seat-list">${seats}</ul>
       <p class="caption">${live ? tr("Partie en cours", "Game in progress") : tr(`${filled}/4 places occupées`, `${filled}/4 seats taken`)} · ${tr("2 équipes", "2 teams")}</p>
       ${mine && t.phase === "ATTENTE" ? `<button type="button" class="button primary seat-btn" data-action="start" data-match="${esc(t.matchID)}">${tr("Lancer la partie", "Start the game")}</button>` : ""}

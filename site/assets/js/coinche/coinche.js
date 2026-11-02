@@ -52,7 +52,6 @@ var e=globalThis.document?document.documentElement.lang===`en`:globalThis.name==
       ${j(e)?N:``}
       <span class="eyebrow">${t(`SALON`,`ROOM`)} ${String(n).padStart(2,`0`)}${r}${c?` <span class="lobby-live-tag">${t(`EN JEU`,`IN PLAY`)}</span>`:``}</span>
       <h3>${x(M(e,i))}</h3>
-      ${j(e)?`<p class="affreux-motto">${t(`Tenez bien vos cartes : ici, on vous vole jusqu’au dernier pli.`,`Hold on to your cards: here they’ll steal every last trick.`)}</p>`:``}
       <ul class="seat-list">${l}</ul>
       <p class="caption">${c?t(`Partie en cours`,`Game in progress`):t(`${o}/4 places occupées`,`${o}/4 seats taken`)} · ${t(`2 équipes`,`2 teams`)}</p>
       ${s&&e.phase===`ATTENTE`?`<button type="button" class="button primary seat-btn" data-action="start" data-match="${x(e.matchID)}">${t(`Lancer la partie`,`Start the game`)}</button>`:``}
