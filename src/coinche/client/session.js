@@ -4,6 +4,7 @@
 // ce navigateur est l'hôte, les bots et les délais.
 import { Client } from "boardgame.io/client";
 import { Local } from "boardgame.io/multiplayer";
+import { ESSEC } from "../engine.js";
 import { Coinche } from "../game.js";
 import { trickPause } from "../host.js";
 import { buildRecord, JOURNAL_MAX_BYTES } from "../journal.js";
@@ -57,9 +58,12 @@ export function startSession({
         name: watch ? watchName : undefined,
       })
     : // Solo : état gardé dans ce navigateur (reprise après rechargement),
-      // effacé en quittant ; soloID est propre à chaque partie.
+      // effacé en quittant ; soloID est propre à chaque partie. « solo-essec-… » :
+      // partie aux règles de l'ESSEC (voir lobby.js).
       Client({
-        game: Coinche,
+        game: soloID?.startsWith(`solo-${ESSEC}-`)
+          ? { ...Coinche, setup: (c, data) => Coinche.setup(c, { ...data, regles: ESSEC }) }
+          : Coinche,
         numPlayers: 4,
         playerID,
         debug: false,

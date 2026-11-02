@@ -155,7 +155,8 @@
       <h3 id="regles-essec">The ESSEC rules room</h3>
       <p>
         The Table des affreux de Cergy-Pontoise (and private tables with
-        “ESSEC rules” ticked) plays with these differences:
+        “ESSEC rules” ticked, as well as the “Solo, ESSEC rules” button)
+        plays with these differences:
       </p>
       <ul>
         <li>
@@ -414,9 +415,15 @@
             </ol>
           </div>
           <!-- Activé par le jeu une fois chargé (lobby.js). -->
-          <button type="button" class="button primary" id="solo-btn" disabled>
-            Play solo against the computer
-          </button>
+          <div class="cq-solo">
+            <button type="button" class="button primary" id="solo-btn" disabled>
+              Play solo against the computer
+            </button>
+            <!-- Same solo game, ESSEC rules (All Trumps, No Trumps, parole, misère). -->
+            <button type="button" class="button outline" id="solo-essec-btn" disabled>
+              Solo, ESSEC rules
+            </button>
+          </div>
         </div>
         <p class="caption cq-status" id="lobby-status" role="status"></p>
         <div class="lobby-grid" id="lobby-grid"></div>

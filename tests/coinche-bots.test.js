@@ -62,6 +62,9 @@ for (let game = 0; game < GAMES + MC_GAMES; game++) {
         + (plis[0] + plis[1] === 8 ? 10 : 0);
     },
     score(G) {
+      // Chaque enchère de bot porte sa raison (montrée dans l'historique).
+      for (const e of G.bidLog)
+        if (e.montant) assert(Object.hasOwn(engine.BID_WHY, e.why), `${where()} : enchère ${e.montant}${e.atout} sans raison (${e.why})`);
       const c = G.contract;
       const pre = c.equipePreneur;
       const main = G.mainsInitiales[c.preneur];

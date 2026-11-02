@@ -337,7 +337,8 @@ function botTurnAction(seat) {
   if (G.joueurActif !== seat) return null;
   if (G.phase === "ENCHERES") {
     const a = botDecideBid(seat);
-    return a.type === "PASSER" && paroleOblige(seat) ? paroleBid(seat) : a;
+    if (a.type === "PASSER" && paroleOblige(seat)) return paroleBid(seat);
+    return bidWhy ? { ...a, why: bidWhy } : a;
   }
   if (G.phase === "JEU") {
     if (botWantsMisere(seat)) return { type: "MISERE" };
@@ -596,14 +597,19 @@ function bestOpening(hand, light) {
 }
 
 // Points de soutien que j'apporte à l'atout de mon partenaire.
-function supportPoints(hand, suit, partnerBid) {
+// libre : l'adversaire n'a pas encore annoncé dans la donne.
+function supportPoints(hand, suit, partnerBid, libre = false) {
   // Table stricte : +20 Valet, +10 9 second, +10 par As à côté, +20 belote ;
   // rien sans atout. Pas de palier de prudence : la relance vaut ces points.
   const m = asMask(hand);
   const n = countOf(m, suit);
   // Un honneur (Valet, 9, As) ou deux atouts, sinon pas de remontée : un 7
-  // sec et des As à côté ne se lisaient pas (duel +1,3 ± 1,6).
-  if (!peutAppuyer(m, suit)) return 0;
+  // sec et des As à côté ne se lisaient pas (duel +1,3 ± 1,6). Exception,
+  // l'adversaire muet : un seul petit atout et au moins deux As remontent de
+  // leurs As. Le partenaire qui se taisait ainsi laissait des contrats
+  // réussis 98 % du temps avec 34 pts de marge (51 donnes sur 2 714).
+  if (!peutAppuyer(m, suit) && !(libre && n === 1 && sideAces(m, suit) >= 2))
+    return 0;
   let pts =
     (has(m, suit, "J") ? 20 : 0) +
     (has(m, suit, "9") && (n >= 2 || partnerBid === 80) ? 10 : 0) +
@@ -695,9 +701,44 @@ const CAPOT_SIM = 0.7;
 const CAPOT_WORLDS = 24;
 let inBid = false; // enchère en cours : makeProbability joue bidWorlds
 let bidWorlds = null;
+// Raison de la dernière enchère d'un bot (barème, forçage, soutien,
+// simulation, veto…) : jointe à son action (botTurnAction), gardée dans
+// G.bidLog et montrée dans l'historique des enchères ; lue aussi par les
+// outils de diagnostic (bots.lastBidWhy). Rien de la main au-delà de ce que
+// la convention affichée dit déjà.
+export const BID_WHY = {
+  bareme: ["barème d'ouverture", "opening scale"],
+  "bareme-sans-sim": ["barème d'ouverture", "opening scale"],
+  force: ["forçage : 10 de plus que la main, pour gêner", "push: 10 above the hand, to compete"],
+  soutien: ["soutien : +10 par As, +20 Valet, +10 9 second, +20 belote", "raise: +10 per Ace, +20 Jack, +10 guarded 9, +20 belote"],
+  "force-soutien": ["soutien forcé : 10 de plus que la main", "pushed raise: 10 above the hand"],
+  "autre-couleur": ["sa couleur vaut plus que le soutien", "own suit worth more than the raise"],
+  "relance-ouvreur": ["ouvreur remonté : ses As en plus", "raised opener: extra Aces"],
+  "intervention-sim": ["intervention : la simulation préfère enchérir à laisser jouer l'adversaire", "overcall: simulation prefers bidding to letting them play"],
+  "intervention-bareme": ["intervention au barème, validée par la simulation", "overcall at the scale, checked by simulation"],
+  "pass-intervention": ["laisser jouer l'adversaire coûte moins que surenchérir (simulation)", "letting them play costs less than overbidding (simulation)"],
+  "repli-palier": ["palier du barème refusé par la simulation : un cran plus bas", "scale level vetoed by simulation: one step lower"],
+  "repli-couleur": ["couleur du barème refusée par la simulation : une autre couleur", "scale suit vetoed by simulation: another suit"],
+  "pass-veto": ["barème refusé par la simulation (moins de 6 fois sur 10)", "scale vetoed by simulation (under 6 in 10)"],
+  "80-sim": ["80 hors barème : la simulation le réussit 7 fois sur 10", "80 off the scale: simulation makes it 7 in 10"],
+  "capot-clefs": ["capot par les clefs (As du partenaire contre fausses cartes)", "capot by the keys (partner's Aces vs losers)"],
+  "capot-sim": ["capot : la simulation le réussit 7 fois sur 10", "capot: simulation makes it 7 in 10"],
+  "capot-bareme": ["capot au barème, validé par la simulation", "capot at the scale, checked by simulation"],
+  "160-capot-refuse": ["capot refusé par la simulation : 160", "capot vetoed by simulation: 160"],
+  generale: ["Générale : la simulation la réussit presque toujours", "Générale: simulation almost always makes it"],
+  "sim-TA": ["Tout Atout : la simulation le réussit assez souvent", "All Trumps: simulation makes it often enough"],
+  "sim-SA": ["Sans Atout : la simulation le réussit assez souvent", "No Trumps: simulation makes it often enough"],
+  "sim-apres-TA-SA": ["après un Tout Atout / Sans Atout : décidé par la simulation", "after All/No Trumps: decided by simulation"],
+};
+let bidWhy = null;
+function withWhy(w, o) {
+  if (o) bidWhy = w;
+  return o;
+}
 function botDecideBid(seat) {
   inBid = true;
   bidWorlds = null;
+  bidWhy = null;
   try {
     return withSeed(seat, "bid", () => decideBid(seat));
   } finally {
@@ -797,10 +838,10 @@ function decideBid(seat) {
   if (!essec()) return decideBidV1(seat);
   const cur = G.contract;
   if (G.donneAnnonces.some((a) => !SUITS.includes(a.atout)))
-    return (!cur || cur.montant < 160 ? simBid(seat, cur, ESSEC_ATOUTS) : null) ?? { type: "PASSER" };
+    return withWhy("sim-apres-TA-SA", (!cur || cur.montant < 160 ? simBid(seat, cur, ESSEC_ATOUTS) : null) ?? { type: "PASSER" });
   const r = decideBidV1(seat);
   const alt = !cur || cur.montant < 160 ? simBid(seat, cur, ["TA", "SA"]) : null;
-  return alt && (r.type !== "ENCHERIR" || alt.montant > r.montant) ? alt : r;
+  return alt && (r.type !== "ENCHERIR" || alt.montant > r.montant) ? withWhy("sim-" + alt.atout, alt) : r;
 }
 
 function decideBidV1(seat) {
@@ -811,9 +852,10 @@ function decideBidV1(seat) {
   const partner = partnerOf(seat);
   const memo = G.bidMemo[seat];
   const min = cur ? cur.montant + 10 : 80;
+  let refusWhy = null;
   const gen = generaleBid(seat, hand, cur, team);
-  if (gen) return gen;
-  if (cur && cur.montant >= 270) return PASS;
+  if (gen) return withWhy("generale", gen);
+  if (cur && cur.montant >= 270) return withWhy("pass-270", PASS);
   const ours = !!cur && teamOf(cur.preneur) === team;
   const capotOnTable = !!cur && cur.montant >= 250;
 
@@ -875,7 +917,7 @@ function decideBidV1(seat) {
       const o = offer(capot, suit);
       if (capotOk(o)) {
         memo.supported = true;
-        return o;
+        return withWhy("capot-clefs", o);
       }
     }
     const mine = myBid && myBid.atout === suit ? openingOf(seat, suit) : 0;
@@ -885,7 +927,7 @@ function decideBidV1(seat) {
       (partnerBid.montant - mine) / 10 > fausses(hand, suit)
     ) {
       const o = offer(capot, suit);
-      if (capotOk(o)) return o;
+      if (capotOk(o)) return withWhy("capot-clefs", o);
     }
   }
 
@@ -905,7 +947,7 @@ function decideBidV1(seat) {
       )
         continue;
       const o = offer(hasBelote(hand, s) ? 270 : 250, s);
-      if (o && pMake(o.montant, s, CAPOT_WORLDS) >= CAPOT_SIM) return o;
+      if (o && pMake(o.montant, s, CAPOT_WORLDS) >= CAPOT_SIM) return withWhy("capot-sim", o);
     }
   }
 
@@ -922,24 +964,24 @@ function decideBidV1(seat) {
   ) {
     memo.supported = true;
     const suit = partnerBid.atout;
-    const target =
-      partnerBid.montant + supportPoints(hand, suit, partnerBid.montant);
-    const own = bestOpening(hand, false);
-    if (own && own.atout !== suit && own.montant > target) {
-      const o = offer(own.montant, own.atout);
-      if (o) return o;
-    }
-    // Sur le point de sortir et l'adversaire se tait : annoncer le nécessaire.
     const opponentsSpoke = G.donneAnnonces.some(
       (a) => teamOf(a.seat) !== team,
     );
+    const target =
+      partnerBid.montant + supportPoints(hand, suit, partnerBid.montant, !opponentsSpoke);
+    const own = bestOpening(hand, false);
+    if (own && own.atout !== suit && own.montant > target) {
+      const o = offer(own.montant, own.atout);
+      if (o) return withWhy("autre-couleur", o);
+    }
+    // Sur le point de sortir et l'adversaire se tait : annoncer le nécessaire.
     const nearExit =
       !opponentsSpoke && G.scores[team] + partnerBid.montant >= 1010;
     if (target > partnerBid.montant && !nearExit) {
       const o =
         offer(target, suit) ||
         (!ours && target + 10 >= min ? force(suit) : null);
-      if (o) return o;
+      if (o) return withWhy(o.montant > round10(target) ? "force-soutien" : "soutien", o);
     }
   }
 
@@ -947,7 +989,7 @@ function decideBidV1(seat) {
   // tour de ce que son ouverture ne montrait pas (voir relanceOuvreur).
   if (ouvertureRemontee(seat, G.donneAnnonces, cur)) {
     const o = offer(cur.montant + relanceOuvreur(hand, cur.atout), cur.atout);
-    if (o) return o;
+    if (o) return withWhy("relance-ouvreur", o);
   }
 
   // 3. Intervenir au-dessus de l'adversaire : par espérance simulée, pas
@@ -970,8 +1012,10 @@ function decideBidV1(seat) {
         const partnerSuit = !!partnerBid && partnerBid.atout === s;
         if (partnerSuit ? !peutAppuyer(hand, s) : suitCards(hand, s).length < 3)
           continue;
-        // Une autre couleur : le Valet ou le 9 (l'As seul ne se lisait pas).
-        if (!partnerSuit && !(holds(hand, s, "J") || holds(hand, s, "9"))) continue;
+        // Une autre couleur : le Valet (l'As seul ne se lisait pas). Avec le
+        // 9 sans le Valet, ces interventions ne réussissaient que 32 à 37 %
+        // du temps, coinchées 31 à 60 % : −78 à −186 pts par contrat.
+        if (!partnerSuit && !holds(hand, s, "J")) continue;
         // Main forte : le palier du barème est candidat aussi (130 plutôt
         // que 90, +1,9 pt/donne), il renseigne le partenaire.
         const sys = Math.min(160, openingBid(hand, s, false));
@@ -990,9 +1034,9 @@ function decideBidV1(seat) {
         // que du bruit (90 à 0,98 et 100 à 0,96 : tiré au sort 70/30, ENC-4).
         const { sys, pSys } = best.palierSys;
         const auBareme = pSys !== null && pSys >= OPEN_VETO && sys > best.palier;
-        return offer(auBareme ? sys : best.palier, best.s);
+        return withWhy(auBareme ? "intervention-bareme" : "intervention-sim", offer(auBareme ? sys : best.palier, best.s));
       }
-      return PASS;
+      return withWhy("pass-intervention", PASS);
     }
   }
 
@@ -1014,20 +1058,21 @@ function decideBidV1(seat) {
       const o =
         plain || (cur && own.montant + 10 >= min ? force(own.atout) : null);
       if (o && o.montant >= 250) {
-        if (capotOk(o)) return o;
+        if (capotOk(o)) return withWhy("capot-bareme", o);
         // Capot refusé par la simulation : la main vaut tout de même 160.
         const o160 = offer(160, o.atout);
         const p160 = o160 ? pMake(160, o.atout) : null;
-        if (o160 && (p160 === null || p160 >= 0.5)) return o160;
-        if (cur) return PASS;
+        if (o160 && (p160 === null || p160 >= 0.5)) return withWhy("160-capot-refuse", o160);
+        if (cur) return withWhy("pass-capot-refuse", PASS);
         refus = 160;
       } else if (o) {
         const pm = pMake(o.montant, o.atout);
-        if (pm === null || pm >= OPEN_VETO) return o;
+        if (pm === null || pm >= OPEN_VETO) return withWhy(!plain ? "force" : pm === null ? "bareme-sans-sim" : "bareme", o);
         if (!plain) G.forced[team]--; // veto : ce forçage n'a pas servi
         refus = o.montant;
       }
     }
+    if (refus) refusWhy = "pass-veto";
     if (!cur) {
       // Repli après un veto (OUV-1) : on ne passe pas avec V-9 et deux As-10
       // parce que le 160 est douteux. On redescend les paliers du barème dans
@@ -1048,7 +1093,7 @@ function decideBidV1(seat) {
       };
       if (refus) {
         const bas = descendre(own.atout, refus - 1, true);
-        if (bas) return bas;
+        if (bas) return withWhy("repli-palier", bas);
         const autres = SUITS.filter((s) => s !== own.atout)
           .map((s) => ({ s, v: Math.min(160, openingBid(hand, s, light)) }))
           .filter((x) => x.v)
@@ -1058,7 +1103,7 @@ function decideBidV1(seat) {
           );
         for (const { s, v } of autres) {
           const autre = descendre(s, v, false);
-          if (autre) return autre;
+          if (autre) return withWhy("repli-couleur", autre);
         }
       }
       let best = null;
@@ -1081,10 +1126,10 @@ function decideBidV1(seat) {
         const pm = pMake(80, s);
         if (pm !== null && (!best || pm > best.pm)) best = { pm, s };
       }
-      if (best && best.pm >= 0.7) return offer(80, best.s);
+      if (best && best.pm >= 0.7) return withWhy("80-sim", offer(80, best.s));
     }
   }
-  return PASS;
+  return withWhy(refusWhy || "pass", PASS);
 }
 
 // Huit atouts : la main initiale du preneur tient les 8 cartes de l'atout —
@@ -1927,7 +1972,8 @@ function bidReadings() {
         (j > pIdx ||
           (x.montant && partnerBid && x.atout === partnerBid.atout)),
     );
-    return { e, partnerBid, acted, opened: ouvertureRemontee(e.seat, earlier, e.cur) };
+    const libre = !earlier.some((x) => x.montant && teamOf(x.seat) !== teamOf(e.seat));
+    return { e, partnerBid, acted, libre, opened: ouvertureRemontee(e.seat, earlier, e.cur) };
   });
 }
 
@@ -1982,7 +2028,7 @@ function bidFits(r, h) {
     return baremeFits(r, h);
   const pOf = (s) => {
     const ps = !!partnerBid && partnerBid.atout === s;
-    return (ps ? !peutAppuyer(h, s) : countOf(h, s) < 3)
+    return (ps ? !peutAppuyer(h, s) : countOf(h, s) < 3 || !has(h, s, "J"))
       ? 0
       : interventionP(h, s, ps, min);
   };
@@ -2005,7 +2051,7 @@ function bidFits(r, h) {
 // construction. Renvoie la vraisemblance : 1, BLUFF (ouverture « légère »
 // hors quatrième position, que seul le bluff produit), SIM_FIT (ce que la
 // simulation a pu décider hors barème) ou 0 (il aurait parlé autrement).
-function baremeFits({ e, partnerBid, acted, opened }, h) {
+function baremeFits({ e, partnerBid, acted, opened, libre }, h) {
   // Ouvreur remonté par son partenaire (étape 2 bis) : sous le capot, sa
   // relance dit ses As en plus et sa belote, sa passe qu'il n'en a pas.
   if (opened && (!e.montant || e.montant < 250)) {
@@ -2023,7 +2069,7 @@ function baremeFits({ e, partnerBid, acted, opened }, h) {
     if (partnerBid && partnerBid.atout === e.atout) {
       if (e.montant >= 250) return 1;
       // Relance = soutien (plus de palier de prudence), ou soutien − 10 si forcée.
-      const pts = supportPoints(h, e.atout, partnerBid.montant);
+      const pts = supportPoints(h, e.atout, partnerBid.montant, libre);
       const r = e.montant - partnerBid.montant;
       if (pts >= (forced ? r - 10 : r) && (acted || e.montant >= 160 || pts < r + 10))
         return 1;
@@ -2056,7 +2102,7 @@ function baremeFits({ e, partnerBid, acted, opened }, h) {
   if (!e.cur) return bestOpening(h, e.passes === 3) ? SIM_FIT : 1;
   if (e.cur.montant >= 250) return 1;
   if (teamOf(e.cur.preneur) === teamOf(e.seat))
-    return acted || supportPoints(h, e.cur.atout, e.cur.montant) <= 0
+    return acted || supportPoints(h, e.cur.atout, e.cur.montant, libre) <= 0
       ? 1
       : 0;
   // Passe sur l'adversaire avec de quoi intervenir : l'étape 3 a jugé que
@@ -2491,6 +2537,12 @@ const TRUMP_LEAD_MARGIN = 16;
 // son As, la couleur appelée ou annoncée par le partenaire revient.
 // Violations mesurées : 8 → 3 %, 57 → 26 %, 55 → 27 %, 45-63 → 10-12 %.
 const CONVENTION_MARGIN = { trumpDef: 32, takerDraw: 32, defAce: 32, called: 32 };
+// Le 10 non maître (As dehors, ni tombé ni en main) que le réflexe garde :
+// le Monte-Carlo le posait 0,45 fois par donne avant le 4e joueur, toujours
+// contre le réflexe (entamé par la défense : pli fait 14-18 % du temps).
+// Marge en pts par monde, avec un adversaire encore à jouer derrière : 0,27
+// fois par donne ; duel MC 48 +0,65 ± 1,64 pt/donne.
+const TEN_MARGIN = 16;
 // Défausses : un vrai appel du réflexe est gardé à 16 pts par monde près
 // (gardé 36 % → 86 % du temps) ; un faux signal coûte 5 pts par monde tant
 // qu'il reste un choix honnête (faux signaux émis 4,9 % → 1,3 %).
@@ -2534,15 +2586,30 @@ function mcChooseCard(seat, legal, reflex, why) {
   if (!suitGame) return choice;
   const { atout, preneur, equipePreneur, type } = G.contract;
   let margin = 0;
+  // Un 10 sous l'As, alors qu'un adversaire joue encore après moi et que je
+  // tiens une autre carte de la couleur : seulement pour un vrai gain.
+  const tenUnderAce =
+    choice.rank === "10" &&
+    choice.suit !== atout &&
+    reflex.id !== choice.id &&
+    !G.seen["A" + choice.suit] &&
+    !holds(hand, choice.suit, "A") &&
+    suitCards(hand, choice.suit).length >= 2 &&
+    seatsStillToAct(G.pliCourant, seat).some((s) => teamOf(s) !== teamOf(seat));
+  if (tenUnderAce) margin = TEN_MARGIN;
   if (G.pliCourant.length) {
     if (sigOnPlay(reflex, legal) === "appel" && holds(hand, reflex.suit, "A"))
-      margin = KEEP_APPEL_MARGIN;
+      margin = Math.max(margin, KEEP_APPEL_MARGIN);
   } else {
     const M = CONVENTION_MARGIN;
     const def = teamOf(seat) !== equipePreneur;
     if ((choice.suit === atout) !== (reflex.suit === atout))
       margin = TRUMP_LEAD_MARGIN;
     if (!def && G.plisJoues <= 1 && reflex.suit === atout && choice.suit !== atout) margin = Infinity;
+    // Rejeté (2 novembre) : au-delà des deux premiers plis, l'atout maître
+    // avec au moins deux atouts tiré quand le réflexe le fait (marge 32) :
+    // −0,7 ± 1,1 pt/donne en duel ; le Monte-Carlo, qui le refuse 18-22 % du
+    // temps, garde l'atout pour couper ou reprendre la main à raison.
     // La défense n'entame pas atout (sauf capot ou Générale).
     if (def && type === "NUMERIQUE" && choice.suit === atout && reflex.suit !== atout)
       margin = Math.max(margin, M.trumpDef);
@@ -2769,6 +2836,13 @@ function computeScore() {
   startTurn();
 }
 
+// Raison d'une enchère de bot, si elle est connue (voir BID_WHY).
+function whyOf(seat, action) {
+  return G.seats?.[seat]?.type === "bot" && Object.hasOwn(BID_WHY, action.why)
+    ? { why: action.why }
+    : {};
+}
+
 // Applique l'action d'un siège. Renvoie undefined si elle est acceptée,
 // sinon le motif du refus (REGLES_COINCHE.md §10) sans rien modifier.
 // Actions : PASSER, ENCHERIR { montant, atout }, COINCHER, SURCOINCHER,
@@ -2830,6 +2904,7 @@ function act(seat, action) {
       seat,
       type: G.seats?.[seat]?.type,
       ...(action.auto && { auto: true }),
+      ...whyOf(seat, action),
       cur: G.contract && { ...G.contract },
       passes: G.passesConsecutives,
     });
@@ -2865,6 +2940,7 @@ function act(seat, action) {
     G.bidLog.push({
       seat,
       type: G.seats?.[seat]?.type,
+      ...whyOf(seat, action),
       montant,
       atout: action.atout,
       cur: G.contract && { ...G.contract },
@@ -3057,6 +3133,7 @@ export function actOn(g, seat, action, r, dealFn) {
 export const bots = {
   turnAction: withG(botTurnAction),
   decideBid: withG(botDecideBid),
+  lastBidWhy: () => bidWhy,
   chooseCard: withG(botChooseCard),
   wantsMisere: withG(botWantsMisere),
   wantsToCoinche: withG((s) =>

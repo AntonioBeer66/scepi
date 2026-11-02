@@ -188,6 +188,7 @@ npm test          # moteur, stratégies des bots, parties de bots, partie boardg
 npm run test:e2e  # partie solo dans un vrai navigateur (Playwright ; Edge/Chrome du poste à défaut)
 node tests/coinche-online-e2e.js   # multijoueur de bout en bout (npm start dans un autre terminal)
 node tests/coinche-ab.js A.js B.js 40 0   # duel de deux moteurs sur tous les cœurs (donnes jumelles ; 0 = réflexes seuls, sinon nombre de mondes)
+node tests/coinche-diag.js src/coinche/engine.js 20 48   # pourquoi les bots annoncent (raison de chaque contrat), 10 posés, tirage d'atout
 npm run deploy    # compile et publie sur Cloudflare
 ```
 

@@ -8,6 +8,7 @@
 import {
   ALLOWED_BIDS,
   BELOTE_BONUS,
+  BID_WHY,
   DURATION_MS,
   ESSEC_ATOUTS,
   ESSEC_BIDS,
@@ -284,14 +285,25 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       rows[rows.length - 1][c] = e;
       prevCol = c;
     }
+    // Raison d'une enchère de bot (G.bidLog[].why, voir BID_WHY du moteur).
+    const whyText = (e) => (e.why && BID_WHY[e.why] ? t(...BID_WHY[e.why]) : "");
+    const tip = (e) => (whyText(e) ? ` title="${esc(whyText(e))}"` : "");
     const cell = (e) =>
       !e
         ? "<td></td>"
         : e.wait
           ? '<td class="is-wait" aria-hidden="true">…</td>'
           : !e.montant
-            ? `<td class="is-pass">${t("Passe", "Pass")}</td>`
-            : `<td${e === lead ? ' class="is-lead"' : ""}>${bidReadout(e.montant)} ${suitSpan(e.atout)}</td>`;
+            ? `<td class="is-pass"${tip(e)}>${t("Passe", "Pass")}</td>`
+            : `<td${e === lead ? ' class="is-lead"' : ""}${tip(e)}>${bidReadout(e.montant)} ${suitSpan(e.atout)}</td>`;
+    // Sous le tableau : la dernière raison de chaque bot qui en a donné une.
+    const whys = cols
+      .map((s) => [...G.bidLog].reverse().find((e) => e.seat === s && whyText(e)))
+      .filter(Boolean)
+      .map(
+        (e) =>
+          `<li><b>${esc(seatName(e.seat))}</b> · ${e.montant ? `${bidReadout(e.montant)} ${suitSpan(e.atout)}` : t("passe", "pass")} : ${esc(whyText(e))}</li>`,
+      );
     const head = cols
       .map((s) => {
         const note = [
@@ -318,7 +330,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     return `<table class="cg-bids" aria-label="${t("Enchères de la donne", "Bids this deal")}">
       <thead><tr>${head}</tr></thead>
       <tbody>${rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody>
-    </table>${calls.length ? `<p class="cg-bids-note">${calls.join(" · ")}</p>` : ""}`;
+    </table>${calls.length ? `<p class="cg-bids-note">${calls.join(" · ")}</p>` : ""}${
+      whys.length ? `<ul class="cg-bids-why" aria-label="${t("Pourquoi les bots ont parlé", "Why the bots bid")}">${whys.join("")}</ul>` : ""
+    }`;
   }
 
   function renderDonnes() {

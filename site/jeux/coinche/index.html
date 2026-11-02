@@ -154,7 +154,8 @@
       <h3 id="regles-essec">Le salon des règles de l’ESSEC</h3>
       <p>
         La Table des affreux de Cergy-Pontoise (et les tables privées cochées
-        « Règles de l’ESSEC ») joue avec ces différences :
+        « Règles de l’ESSEC », ainsi que le bouton « Solo, règles ESSEC »)
+        joue avec ces différences :
       </p>
       <ul>
         <li>
@@ -414,9 +415,15 @@
             </ol>
           </div>
           <!-- Activé par le jeu une fois chargé (lobby.js). -->
-          <button type="button" class="button primary" id="solo-btn" disabled>
-            Jouer seul contre l’ordinateur
-          </button>
+          <div class="cq-solo">
+            <button type="button" class="button primary" id="solo-btn" disabled>
+              Jouer seul contre l’ordinateur
+            </button>
+            <!-- Même partie solo, règles de l'ESSEC (Tout Atout, Sans Atout, parole, misère). -->
+            <button type="button" class="button outline" id="solo-essec-btn" disabled>
+              Solo, règles ESSEC
+            </button>
+          </div>
         </div>
         <p class="caption cq-status" id="lobby-status" role="status"></p>
         <div class="lobby-grid" id="lobby-grid"></div>

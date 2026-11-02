@@ -39,6 +39,7 @@ function clean(action) {
   }
   if (action.type === "JOUER") out.carte = { id: action.carte?.id };
   if (action.type === "TIMEOUT") out.tour = action.tour;
+  if (typeof action.why === "string") out.why = action.why.slice(0, 32); // raison d'une enchère de bot
   if (action.memo)
     out.memo = { bidMemo: action.memo.bidMemo, forced: action.memo.forced };
   return out;
@@ -104,6 +105,7 @@ export const Coinche = {
         if (!G.seats || !isHuman(G, seat) || !a || !HUMAN_ACTIONS.has(a.type))
           return INVALID_MOVE;
         delete a.memo;
+        delete a.why;
         return apply(G, seat, a, random);
       },
     },

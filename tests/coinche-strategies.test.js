@@ -80,6 +80,12 @@ setup({ hands: hands('JH 7H AS 8S 7D 8D 9C 7C'), contract: contract(2, 80, 'H'),
 check('Soutien Valet + As sur 80 : +20 et +10, sans palier de prudence', bid(api.botDecideBid(0)), '110H');
 setup({ hands: hands('AS 8S 7S AD 8D 7D 9C 7C'), contract: contract(2, 80, 'H'), donneAnnonces: [{ seat: 2, montant: 80, atout: 'H' }], passesConsecutives: 1 });
 check('Sec à l’atout du partenaire : pas de soutien', bid(api.botDecideBid(0)), 'passe');
+setup({ hands: hands('7H AS 8S 7S AD 8D 9C 7C'), contract: contract(2, 90, 'H'), donneAnnonces: [{ seat: 2, montant: 90, atout: 'H' }], passesConsecutives: 1 });
+check('Un petit atout et deux As, adversaire muet : +20 pour les As', bid(api.botDecideBid(0)), '110H');
+setup({ hands: hands('7H AS 8S 7S AD 8D 9C 7C'), contract: contract(3, 100, 'S'), donneAnnonces: [{ seat: 2, montant: 90, atout: 'H' }, { seat: 3, montant: 100, atout: 'S' }] });
+check('Un petit atout et deux As, adversaire au-dessus : pas de soutien', bid(api.botDecideBid(0)), 'passe');
+setup({ hands: hands('9S KS QS 8S AD 10D 7C 8C'), contract: contract(1, 100, 'H'), donneAnnonces: [{ seat: 1, montant: 100, atout: 'H' }] });
+check('9 quatrième sans le Valet : pas d’intervention sur l’adversaire', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('JH 9H AH 7H AD 10D AC 8C'), contract: contract(1, 80, 'S'), donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
 check('Intervention Valet-9-As avec une fausse carte : 130', bid(api.botDecideBid(0)), '130H');
 setup({ hands: hands('KH QH 7H AS 8S 7D 8D 7C'), contract: contract(2, 110, 'H'), bidMemo: [{ supported: true }, {}, {}, {}],

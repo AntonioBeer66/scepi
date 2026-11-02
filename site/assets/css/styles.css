@@ -2969,6 +2969,27 @@ body.is-playing .header {
   font-size: 13px;
 }
 
+/* Boutons du solo : règles SCEPI, règles de l'ESSEC */
+.cq-solo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Pourquoi un bot a annoncé (G.bidLog[].why) */
+.cg-bids-why {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.cg-bids-why b {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* Résultat de la donne, au centre de la table */
 .cg-banner {
   position: absolute;

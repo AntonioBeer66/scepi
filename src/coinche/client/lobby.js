@@ -317,22 +317,24 @@ async function act(fn) {
 }
 
 // Partie solo en cours (identifiant boardgame.io), pour la reprendre après
-// un rechargement ; oubliée en quittant.
-function soloID(fresh) {
+// un rechargement ; oubliée en quittant. Les règles de l'ESSEC sont dans
+// l'identifiant (« solo-essec-… », lu par session.js) : une partie reprise
+// garde ses règles.
+function soloID(fresh, regles) {
   try {
     // Nouvelle partie : on repart d'un stockage vide (voir session.js).
     if (fresh)
       for (const k of ["state", "initial", "metadata", "log"])
         localStorage.removeItem(`scepi-coinche-solo_${k}`);
     let id = fresh ? null : localStorage.getItem(SOLO_KEY);
-    if (!id) localStorage.setItem(SOLO_KEY, (id = `solo-${Date.now()}`));
+    if (!id) localStorage.setItem(SOLO_KEY, (id = `solo-${regles ? `${regles}-` : ""}${Date.now()}`));
     return id;
   } catch {
-    return `solo-${Date.now()}`;
+    return `solo-${regles ? `${regles}-` : ""}${Date.now()}`;
   }
 }
 
-async function enterGame({ online, launch = false, fresh = false, watch = null, watchName = null }) {
+async function enterGame({ online, launch = false, fresh = false, watch = null, watchName = null, regles = null }) {
   // Réservé avant l'import : un rafraîchissement du salon qui aboutit
   // pendant le chargement lancerait sinon une seconde session.
   if (playing) return;
@@ -351,7 +353,7 @@ async function enterGame({ online, launch = false, fresh = false, watch = null, 
     launch,
     api: API,
     session,
-    soloID: online ? null : soloID(fresh),
+    soloID: online ? null : soloID(fresh, regles),
     watch,
     watchName,
     seatsFromTable: () =>
@@ -475,6 +477,12 @@ function init() {
     enterGame({ online: false, fresh: true });
   });
   if (soloBtn) soloBtn.disabled = false;
+  const soloEssecBtn = $("#solo-essec-btn");
+  soloEssecBtn?.addEventListener("click", () => {
+    if (playing) return;
+    enterGame({ online: false, fresh: true, regles: "essec" });
+  });
+  if (soloEssecBtn) soloEssecBtn.disabled = false;
 
   // Rechargé en pleine partie solo : on y retourne.
   let resume = null;
