@@ -339,9 +339,7 @@ function botTurnAction(seat) {
     return a.type === "PASSER" && paroleOblige(seat) ? paroleBid(seat) : a;
   }
   if (G.phase === "JEU") {
-    // Misère en défense : la donne annulée prive les preneurs de leur contrat.
-    if (teamOf(seat) !== G.contract.equipePreneur && misereOk(seat))
-      return { type: "MISERE" };
+    if (botWantsMisere(seat)) return { type: "MISERE" };
     return { type: "JOUER", carte: botChooseCard(seat) };
   }
   return null;
@@ -361,16 +359,22 @@ function paroleBid(seat) {
     SUITS.reduce((a, s) => (suitCards(hand, s).length > suitCards(hand, a).length ? s : a));
   return { type: "ENCHERIR", montant: 80, atout };
 }
-// Misère (salon ESSEC) : avant de jouer sa première carte, une main initiale
-// de MISERE_MAX points ou moins, au barème du contrat.
+// Misère (salon ESSEC) : avant que la première carte de la donne tombe (la
+// sienne ou celle d'un autre), une main initiale de MISERE_MAX points ou
+// moins, au barème du contrat.
 function misereOk(seat) {
   return (
     essec() &&
     G.phase === "JEU" &&
-    !G.playedBy[seat].length &&
+    !G.plisJoues &&
+    !G.pliCourant.length &&
     G.mainsInitiales[seat].reduce((s, c) => s + cardPoints(c, G.contract.atout), 0) <=
       MISERE_MAX
   );
+}
+// Un bot la dit en défense : la donne annulée prive les preneurs de leur contrat.
+function botWantsMisere(seat) {
+  return teamOf(seat) !== G.contract.equipePreneur && misereOk(seat);
 }
 
 // ---- IA : système d'enchères -------------------------------------------
@@ -2970,6 +2974,7 @@ export const bots = {
   turnAction: withG(botTurnAction),
   decideBid: withG(botDecideBid),
   chooseCard: withG(botChooseCard),
+  wantsMisere: withG(botWantsMisere),
   wantsToCoinche: withG((s) =>
     withSeed(s, "coinche", () => botWantsToCoinche(s)),
   ),

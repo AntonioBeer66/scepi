@@ -414,7 +414,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">${t("Surcoincher", "Surcoinche")}</button>
         ${countHtml()}</div>`;
     }
-    // Misère (salon ESSEC) : tant qu'on n'a pas joué sa première carte.
+    // Misère (salon ESSEC) : tant que personne n'a joué.
     if (!spectator && G.phase === "JEU" && miserePossible(G, me))
       return `<div class="cg-bidbar is-coinche"><button type="button" class="cg-btn is-danger" data-action="misere" data-focus-key="misere">${t("Misère", "Misère")}</button></div>`;
     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
@@ -839,6 +839,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       if (prev && G.contract?.coinche && !prev.contract?.coinche) flash("coinche");
       if (prev && G.contract?.surcoinche && !prev.contract?.surcoinche)
         flash("surcoinche");
+      if (prev && G.misere != null && prev.donneNumero !== G.donneNumero)
+        toast(t(`Misère de ${who(G.misere)} : donne annulée`, `Misère by ${who(G.misere)}: deal cancelled`));
       if (prev && prev.donneNumero === G.donneNumero) {
         if (G.belote.beloteDeclared && !prev.belote.beloteDeclared) toast(t("Belote !", "Belote!"));
         if (G.belote.rebeloteDeclared && !prev.belote.rebeloteDeclared)

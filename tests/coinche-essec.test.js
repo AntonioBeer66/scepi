@@ -15,6 +15,7 @@ import {
   tuning,
 } from "../src/coinche/engine.js";
 import { Coinche } from "../src/coinche/game.js";
+import { MISERE_WINDOW_MS, createHost } from "../src/coinche/host.js";
 import { rng } from "./coinche-sim.js";
 
 const card = (id) => ({ id, rank: id.slice(0, -1), suit: id.slice(-1) });
@@ -122,10 +123,51 @@ function contrat(atout) {
   eq(act(3, { type: "MISERE" }), "MISERE_INTERDITE", "barème du contrat");
 }
 {
+  // Avant la première carte de la donne, pas après : même pour qui n'a pas joué.
   const { g, act } = contrat("H");
   act(0, { type: "JOUER", carte: card("JH") });
+  eq(act(1, { type: "MISERE" }), "MISERE_INTERDITE", "une carte est tombée : trop tard, même sans avoir joué");
   act(1, { type: "JOUER", carte: g.hands[1][0] });
   eq(act(1, { type: "MISERE" }), "MISERE_INTERDITE", "après sa première carte : trop tard");
+}
+
+// L'hôte : les bots disent leur misère avant l'entame (jamais en plein pli) et
+// un bot qui entame laisse le temps à un humain d'en dire une.
+function hote(types, atout = "SA") {
+  const r = rng(11);
+  const g = createGame(types.map((type) => ({ type, name: "X" })), r, () => MAINS.map((h) => h.slice()), ESSEC);
+  g.donneur = 3;
+  g.joueurActif = 0;
+  actOn(g, 0, { type: "ENCHERIR", montant: 80, atout }, r);
+  passes((s, a) => actOn(g, s, a, r), 1, 2, 3);
+  const out = [];
+  const queue = [];
+  let now = 0;
+  const host = createHost({
+    timers: { setTimeout: (fn, ms) => queue.push({ at: now + ms, fn }), clearTimeout() {} },
+    random: r,
+    send(seat, action) {
+      out.push({ type: action.type, seat, cartes: g.plisJoues * 4 + g.pliCourant.length, at: now });
+      actOn(g, seat, action, r);
+      host.update(g);
+    },
+  });
+  host.update(g);
+  while (queue.length && !out.some((o) => o.type !== "TIMEOUT")) {
+    queue.sort((a, b) => a.at - b.at);
+    const t = queue.shift();
+    now = t.at;
+    t.fn();
+  }
+  return out[0];
+}
+{
+  const bot = hote(["bot", "bot", "bot", "bot"]);
+  eq([bot.type, bot.seat, bot.cartes], ["MISERE", 1, 0], "bot en défense sans point : misère avant l'entame");
+  const attendu = hote(["bot", "human", "bot", "bot"]);
+  eq([attendu.type, attendu.seat, attendu.at >= MISERE_WINDOW_MS], ["JOUER", 0, true], "humain sans point : le bot attend avant d'entamer");
+  const fort = hote(["bot", "bot", "human", "bot"]);
+  eq([fort.type, fort.seat, fort.at < MISERE_WINDOW_MS], ["MISERE", 1, true], "humain à la main trop forte : pas d'attente");
 }
 
 // ---- Table boardgame.io : les règles du salon passent à la partie ----

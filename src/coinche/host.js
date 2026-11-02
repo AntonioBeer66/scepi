@@ -6,7 +6,7 @@
 // Les délais des bots imitent un joueur vif (voir thinkMs : une carte
 // forcée part en 0,15 à 0,3 s, un vrai choix demande 0,35 à 1,9 s) ; après
 // un pli complet, tout attend que l'écran l'ait montré puis ramassé.
-import { DURATION_MS, bots, computeLegal, teamOf } from "./engine.js";
+import { DURATION_MS, bots, computeLegal, miserePossible, teamOf } from "./engine.js";
 
 export const TRICK_SHOW_MS = 900; // pli complet affiché (0,9 s) puis ramassé
 export const LAST_TRICK_SHOW_MS = 2500; // dernier pli de la donne : on le regarde
@@ -19,6 +19,7 @@ export const trickPause = (G) =>
       ? LAST_TRICK_SHOW_MS
       : TRICK_SHOW_MS;
 const COINCHE_WINDOW_MS = 1800; // temps laissé à un humain pour coincher une annonce
+export const MISERE_WINDOW_MS = 2500; // temps laissé à un humain pour dire « misère » avant que le bot entame
 
 // Temps que prend un bot pour parler ou jouer, hors pause de pli et fenêtre
 // de coinche. u : tirage uniforme dans [0, 1[.
@@ -73,6 +74,7 @@ export function createHost({
   // touche pas à G.tour) rend le siège bot sans nouveau tour ; sans cela le
   // bot restait muet jusqu'au TIMEOUT (passe, ou carte au hasard).
   const decided = [null, null, null, null];
+  let misereTour = null; // tour dont les misères de bots sont déjà programmées
   const pending = new Set();
 
   function later(ms, fn) {
@@ -101,6 +103,12 @@ export function createHost({
       ? COINCHE_WINDOW_MS
       : 0;
   }
+
+  // Misère (salon ESSEC) : possible tant que personne n'a joué. Un bot qui
+  // entame laisse sa chance à un humain (l'hôte ne voit pas toujours sa main :
+  // dans le doute, il attend).
+  const misereWindow = () =>
+    [0, 1, 2, 3].some((s) => !isBot(s) && miserePossible(G, s)) ? MISERE_WINDOW_MS : 0;
 
   // Tour d'un bot en phase d'enchères ou de jeu. Défenseur d'un contrat pas
   // encore coinché, il décide d'abord s'il coinche : à son tour de parole,
@@ -141,13 +149,26 @@ export function createHost({
       });
     }
 
+    // Misère des bots : avant la première carte, avant même que l'un d'eux
+    // entame (thinkMs : 0,45 s au moins).
+    if (G.phase === "JEU" && misereTour !== t) {
+      misereTour = t;
+      for (const s of [0, 1, 2, 3]) {
+        if (!playable(s) || !miserePossible(G, s)) continue;
+        later(100 + 250 * random(), () => {
+          if (G.tour === t && playable(s) && decide.wantsMisere?.(seatView(G, s), s))
+            send(s, { type: "MISERE" });
+        });
+      }
+    }
+
     if (G.phase === "ENCHERES" || G.phase === "JEU") {
       const seat = G.joueurActif;
       if (playable(seat) && decided[seat] !== t) {
         decided[seat] = t;
         // Le temps de réflexion sert au calcul : la décision est prise dès que
         // le pli est ramassé, puis envoyée au bout du délai (pas plus tôt).
-        const wait = coincheWindow() + thinkMs(G, seat, random());
+        const wait = coincheWindow() + misereWindow() + thinkMs(G, seat, random());
         later(pause, () => {
           if (G.tour !== t) return;
           const key = [G.phase, G.bidLog.length, !!(G.contract && G.contract.coinche)].join();
@@ -185,6 +206,7 @@ export function createHost({
     pending.clear();
     G = null;
     tour = null;
+    misereTour = null;
     decided.fill(null);
   }
 
