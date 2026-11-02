@@ -54,7 +54,7 @@ const isRed = (s) => s === "H" || s === "D";
 // Symbole d'atout dans les bulles d'enchère : quatre teintes vives sur fond
 // sombre (jeu « quatre couleurs » du poker en ligne), sinon ♥/♦ et ♠/♣ se
 // confondent en petit.
-const BUBBLE_SUIT_COLOR = { H: "#ff6b7a", D: "#5aa9ff", C: "#4fd18b", S: "#ece8f7" };
+const BUBBLE_SUIT_COLOR = { H: "#ff6b7a", D: "#5aa9ff", C: "#4fd18b", S: "#ece8f7", TA: "#f2c14e", SA: "#f2c14e" };
 
 // roundRect du canevas 2D manque aux navigateurs mobiles anciens (Safari
 // < 16, Chrome < 99) : sans lui, aucune carte ne s'affichait. Coins droits alors.
@@ -73,7 +73,7 @@ function sortHand(hand, atout) {
     const i = last ? rest.findIndex((s) => isRed(s) !== isRed(last)) : 0;
     order.push(rest.splice(Math.max(i, 0), 1)[0]);
   }
-  const force = (c) => (c.suit === atout ? TRUMP_FORCE : PLAIN_FORCE)[c.rank];
+  const force = (c) => (c.suit === atout || atout === "TA" ? TRUMP_FORCE : PLAIN_FORCE)[c.rank];
   return hand
     .slice()
     .sort(
@@ -347,7 +347,7 @@ export function createTable(parent, { me, peek = null, onPlay, onPeek }) {
     }
     if (!bidding) return null;
     const e = G.bidLog.filter((x) => x.seat === seat).pop();
-    if (!e) return null;
+    if (!e) return G.parole === seat ? { t: "Parole" } : null;
     return e.montant ? { t: bidLabel(e.montant, e.atout), suit: e.atout } : { t: t("Passe", "Pass") };
   }
 

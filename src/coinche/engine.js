@@ -17,12 +17,15 @@ import { t } from "./client/i18n.js";
 
 export const SUITS = ["H", "D", "C", "S"];
 export const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
-export const SUIT_SYMBOL = { H: "♥", D: "♦", C: "♣", S: "♠" };
+// TA et SA : Tout Atout et Sans Atout, contrats du salon ESSEC (voir ESSEC).
+export const SUIT_SYMBOL = { H: "♥", D: "♦", C: "♣", S: "♠", TA: "TA", SA: "SA" };
 export const SUIT_NAME = {
   H: t("Cœur", "Hearts"),
   D: t("Carreau", "Diamonds"),
   C: t("Trèfle", "Clubs"),
   S: t("Pique", "Spades"),
+  TA: t("Tout Atout", "All Trumps"),
+  SA: t("Sans Atout", "No Trumps"),
 };
 const RANK_NAME = {
   7: "7",
@@ -49,6 +52,19 @@ export const ALLOWED_BIDS = [
 ];
 // Belote de l'équipe preneuse (preneur ou partenaire) : +20 au décompte de
 // la donne (pas au score de la partie) si elle fait au moins 81 points de plis.
+// Salon « règles de l'ESSEC » (G.regles === ESSEC), seul à s'écarter du
+// profil V1 : contrats Tout Atout (atout "TA" : chaque couleur dans l'ordre
+// de l'atout, il faut monter dans la couleur demandée) et Sans Atout ("SA"),
+// sans belote ; Générale à 500, pas de Générale belotée ; « parole » et
+// « misère » (voir act). 152 points de cartes + 10 de der : 162 partout.
+export const ESSEC = "essec";
+export const ESSEC_ATOUTS = [...SUITS, "TA", "SA"];
+export const ESSEC_BIDS = ALLOWED_BIDS.filter((b) => b !== GENERALE_BELOTE);
+const TA_POINTS = { J: 14, 9: 9, A: 6, 10: 5, K: 3, Q: 1, 8: 0, 7: 0 };
+const SA_POINTS = { A: 19, 10: 10, K: 4, Q: 3, J: 2, 9: 0, 8: 0, 7: 0 };
+// Misère : une main de 11 points ou moins (au barème du contrat) annule la donne.
+export const MISERE_MAX = 11;
+const essec = () => G?.regles === ESSEC;
 export const BELOTE_BONUS = 20;
 const BELOTE_MIN = 81;
 
@@ -77,7 +93,7 @@ export function bidType(montant) {
 
 // Points que vaut un contrat réussi (avant multiplicateur).
 export function contractValue(contract) {
-  if (contract.type === "GENERALE") return 250;
+  if (contract.type === "GENERALE") return essec() ? 500 : 250;
   if (contract.type === "GENERALE_BELOTE") return 270;
   return contract.montant;
 }
@@ -134,6 +150,8 @@ function cardLabel(card) {
 
 // Score d'une carte pour déterminer le maître d'un pli en cours (-1 = ne peut pas être maître)
 function winValue(card, atout, couleurDemandee) {
+  if (atout === "TA")
+    return card.suit === couleurDemandee ? 100 + TRUMP_FORCE[card.rank] : -1;
   if (card.suit === atout) return 100 + TRUMP_FORCE[card.rank];
   if (card.suit === couleurDemandee) return PLAIN_FORCE[card.rank];
   return -1;
@@ -154,24 +172,19 @@ function trickWinnerSeat(pli, atout) {
 }
 
 function trickPoints(pli, atout) {
-  return pli.reduce(
-    (sum, e) =>
-      sum +
-      (e.carte.suit === atout
-        ? TRUMP_POINTS[e.carte.rank]
-        : PLAIN_POINTS[e.carte.rank]),
-    0,
-  );
+  return pli.reduce((sum, e) => sum + cardPoints(e.carte, atout), 0);
 }
 
 function cardPoints(card, atout) {
+  if (atout === "TA") return TA_POINTS[card.rank];
+  if (atout === "SA") return SA_POINTS[card.rank];
   return card.suit === atout
     ? TRUMP_POINTS[card.rank]
     : PLAIN_POINTS[card.rank];
 }
 
 function forceOf(card, atout) {
-  return card.suit === atout
+  return card.suit === atout || atout === "TA"
     ? TRUMP_FORCE[card.rank]
     : PLAIN_FORCE[card.rank];
 }
@@ -184,7 +197,7 @@ function computeLegal(main, pli, atout, siege) {
   const fournissables = main.filter((c) => c.suit === couleurDemandee);
 
   if (fournissables.length) {
-    if (couleurDemandee === atout) {
+    if (couleurDemandee === atout || atout === "TA") {
       const maitreForce =
         TRUMP_FORCE[pli.find((e) => e.siege === maitreSeat).carte.rank];
       const superieures = fournissables.filter(
@@ -219,9 +232,10 @@ function computeLegal(main, pli, atout, siege) {
 let G = null;
 
 // Nouvelle partie. seats : [{ type: "human" | "bot", name }].
-function newGame(seats) {
+function newGame(seats, regles) {
   G = {
     seats,
+    ...(regles === ESSEC && { regles }),
     donneur: Math.floor(rand() * 4),
     donneNumero: 1,
     scores: [0, 0],
@@ -250,6 +264,10 @@ function startNewDonne() {
     deal(shuffle(buildDeck(), rand), G.donneur);
   G.mainsInitiales = G.hands.map((h) => h.slice());
   G.contract = null;
+  if (essec()) {
+    G.parole = null; // siège qui a dit « parole » (voir act)
+    G.misere = null; // siège dont la misère a annulé la donne précédente
+  }
   G.passesConsecutives = 0;
   G.multiplicateur = 1;
   G.pliCourant = [];
@@ -316,9 +334,43 @@ function startTurn() {
 // Ce qu'un bot fait quand c'est à lui : enchère ou carte.
 function botTurnAction(seat) {
   if (G.joueurActif !== seat) return null;
-  if (G.phase === "ENCHERES") return botDecideBid(seat);
-  if (G.phase === "JEU") return { type: "JOUER", carte: botChooseCard(seat) };
+  if (G.phase === "ENCHERES") {
+    const a = botDecideBid(seat);
+    return a.type === "PASSER" && paroleOblige(seat) ? paroleBid(seat) : a;
+  }
+  if (G.phase === "JEU") {
+    // Misère en défense : la donne annulée prive les preneurs de leur contrat.
+    if (teamOf(seat) !== G.contract.equipePreneur && misereOk(seat))
+      return { type: "MISERE" };
+    return { type: "JOUER", carte: botChooseCard(seat) };
+  }
   return null;
+}
+
+// Parole (salon ESSEC) : le premier à parler l'annonce au lieu de passer ;
+// si les trois autres passent derrière, il doit annoncer à son tour.
+function paroleOblige(seat) {
+  return G.parole === seat && !G.contract;
+}
+// Enchère imposée par la parole (bot, ou délai écoulé) : 80 dans la couleur
+// d'ouverture, sinon la plus longue.
+function paroleBid(seat) {
+  const hand = G.hands[seat];
+  const atout =
+    bestOpening(hand, true)?.atout ??
+    SUITS.reduce((a, s) => (suitCards(hand, s).length > suitCards(hand, a).length ? s : a));
+  return { type: "ENCHERIR", montant: 80, atout };
+}
+// Misère (salon ESSEC) : avant de jouer sa première carte, une main initiale
+// de MISERE_MAX points ou moins, au barème du contrat.
+function misereOk(seat) {
+  return (
+    essec() &&
+    G.phase === "JEU" &&
+    !G.playedBy[seat].length &&
+    G.mainsInitiales[seat].reduce((s, c) => s + cardPoints(c, G.contract.atout), 0) <=
+      MISERE_MAX
+  );
 }
 
 // ---- IA : système d'enchères -------------------------------------------
@@ -659,7 +711,7 @@ function generaleBid(seat, hand, cur, team) {
       !holds(hand, atout, "9")
     )
       continue;
-    const montant = hasBelote(hand, atout) ? GENERALE_BELOTE : GENERALE;
+    const montant = hasBelote(hand, atout) && !essec() ? GENERALE_BELOTE : GENERALE;
     if (cur && montant <= cur.montant) continue;
     const pm = makeProbability(seat, {
       id: -1,
@@ -703,6 +755,15 @@ function decideBid(seat) {
   const partner = partnerOf(seat);
   const memo = G.bidMemo[seat];
   const min = cur ? cur.montant + 10 : 80;
+  // ponytail: Tout Atout ou Sans Atout annoncé (salon ESSEC) : le système et
+  // la simulation ne savent pas le lire ; on ouvre au barème au-dessus de
+  // l'adversaire, sinon on passe.
+  if (G.donneAnnonces.some((a) => !SUITS.includes(a.atout))) {
+    const o = bestOpening(hand, false);
+    return o && o.montant >= min && !(cur && teamOf(cur.preneur) === team)
+      ? { type: "ENCHERIR", montant: o.montant, atout: o.atout }
+      : PASS;
+  }
   const gen = generaleBid(seat, hand, cur, team);
   if (gen) return gen;
   if (cur && cur.montant >= 270) return PASS;
@@ -1003,6 +1064,9 @@ function contractHuitAtouts(contract) {
 function botWantsToCoinche(seat) {
   const contract = G.contract;
   if (!contract || teamOf(seat) === contract.equipePreneur) return false;
+  // ponytail: Tout Atout / Sans Atout jamais coinchés par les bots, la
+  // simulation suppose une couleur d'atout.
+  if (!SUITS.includes(contract.atout)) return false;
   const hand = G.hands[seat];
   const atout = contract.atout;
   // Score de la partie. Le preneur sort s'il réussit, coinché ou non : la
@@ -1047,6 +1111,7 @@ const COINCHE_MARGIN = 0.35;
 function botWantsToSurcoinche(seat) {
   const contract = G.contract;
   if (!contract || teamOf(seat) !== contract.equipePreneur) return false;
+  if (!SUITS.includes(contract.atout)) return false;
   const hand = G.hands[seat];
   const atout = contract.atout;
   const pre = G.scores[teamOf(seat)];
@@ -1785,8 +1850,13 @@ function dealUnknown(unknown, others, size, pinned) {
 // (enchère du partenaire, réponse déjà donnée), ne dépend pas des mains —
 // calculée une fois par décision.
 function bidReadings() {
-  return G.bidLog.map((e, i) => {
-    const earlier = G.bidLog.slice(0, i);
+  // Les annonces Tout Atout et Sans Atout (salon ESSEC), et ce qui a été dit
+  // au-dessus d'elles, ne se relisent pas avec le système des bots.
+  const log = G.bidLog.filter(
+    (e) => (!e.montant || SUITS.includes(e.atout)) && (!e.cur || SUITS.includes(e.cur.atout)),
+  );
+  return log.map((e, i) => {
+    const earlier = log.slice(0, i);
     const pIdx = earlier
       .map((x) => x.seat === partnerOf(e.seat) && !!x.montant)
       .lastIndexOf(true);
@@ -2484,10 +2554,27 @@ function botChooseCard(seat) {
     seat,
   );
   if (legal.length === 1) return legal[0];
+  if (!SUITS.includes(G.contract.atout)) return simpleCard(seat, legal);
   return withSeed(seat, "card", () => {
     const reflex = heuristicCard(seat);
     return mcChooseCard(seat, legal, reflex, reflexWhy);
   });
+}
+
+// ponytail: Tout Atout / Sans Atout (salon ESSEC) en réflexes minimaux, les
+// réflexes de club et la simulation supposant une couleur d'atout. Entamer
+// fort ; partenaire maître : charger en dernier, sinon petit ; gagner au
+// plus juste ; sinon la plus petite.
+function simpleCard(seat, legal) {
+  const atout = G.contract.atout;
+  const pli = G.pliCourant;
+  if (!pli.length) return strongest(legal, atout);
+  if (teamOf(trickWinnerSeat(pli, atout)) === teamOf(seat))
+    return pli.length === 3 ? highest(legal, atout) : lowest(legal, atout);
+  const wins = legal.filter(
+    (c) => trickWinnerSeat([...pli, { siege: seat, carte: c }], atout) === seat,
+  );
+  return wins.length ? weakest(wins, atout) : lowest(legal, atout);
 }
 
 // Belote et rebelote sont annoncées automatiquement dès que le Roi et la
@@ -2620,7 +2707,12 @@ function act(seat, action) {
     if ((G.phase === "ENCHERES" || G.phase === "JEU") && G.seats?.[G.joueurActif]?.type === "human")
       (G.absent ??= [false, false, false, false])[G.joueurActif] = true;
     if (G.phase === "ENCHERES")
-      return act(G.joueurActif, { type: "PASSER", auto: true });
+      return act(
+        G.joueurActif,
+        paroleOblige(G.joueurActif)
+          ? { ...paroleBid(G.joueurActif), auto: true }
+          : { type: "PASSER", auto: true },
+      );
     if (G.phase === "JEU") {
       const s = G.joueurActif;
       const legal = computeLegal(G.hands[s], G.pliCourant, G.contract.atout, s);
@@ -2645,6 +2737,7 @@ function act(seat, action) {
   if (action.type === "PASSER") {
     if (G.phase !== "ENCHERES") return "HORS_PHASE";
     if (seat !== G.joueurActif) return "HORS_TOUR";
+    if (paroleOblige(seat)) return "PAROLE_OBLIGE";
     G.bidLog.push({
       seat,
       type: G.seats?.[seat]?.type,
@@ -2673,7 +2766,10 @@ function act(seat, action) {
     if (G.phase !== "ENCHERES") return "HORS_PHASE";
     if (seat !== G.joueurActif) return "HORS_TOUR";
     const montant = action.montant;
-    if (!ALLOWED_BIDS.includes(montant) || !SUITS.includes(action.atout))
+    if (
+      !(essec() ? ESSEC_BIDS : ALLOWED_BIDS).includes(montant) ||
+      !(essec() ? ESSEC_ATOUTS : SUITS).includes(action.atout)
+    )
       return "ENCHERE_INVALIDE";
     if (G.contract && montant <= G.contract.montant) return "ENCHERE_INVALIDE";
     G.contractCounter = (G.contractCounter || 0) + 1;
@@ -2699,6 +2795,28 @@ function act(seat, action) {
     G.passesConsecutives = 0;
     G.joueurActif = suivant(seat);
     startTurn();
+    return;
+  }
+
+  // Parole : seulement le premier à parler, à sa première prise de parole.
+  // Ne compte pas comme une passe : trois passes derrière lui et il doit
+  // annoncer (PAROLE_OBLIGE) ; dès qu'un autre annonce, il est libre.
+  if (action.type === "PAROLE") {
+    if (!essec() || G.phase !== "ENCHERES") return "HORS_PHASE";
+    if (seat !== G.joueurActif) return "HORS_TOUR";
+    if (G.bidLog.length || G.parole !== null) return "PAROLE_INTERDITE";
+    G.parole = seat;
+    G.joueurActif = suivant(seat);
+    startTurn();
+    return;
+  }
+
+  // Misère : la donne est annulée sans score, le donneur suivant redistribue.
+  if (action.type === "MISERE") {
+    if (!essec() || G.phase !== "JEU") return "HORS_PHASE";
+    if (!misereOk(seat)) return "MISERE_INTERDITE";
+    startNewDonne();
+    G.misere = seat;
     return;
   }
 
@@ -2784,10 +2902,12 @@ function lockContractAndStartPlay() {
   // Belote de l'équipe preneuse : le preneur ou son partenaire (qui a pu
   // ouvrir avant d'être remonté) tient Roi et Dame d'atout.
   const { preneur, atout } = G.contract;
-  G.belote.holder =
-    [preneur, partnerOf(preneur)].find((s) =>
-      hasBelote(G.mainsInitiales[s], atout),
-    ) ?? null;
+  // Pas de belote en Tout Atout ni en Sans Atout.
+  G.belote.holder = SUITS.includes(atout)
+    ? ([preneur, partnerOf(preneur)].find((s) =>
+        hasBelote(G.mainsInitiales[s], atout),
+      ) ?? null)
+    : null;
   // Huit atouts : la main initiale du preneur tenait les 8 cartes de
   // l'atout. Ce n'est pas un contrat à part — il se joue et se score
   // exactement comme le capot beloté qu'il est déjà (270) — seulement un
@@ -2831,9 +2951,10 @@ function withRules(r, dealFn, fn) {
   }
 }
 
-// Nouvelle partie, première donne distribuée. seats : [{ type, name }].
-export function createGame(seats, r, dealFn) {
-  return withRules(r, dealFn, () => newGame(seats));
+// Nouvelle partie, première donne distribuée. seats : [{ type, name }] ;
+// regles : ESSEC pour le salon des règles de l'ESSEC, sinon profil V1.
+export function createGame(seats, r, dealFn, regles) {
+  return withRules(r, dealFn, () => newGame(seats, regles));
 }
 
 // Applique l'action d'un siège à g (voir applyAction) : undefined ou motif.
@@ -2864,6 +2985,9 @@ export const bots = {
   contractHuitAtouts: withG(contractHuitAtouts),
   exactEnd,
 };
+
+// Misère encore possible pour ce siège (salon ESSEC) : l'écran propose le bouton.
+export const miserePossible = withG(misereOk);
 
 export {
   teamOf,

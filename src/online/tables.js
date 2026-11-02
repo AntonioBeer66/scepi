@@ -121,7 +121,16 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
     else if (d.key !== m.deadline?.key) m.deadline = { key: d.key, at: m.updatedAt + d.ms };
   }
 
-  function create(table = null, code = null, owner = null) {
+  // Tables permanentes aux règles à part (fiche.specialTables : numéro →
+  // règles), en plus des PERMANENT_TABLES ; une table privée peut prendre
+  // les mêmes règles.
+  const special = fiche.specialTables ?? {};
+  const permanent = [
+    ...Array.from({ length: PERMANENT_TABLES }, (_, i) => i + 1),
+    ...Object.keys(special).map(Number),
+  ];
+
+  function create(table = null, code = null, owner = null, regles = null) {
     if (matches.size >= MAX_MATCHES) return null;
     if (owner && [...matches.values()].filter((m) => m.owner === owner).length >= MAX_PER_OWNER)
       return null;
@@ -134,7 +143,7 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
       createdAt: t,
       updatedAt: t,
       stateID: 0,
-      G: game.setup({ ctx: { numPlayers } }, { table }),
+      G: game.setup({ ctx: { numPlayers } }, { table, ...(regles && { regles }) }),
       players: seats.map(() => ({ name: null, credentials: null })),
     };
     matches.set(m.id, m);
@@ -184,9 +193,9 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
           removed.push(m.id);
         } else if (m.table) waiting.add(m.table); // en attente ou en jeu : le numéro reste à cette table
       }
-      for (let n = 1; n <= PERMANENT_TABLES; n++)
+      for (const n of permanent)
         if (!waiting.has(n)) {
-          const m = create(n);
+          const m = create(n, null, null, special[n]);
           if (m) created.push(m);
         }
       return { removed, created };
@@ -198,11 +207,12 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
 
     // Table privée (un salon temporaire) : { match } ou { error }. Code
     // unique parmi les tables ouvertes : il désigne une seule table.
-    createPrivate(raw, owner = null) {
+    createPrivate(raw, owner = null, regles = null) {
       const code = normCode(raw);
       if (code.length < CODE_MIN) return { error: "CODE_INVALIDE" };
+      if (regles != null && !Object.values(special).includes(regles)) return { error: "INVALIDE" };
       if ([...matches.values()].some((m) => m.code === code)) return { error: "CODE_PRIS" };
-      const match = create(null, code, owner);
+      const match = create(null, code, owner, regles);
       return match ? { match } : { error: "PLEIN" };
     },
 
@@ -214,6 +224,7 @@ export function createTables(fiche, { now = Date.now, random = Math.random } = {
         matchID: m.id,
         table: m.table,
         code: m.code ?? null,
+        regles: m.G.regles ?? null,
         phase: phaseOf(m.G),
         players: m.players.map((p, s) => ({
           id: s,

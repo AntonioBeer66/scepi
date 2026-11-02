@@ -21,6 +21,8 @@ const HUMAN_ACTIONS = new Set([
   "COINCHER",
   "SURCOINCHER",
   "JOUER",
+  "PAROLE", // salon ESSEC
+  "MISERE", // salon ESSEC
 ]);
 
 const isSeat = (s) => Number.isInteger(s) && s >= 0 && s < 4;
@@ -60,6 +62,8 @@ export const Coinche = {
   setup: ({ ctx }, setupData) => ({
     phase: "ATTENTE",
     table: setupData?.table ?? null,
+    // Salon des règles de l'ESSEC : "essec" (voir engine.js, ESSEC).
+    ...(setupData?.regles && { regles: setupData.regles }),
   }),
 
   turn: { activePlayers: ALL_ACTIVE },
@@ -86,7 +90,7 @@ export const Coinche = {
         }));
         const me = seatOf(playerID);
         if (list[me]?.type !== "human") return INVALID_MOVE;
-        const game = createGame(list, () => random.Number());
+        const game = createGame(list, () => random.Number(), undefined, G.regles);
         return { ...game, hote: me, table: G.table };
       },
     },

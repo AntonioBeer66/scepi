@@ -152,6 +152,33 @@
         taken over by the computer, and you can come back and sit in it
         again.
       </p>
+      <h3 id="regles-essec">The ESSEC rules room</h3>
+      <p>
+        The Table des affreux de Cergy-Pontoise (and private tables with
+        “ESSEC rules” ticked) plays with these differences:
+      </p>
+      <ul>
+        <li>
+          <b>All Trumps (TA)</b>: every suit plays like trumps. Jack 14, 9 9,
+          Ace 6, 10 5, King 3, Queen 1, 8 and 7 0. You must follow suit and
+          play higher in the suit led.
+        </li>
+        <li>
+          <b>No Trumps (SA)</b>: Ace 19, 10 10, King 4, Queen 3, Jack 2, 9, 8
+          and 7 0. Follow suit, no need to play higher.
+        </li>
+        <li>No belote in All Trumps or No Trumps.</li>
+        <li>The Générale is worth 500; there is no Générale + belote.</li>
+        <li>
+          <b>Parole</b>: the first player to speak may say “parole” (a good
+          hand to support). If the other three pass, they must bid.
+        </li>
+        <li>
+          <b>Misère</b>: once bidding is over, a player with 11 points or less
+          in hand (counted for the contract) may call “misère” before playing
+          their first card: the deal is cancelled.
+        </li>
+      </ul>
       <div class="rules-bots">
         <h3>How the bots play</h3>
         <p>
@@ -451,6 +478,7 @@
               <button type="submit" class="button outline">Join</button>
               <button type="button" class="button outline" id="private-create-btn">Create</button>
             </div>
+            <label class="cq-check"><input type="checkbox" name="essec"> ESSEC rules</label>
           </form>
         </div>
         <!-- Rempli par coinche-stats.js (GET /api/stats) ; reste caché sans chiffres. -->

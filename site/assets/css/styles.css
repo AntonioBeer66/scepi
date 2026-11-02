@@ -515,6 +515,67 @@ a {
   color: var(--gold);
   margin-left: 6px;
 }
+/* Table des affreux de Cergy-Pontoise (règles de l'ESSEC) : la seule carte
+   à décor. Gare en feu et butin dans un bandeau illustré, rubalise dorée ;
+   rien que les teintes du site (nuit violette, or). */
+.lobby.is-affreux {
+  overflow: hidden;
+}
+.affreux-scene {
+  position: relative;
+  height: 104px;
+  margin: -24px -24px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.affreux-scene svg {
+  display: block;
+  width: 100%;
+  height: 96px;
+}
+.affreux-tape {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  bottom: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 3px 0;
+  background: var(--gold);
+  color: #181127;
+  font: 700 0.625rem/1 Consolas, monospace;
+  letter-spacing: 0.14em;
+  text-align: center;
+  transform: rotate(-3deg);
+  box-shadow: 0 2px 6px #0008;
+}
+.affreux-motto {
+  margin: -6px 0 14px;
+  color: var(--muted);
+  font-style: italic;
+}
+.affreux-flamme {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: affreux-flamme 1.6s var(--ease-in-out) infinite alternate;
+}
+.affreux-flamme.is-b {
+  animation-duration: 1.9s;
+  animation-delay: -0.7s;
+}
+.affreux-flamme.is-c {
+  animation-duration: 1.3s;
+  animation-delay: -0.4s;
+}
+@keyframes affreux-flamme {
+  to {
+    transform: scale(0.88, 1.12) skewX(-4deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .affreux-flamme {
+    animation: none;
+  }
+}
 
 
 
@@ -2361,6 +2422,9 @@ a {
   .lobby {
     padding: 18px 12px;
   }
+  .affreux-scene {
+    margin: -18px -12px 16px;
+  }
   .empty-seats {
     font-size: 1.4375rem;
     letter-spacing: 2px;
@@ -3119,6 +3183,25 @@ body.is-playing .header {
 .cg-suitchip.s-D { color: #1d5bb5; }
 .cg-suitchip.s-C { color: #17703e; }
 .cg-suitchip.s-S { color: #181127; }
+/* Tout Atout, Sans Atout (salon ESSEC) : deux lettres au lieu d'un symbole. */
+.cg-suitchip.s-TA,
+.cg-suitchip.s-SA {
+  color: #181127;
+  font-size: 15px;
+  font-weight: 800;
+}
+.cg-suit.s-TA,
+.cg-suit.s-SA {
+  font-weight: 800;
+}
+/* Partie au salon ESSEC : bouton « ESSEC » vers ce qui change dans les règles. */
+.cg-icon.cg-essec {
+  border-color: var(--gold);
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
 @media (hover: hover) {
   .cg-suitchip:hover {
     transform: translateY(-2px);
@@ -3420,6 +3503,10 @@ body.is-playing .header {
     width: 56px;
     height: 64px;
     font-size: 36px;
+  }
+  .cg-suitchip.s-TA,
+  .cg-suitchip.s-SA {
+    font-size: 19px;
   }
   .cg-btn {
     min-height: 40px;
@@ -5105,6 +5192,21 @@ html {
 }
 .cq-code .button {
   margin: 0;
+}
+/* Table privée aux règles de l'ESSEC : case discrète sous le code. */
+.cq-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--muted, inherit);
+  cursor: pointer;
+}
+.cq-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold);
 }
 @media (max-width: 900px) {
   .coinche-intro,

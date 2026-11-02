@@ -1,13 +1,15 @@
 // Fiche de la coinche pour le serveur de tables (src/online/tables.js) :
 // ce qui, dans une partie en ligne, dépend du jeu. Le reste (places,
 // codes privés, entretien, vues filtrées, validation des coups) est commun.
-import { DURATION_MS, actOn } from "./engine.js";
+import { DURATION_MS, ESSEC, actOn } from "./engine.js";
 import { Coinche } from "./game.js";
 import { trickPause } from "./host.js";
 
 export const coinche = {
   game: Coinche, // format boardgame.io : setup, moves, playerView
   numPlayers: 4,
+  // Le salon des règles de l'ESSEC : une seule table permanente, la 5.
+  specialTables: { 5: ESSEC },
   started: (G) => G.phase !== "ATTENTE",
   finished: (G) => G.phase === "TERMINEE",
   // Coups d'un humain pour lui-même : eux seuls comptent comme activité

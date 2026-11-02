@@ -9,6 +9,8 @@ import {
   ALLOWED_BIDS,
   BELOTE_BONUS,
   DURATION_MS,
+  ESSEC_ATOUTS,
+  ESSEC_BIDS,
   GENERALE,
   GENERALE_BELOTE,
   SUITS,
@@ -16,6 +18,7 @@ import {
   SUIT_SYMBOL,
   cardLabel,
   computeLegal,
+  miserePossible,
   teamOf,
 } from "../engine.js";
 import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
@@ -117,6 +120,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
             : t(`${who(e.seat)} : passe`, `${who(e.seat)}: pass`),
         );
     }
+    // Salon ESSEC : parole, et donne annulée par une misère.
+    if (G.parole != null && !(same && prev.parole != null))
+      out.push(t(`${who(G.parole)} : parole`, `${who(G.parole)}: parole`));
+    if (G.misere != null && prev && !same)
+      out.push(t(`Misère de ${who(G.misere)} : donne annulée.`, `Misère by ${who(G.misere)}: deal cancelled.`));
     if (G.contract?.coinche && !prev?.contract?.coinche)
       out.push(
         !spectator && teamOf(me) === G.contract.equipePreneur
@@ -245,6 +253,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         ${score(us, US)}${score(1 - us, THEM)}
         ${iconBtn("toggle-history", "history", t("Historique", "History"), ui.panel === "history")}
         ${G.lastTrick ? iconBtn("toggle-trick", "trick", t("Dernier pli", "Last trick"), ui.panel === "trick") : ""}
+        ${G.regles === "essec" ? `<button type="button" class="cg-icon cg-essec" data-action="rules-essec" data-focus-key="rules-essec" aria-label="${t("Règles de l’ESSEC : ce qui change", "ESSEC rules: what changes")}">ESSEC</button>` : ""}
         ${iconBtn("rules", "rules", t("Règles", "Rules"))}
         ${iconBtn("quit", "quit", t("Quitter", "Quit"))}
       </div>
@@ -405,12 +414,20 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         <button type="button" class="cg-btn is-primary" data-action="surcoincher" data-focus-key="surcoincher">${t("Surcoincher", "Surcoinche")}</button>
         ${countHtml()}</div>`;
     }
+    // Misère (salon ESSEC) : tant qu'on n'a pas joué sa première carte.
+    if (!spectator && G.phase === "JEU" && miserePossible(G, me))
+      return `<div class="cg-bidbar is-coinche"><button type="button" class="cg-btn is-danger" data-action="misere" data-focus-key="misere">${t("Misère", "Misère")}</button></div>`;
     if (G.phase !== "ENCHERES" || G.joueurActif !== me)
       // Seul, sur le côté : jamais à la place d'« Annoncer » ou « Passer ».
       return coinche ? `<div class="cg-bidbar is-coinche">${coinche}</div>` : "";
 
+    const essec = G.regles === "essec";
     const min = G.contract ? G.contract.montant : 0;
-    const options = ALLOWED_BIDS.filter((b) => b > min);
+    const options = (essec ? ESSEC_BIDS : ALLOWED_BIDS).filter((b) => b > min);
+    // Parole : le premier à parler peut la dire ; trois passes derrière et il
+    // doit annoncer (Passer grisé).
+    const canParole = essec && !G.bidLog.length && G.parole == null;
+    const mustBid = essec && G.parole === me && !G.contract;
     if (ui.bidMin !== min) {
       ui.bidMin = min;
       ui.amount = options[0] ?? null;
@@ -425,7 +442,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         <output class="cg-amount" aria-live="polite">${bidReadout(ui.amount)}</output>
         ${step(options[i + 1], "+", t("Montant supérieur", "Higher amount"))}
       </div>`;
-    const suits = SUITS.map(
+    const suits = (essec ? ESSEC_ATOUTS : SUITS).map(
       (s) =>
         `<button type="button" class="cg-suitchip s-${s}" data-suit="${s}" data-focus-key="suit-${s}" aria-pressed="${s === ui.suit}" aria-label="${SUIT_NAME[s]}">${SUIT_SYMBOL[s]}</button>`,
     ).join("");
@@ -442,11 +459,17 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ${options.length ? `<div class="cg-bidrow">${stepper}
       <div class="cg-suits" role="group" aria-label="${t("Atout", "Trump")}">${suits}</div></div>` : ""}
       <div class="cg-actions">
-        <button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">${t("Passer", "Pass")}</button>
+        ${
+          mustBid
+            ? `<button type="button" class="cg-btn" disabled title="${t("Parole : tu dois annoncer", "Parole: you must bid")}">${t("Passer", "Pass")}</button>`
+            : `<button type="button" class="cg-btn" data-action="passer" data-focus-key="passer">${t("Passer", "Pass")}</button>`
+        }
+        ${canParole ? `<button type="button" class="cg-btn" data-action="parole" data-focus-key="parole">${t("Parole", "Parole")}</button>` : ""}
         ${options.length ? `<button type="button" class="cg-btn is-primary cg-take" data-action="encherir" data-focus-key="encherir"${ui.suit ? "" : ' aria-disabled="true"'}>${t("Annoncer", "Bid")}</button>` : ""}
         ${coinche || `<button type="button" class="cg-btn is-danger" disabled>${t("Coincher", "Coinche")}</button>`}
       </div>
       ${countHtml()}
+      ${mustBid ? `<p class="cg-hint">${t("Tu as dit parole et personne n’a annoncé : à toi d’annoncer.", "You said parole and nobody bid: you must bid.")}</p>` : ""}
       ${ui.hint ? `<p class="cg-hint" role="alert">${esc(ui.hint)}</p>` : ""}
     </div>`;
   }
@@ -618,7 +641,9 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const action = btn.dataset.action;
     if (action === "encherir") {
       if (!ui.suit) {
-        ui.hint = t("Choisis d’abord une couleur d’atout.", "First pick a trump suit.");
+        ui.hint = G.regles === "essec"
+          ? t("Choisis d’abord l’atout (ou TA, SA).", "First pick trumps (or TA, SA).")
+          : t("Choisis d’abord une couleur d’atout.", "First pick a trump suit.");
         render();
         return;
       }
@@ -626,6 +651,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ui.suit = null;
       ui.bidMin = undefined;
     } else if (action === "passer") onAction({ type: "PASSER" });
+    else if (action === "parole") onAction({ type: "PAROLE" });
+    else if (action === "misere") onAction({ type: "MISERE" });
     else if (action === "coincher") {
       if (Date.now() - (ui.coincheShownAt || 0) >= COINCHE_ARM_MS) onAction({ type: "COINCHER" });
       else nope(btn);
@@ -636,6 +663,11 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       ui.panel = ui.panel === p ? null : p;
       render();
     } else if (action === "rules") document.querySelector("#rules-btn")?.click();
+    else if (action === "rules-essec") {
+      // Le panneau des règles, ouvert sur ce qui change au salon ESSEC.
+      if (document.querySelector("#rules-panel")?.hidden) document.querySelector("#rules-btn")?.click();
+      document.querySelector("#regles-essec")?.scrollIntoView({ block: "start" });
+    }
     else if (action === "restart")
       onRelaunch(G.seats.map((s) => ({ type: s.type, name: s.name })));
     else if (action === "quit") onQuit();

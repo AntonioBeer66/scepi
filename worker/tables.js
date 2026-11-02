@@ -293,10 +293,11 @@ export class Tables extends DurableObject {
         return json(this.tables.list((m, s) => this.connected(m, s), url.searchParams.get("code")));
       }
       if (request.method === "POST") {
-        const code = (await request.json().catch(() => null))?.code;
+        const body = await request.json().catch(() => null);
+        const code = body?.code;
         let m;
         if (code != null) {
-          const r = this.tables.createPrivate(code, await ownerOf(request));
+          const r = this.tables.createPrivate(code, await ownerOf(request), body.regles ?? null);
           if (r.error && r.error !== "PLEIN") return json({ error: r.error }, r.error === "CODE_PRIS" ? 409 : 400);
           m = r.match;
         } else m = this.tables.create(await ownerOf(request));

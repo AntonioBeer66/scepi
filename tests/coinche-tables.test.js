@@ -37,8 +37,10 @@ const nulls = (h) => h.every((c) => c === null);
 tables.maintain();
 tables.maintain();
 const list = () => tables.list(() => false);
-assert.strictEqual(list().length, PERMANENT_TABLES);
-assert.deepStrictEqual(list().map((t) => t.table).sort(), [1, 2, 3, 4]);
+// Plus le salon des règles de l'ESSEC (table 5), le seul à ces règles.
+assert.strictEqual(list().length, PERMANENT_TABLES + 1);
+assert.deepStrictEqual(list().map((t) => t.table).sort(), [1, 2, 3, 4, 5]);
+assert.deepStrictEqual(list().map((t) => t.regles), [null, null, null, null, "essec"]);
 
 // Places : pseudo requis, place occupée, identifiants.
 const t1 = list().find((t) => t.table === 1).matchID;
@@ -141,7 +143,7 @@ assert.ok(!tables.get(temp.id), "salon temporaire vide effacé");
 now += IDLE_MS + 1;
 tables.maintain();
 assert.ok(!tables.get(t1), "partie abandonnée effacée");
-assert.strictEqual(list().length, PERMANENT_TABLES);
+assert.strictEqual(list().length, PERMANENT_TABLES + 1);
 
 // En cours de partie : un humain prend la place d'un bot (il en reçoit la
 // main) ; quand tous les humains sont partis, la partie s'arrête aussitôt.
@@ -209,6 +211,8 @@ assert.strictEqual(tables.createPrivate(" abc ").error, "CODE_INVALIDE");
 const priv = tables.createPrivate(" Jeudi ").match;
 assert.strictEqual(priv.code, "JEUDI");
 assert.strictEqual(tables.createPrivate("jeudi").error, "CODE_PRIS");
+assert.strictEqual(tables.createPrivate("TRICHE", null, "autre").error, "INVALIDE", "règles inconnues : refus");
+assert.strictEqual(tables.createPrivate("ESSEC", null, "essec").match.G.regles, "essec", "table privée aux règles de l'ESSEC");
 assert.ok(!list().some((t) => t.matchID === priv.id), "cachée sans code");
 assert.ok(!tables.list(() => false, "VENDREDI").some((t) => t.matchID === priv.id));
 assert.strictEqual(tables.list(() => false, "jeudi").find((t) => t.matchID === priv.id)?.code, "JEUDI");

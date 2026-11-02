@@ -151,6 +151,33 @@
         Une place quittée en cours de partie est reprise par l’ordinateur, et
         l’on peut revenir s’y asseoir.
       </p>
+      <h3 id="regles-essec">Le salon des règles de l’ESSEC</h3>
+      <p>
+        La Table des affreux de Cergy-Pontoise (et les tables privées cochées
+        « Règles de l’ESSEC ») joue avec ces différences :
+      </p>
+      <ul>
+        <li>
+          <b>Tout Atout (TA)</b> : chaque couleur se joue comme l’atout. Valet
+          14, 9 9, As 6, 10 5, Roi 3, Dame 1, 8 et 7 0. Il faut fournir et
+          monter dans la couleur demandée.
+        </li>
+        <li>
+          <b>Sans Atout (SA)</b> : As 19, 10 10, Roi 4, Dame 3, Valet 2, 9, 8
+          et 7 0. On fournit, sans obligation de monter.
+        </li>
+        <li>Pas de belote en Tout Atout ni en Sans Atout.</li>
+        <li>La Générale vaut 500 ; la Générale belotée n’existe pas.</li>
+        <li>
+          <b>Parole</b> : le premier à parler peut dire « parole » (bon jeu
+          pour suivre). Si les trois autres passent, il doit annoncer.
+        </li>
+        <li>
+          <b>Misère</b> : une fois les enchères finies, un joueur qui a 11
+          points ou moins en main (au barème du contrat) peut annoncer
+          « misère » avant de jouer sa première carte : la donne est annulée.
+        </li>
+      </ul>
       <div class="rules-bots">
         <h3>Comment jouent les bots</h3>
         <p>
@@ -450,6 +477,7 @@
               <button type="submit" class="button outline">Rejoindre</button>
               <button type="button" class="button outline" id="private-create-btn">Créer</button>
             </div>
+            <label class="cq-check"><input type="checkbox" name="essec"> Règles de l’ESSEC</label>
           </form>
         </div>
         <!-- Rempli par coinche-stats.js (GET /api/stats) ; reste caché sans chiffres. -->
