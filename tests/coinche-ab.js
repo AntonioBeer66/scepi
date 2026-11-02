@@ -5,6 +5,7 @@
 // le hasard des bots repart de la même graine à chaque donne (reseed) : deux
 // moteurs identiques font exactement 0.
 //   node tests/coinche-ab.js <A/engine.js> <B/engine.js> [parties par cœur] [mondes MC, défaut 48] [première donne, défaut 0]
+// REGLES=essec : duel au salon des règles de l'ESSEC.
 // Tous les cœurs travaillent sur une file de parties ; un point d'étape
 // s'affiche toutes les 30 s. Les fichiers sont copiés au lancement : on peut
 // modifier le jeu pendant un duel.
@@ -39,7 +40,7 @@ function duel(A, B, g) {
   for (const teamA of [0, 1]) {
     const byDonne = new Map();
     const G = play(B, {
-      dealSeed: 1000 + g, botSeed: 5000 + g, reseed: true,
+      dealSeed: 1000 + g, botSeed: 5000 + g, reseed: true, regles: process.env.REGLES || undefined,
       decide: (seat) => (seat % 2 === teamA ? A.bots : B.bots),
       on: {
         score(G) {
@@ -94,7 +95,8 @@ if (process.argv[2] === '--worker') {
 } else {
   const [a, b, per = '20', mc = '', first = '0'] = process.argv.slice(2);
   const stamp = Date.now();
-  const snap = (f, tag) => { const p = path.join(os.tmpdir(), `coinche-ab-${stamp}-${tag}.js`); fs.copyFileSync(f, p); return p; };
+  // Copie à côté du moteur : ses imports relatifs (client/i18n.js) y résolvent.
+  const snap = (f, tag) => { const p = path.join(path.dirname(path.resolve(f)), `.coinche-ab-${stamp}-${tag}.js`); fs.copyFileSync(f, p); return p; };
   const fa = snap(a, 'A');
   const fb = snap(b, 'B');
   const t0 = Date.now();

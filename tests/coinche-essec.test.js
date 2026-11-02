@@ -185,6 +185,21 @@ function hote(types, atout = "SA") {
 tuning.mcSamples = 0;
 tuning.bidWorlds = 4;
 tuning.bidSamples = 4;
+// Les bots annoncent Tout Atout par simulation (voir simBid).
+{
+  const mains = [
+    "JH JD JC JS 9H 9D 9C 9S",
+    "7S 8S 7D 8D 7C 8C 7H 8H",
+    "AS 10S KS QS AD 10D KD QD",
+    "AH 10H KH QH AC 10C KC QC",
+  ].map((m) => m.split(" ").map(card));
+  const robots = [0, 1, 2, 3].map(() => ({ type: "bot", name: "B" }));
+  const g = createGame(robots, rng(5), () => mains.map((h) => h.slice()), ESSEC);
+  g.donneur = 3;
+  g.joueurActif = 0;
+  const a = bots.decideBid(g, 0);
+  eq([a.type, a.atout], ["ENCHERIR", "TA"], "quatre Valets et quatre 9 : Tout Atout");
+}
 const seats = [{ type: "human", name: "H" }, ...[1, 2, 3].map(() => ({ type: "bot", name: "B" }))];
 let donnes = 0;
 const vus = { TA: 0, SA: 0, misere: 0 };

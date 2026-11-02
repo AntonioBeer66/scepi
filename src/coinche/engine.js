@@ -267,6 +267,7 @@ function startNewDonne() {
   if (essec()) {
     G.parole = null; // siège qui a dit « parole » (voir act)
     G.misere = null; // siège dont la misère a annulé la donne précédente
+    G.suitMax = [{}, {}, {}, {}]; // Tout Atout : carte la plus forte encore possible, par siège et couleur
   }
   G.passesConsecutives = 0;
   G.multiplicateur = 1;
@@ -751,7 +752,49 @@ function generaleBid(seat, hand, cur, team) {
   return { type: "ENCHERIR", montant: best.montant, atout: best.atout };
 }
 
+// Salon ESSEC : Tout Atout et Sans Atout n'ont pas de barème. La simulation
+// joue chaque contrat (réflexes de simpleCard) sur les mondes de la décision
+// et l'on annonce le palier d'espérance la plus haute dont la réussite
+// dépasse tuning.essecMin ; derrière son propre partenaire, 0,1 de plus.
+function simBid(seat, cur, atouts) {
+  const team = teamOf(seat);
+  const min = cur ? cur.montant + 10 : 80;
+  const own = !!cur && teamOf(cur.preneur) === team;
+  const need = tuning.essecMin + (own ? 0.1 : 0);
+  const saved = G.contract;
+  let best = null;
+  try {
+    for (const atout of atouts) {
+      const base = { id: -1, type: "NUMERIQUE", atout, preneur: seat, equipePreneur: team, coinche: false, surcoinche: false };
+      G.contract = { ...base, montant: 80 };
+      const worlds = bidWorlds || (bidWorlds = mcWorlds(seat, tuning.bidWorlds));
+      if (worlds.length < Math.min(CAPOT_WORLDS, tuning.bidWorlds)) return null;
+      const runs = worlds.map((w) => playOut(seat, w, null));
+      for (let montant = min; montant <= 160; montant += 10) {
+        const c = { ...base, montant };
+        const ok = runs.filter(({ sim, bel }) => contratReussi(c, sim.pointsPlis, sim.plisGagnes, bel, sim.plisSiege)).length;
+        const pm = ok / runs.length;
+        const ev = pm * montant - (1 - pm) * 160;
+        if (pm >= need && ev > 0 && (!best || ev > best.ev)) best = { ev, atout, montant };
+      }
+    }
+  } finally {
+    G.contract = saved;
+  }
+  return best && { type: "ENCHERIR", montant: best.montant, atout: best.atout };
+}
+
 function decideBid(seat) {
+  if (!essec()) return decideBidV1(seat);
+  const cur = G.contract;
+  if (G.donneAnnonces.some((a) => !SUITS.includes(a.atout)))
+    return (!cur || cur.montant < 160 ? simBid(seat, cur, ESSEC_ATOUTS) : null) ?? { type: "PASSER" };
+  const r = decideBidV1(seat);
+  const alt = !cur || cur.montant < 160 ? simBid(seat, cur, ["TA", "SA"]) : null;
+  return alt && (r.type !== "ENCHERIR" || alt.montant > r.montant) ? alt : r;
+}
+
+function decideBidV1(seat) {
   const PASS = { type: "PASSER" };
   const hand = G.hands[seat];
   const cur = G.contract;
@@ -759,15 +802,6 @@ function decideBid(seat) {
   const partner = partnerOf(seat);
   const memo = G.bidMemo[seat];
   const min = cur ? cur.montant + 10 : 80;
-  // ponytail: Tout Atout ou Sans Atout annoncé (salon ESSEC) : le système et
-  // la simulation ne savent pas le lire ; on ouvre au barème au-dessus de
-  // l'adversaire, sinon on passe.
-  if (G.donneAnnonces.some((a) => !SUITS.includes(a.atout))) {
-    const o = bestOpening(hand, false);
-    return o && o.montant >= min && !(cur && teamOf(cur.preneur) === team)
-      ? { type: "ENCHERIR", montant: o.montant, atout: o.atout }
-      : PASS;
-  }
   const gen = generaleBid(seat, hand, cur, team);
   if (gen) return gen;
   if (cur && cur.montant >= 270) return PASS;
@@ -1068,9 +1102,6 @@ function contractHuitAtouts(contract) {
 function botWantsToCoinche(seat) {
   const contract = G.contract;
   if (!contract || teamOf(seat) === contract.equipePreneur) return false;
-  // ponytail: Tout Atout / Sans Atout jamais coinchés par les bots, la
-  // simulation suppose une couleur d'atout.
-  if (!SUITS.includes(contract.atout)) return false;
   const hand = G.hands[seat];
   const atout = contract.atout;
   // Score de la partie. Le preneur sort s'il réussit, coinché ou non : la
@@ -1115,7 +1146,6 @@ const COINCHE_MARGIN = 0.35;
 function botWantsToSurcoinche(seat) {
   const contract = G.contract;
   if (!contract || teamOf(seat) !== contract.equipePreneur) return false;
-  if (!SUITS.includes(contract.atout)) return false;
   const hand = G.hands[seat];
   const atout = contract.atout;
   const pre = G.scores[teamOf(seat)];
@@ -1262,6 +1292,16 @@ function noteTrumpObligations(seat, carte) {
   if (!pli.length) return;
   const { atout } = G.contract;
   const lead = pli[0].carte.suit;
+  if (atout === "TA") {
+    // Chaque couleur est un atout : qui joue sous le maître de la couleur
+    // demandée n'a rien de plus fort dans cette couleur.
+    const top = TRUMP_FORCE[pli.find((e) => e.siege === trickWinnerSeat(pli, atout)).carte.rank];
+    if (carte.suit === lead && TRUMP_FORCE[carte.rank] < top) {
+      const m = (G.suitMax ||= [{}, {}, {}, {}])[seat];
+      m[lead] = Math.min(m[lead] ?? 8, top - 1);
+    }
+    return;
+  }
   if (lead !== atout && carte.suit === lead) return;
   const master = pli.find((e) => e.siege === trickWinnerSeat(pli, atout));
   if (lead !== atout && teamOf(master.siege) === teamOf(seat)) return; // partenaire maître : libre
@@ -1764,6 +1804,9 @@ export const tuning = {
   bidWorlds: 96,
   bidSamples: 96, // coinche et surcoinche (48 : +1,4 pt/donne contre 24 ; 96 : 7 ms par décision sur PC)
   now: () => Date.now(),
+  // Salon ESSEC : réussite simulée exigée pour annoncer TA / SA (voir simBid).
+  // Duels MC 48 contre 0,65 : 0,55 −0,5 ± 2,2 ; 0,75 +1,6 ± 2,3.
+  essecMin: 0.65,
 };
 
 // Hasard des bots : tiré d'une graine qui ne dépend que de ce que le siège
@@ -1819,7 +1862,8 @@ function withSeed(seat, tag, fn) {
 function canHold(s, c) {
   return (
     !G.void[s][c.suit] &&
-    (c.suit !== G.contract.atout || TRUMP_FORCE[c.rank] <= G.trumpMax[s])
+    (c.suit !== G.contract.atout || TRUMP_FORCE[c.rank] <= G.trumpMax[s]) &&
+    (G.contract.atout !== "TA" || TRUMP_FORCE[c.rank] <= (G.suitMax?.[s][c.suit] ?? 8))
   );
 }
 
@@ -2209,6 +2253,7 @@ function playOut(seat, world, card) {
     appel: real.appel.map((v) => ({ ...v })),
     refus: real.refus.map((v) => ({ ...v })),
     trumpMax: real.trumpMax.slice(),
+    suitMax: real.suitMax?.map((v) => ({ ...v })),
     pointsPlis: real.pointsPlis.slice(),
     plisGagnes: real.plisGagnes.slice(),
     plisSiege: (real.plisSiege || [0, 0, 0, 0]).slice(),
@@ -2226,7 +2271,7 @@ function playOut(seat, world, card) {
         sim.exactValue = exactEnd(sim, next, bel, exactTeam);
         break;
       }
-      next = simPlay(sim, next, heuristicCard(next));
+      next = simPlay(sim, next, rolloutCard(next));
     }
   } finally {
     G = real;
@@ -2405,7 +2450,8 @@ function exactEnd(sim, first, bel, team) {
 
 // Score de la donne vu de l'équipe du siège après `card`.
 function mcValue(seat, card, world) {
-  exactTeam = teamOf(seat);
+  // La recherche exacte des derniers plis suppose une couleur d'atout.
+  exactTeam = SUITS.includes(G.contract.atout) ? teamOf(seat) : null;
   let out;
   try {
     out = playOut(seat, world, card);
@@ -2464,7 +2510,8 @@ function mcChooseCard(seat, legal, reflex, why) {
   for (const w of worlds) cards.forEach((c, i) => (totals[i] += mcValue(seat, c, w)));
   const n = worlds.length;
   const hand = G.hands[seat];
-  const bad = cards.map((c) => sigFalse(hand, c, legal));
+  const suitGame = SUITS.includes(G.contract.atout); // ni signaux ni conventions à TA / SA
+  const bad = suitGame ? cards.map((c) => sigFalse(hand, c, legal)) : [];
   if (bad.some(Boolean) && !bad.every(Boolean))
     bad.forEach((b, i) => {
       if (b) totals[i] -= SIG_PENALTY * n;
@@ -2475,6 +2522,7 @@ function mcChooseCard(seat, legal, reflex, why) {
   });
   if (!best) return reflex;
   const choice = cards[best];
+  if (!suitGame) return choice;
   const { atout, preneur, equipePreneur, type } = G.contract;
   let margin = 0;
   if (G.pliCourant.length) {
@@ -2558,26 +2606,53 @@ function botChooseCard(seat) {
     seat,
   );
   if (legal.length === 1) return legal[0];
-  if (!SUITS.includes(G.contract.atout)) return simpleCard(seat, legal);
   return withSeed(seat, "card", () => {
-    const reflex = heuristicCard(seat);
+    const reflex = rolloutCard(seat);
     return mcChooseCard(seat, legal, reflex, reflexWhy);
   });
 }
 
-// ponytail: Tout Atout / Sans Atout (salon ESSEC) en réflexes minimaux, les
-// réflexes de club et la simulation supposant une couleur d'atout. Entamer
-// fort ; partenaire maître : charger en dernier, sinon petit ; gagner au
-// plus juste ; sinon la plus petite.
+// Tout Atout / Sans Atout (salon ESSEC) : les réflexes de club supposent une
+// couleur d'atout, ceux-ci servent de réflexe et de joueur simulé (voir
+// rolloutCard). Entamer une carte maîtresse, sinon la plus petite ;
+// partenaire maître : charger, sinon petit ; gagner au plus juste ; sinon la
+// plus petite.
+// Aucune carte plus forte dehors (ni jouée, ni dans ma main) dans sa couleur.
+function masterIn(hand, card, atout) {
+  const table = atout === "TA" ? TRUMP_FORCE : PLAIN_FORCE;
+  const f = table[card.rank];
+  const ids = IDS[card.suit];
+  for (let j = 0; j < 8; j++)
+    if (table[RANKS[j]] > f && !G.seen[ids[j]] && !hand.some((c) => c.id === ids[j]))
+      return false;
+  return true;
+}
+// Joueur simulé : les réflexes de club à la couleur, ceux de simpleCard sinon.
+function rolloutCard(seat) {
+  const { atout } = G.contract;
+  if (SUITS.includes(atout)) return heuristicCard(seat);
+  const legal = computeLegal(canonSort(G.hands[seat]), G.pliCourant, atout, seat);
+  return legal.length === 1 ? legal[0] : simpleCard(seat, legal);
+}
 function simpleCard(seat, legal) {
   const atout = G.contract.atout;
   const pli = G.pliCourant;
-  if (!pli.length) return strongest(legal, atout);
-  if (teamOf(trickWinnerSeat(pli, atout)) === teamOf(seat))
-    return pli.length === 3 ? highest(legal, atout) : lowest(legal, atout);
+  const hand = G.hands[seat];
+  if (!pli.length) {
+    const masters = legal.filter((c) => masterIn(hand, c, atout));
+    return masters.length ? highest(masters, atout) : lowest(legal, atout);
+  }
+  const winner = trickWinnerSeat(pli, atout);
+  if (teamOf(winner) === teamOf(seat))
+    return pli.length === 3 || masterIn(hand, pli.find((e) => e.siege === winner).carte, atout)
+      ? highest(legal, atout)
+      : lowest(legal, atout);
   const wins = legal.filter(
     (c) => trickWinnerSeat([...pli, { siege: seat, carte: c }], atout) === seat,
   );
+  // Rejetés en duel (MC 48, salon ESSEC) : au Sans Atout, entamer petit et
+  // garder As et 10 pour la fin (−6,1 ± 2,9) ; ne pas prendre un pli de 4
+  // points au plus avec un As ou un 10 (−0,4 ± 1,6).
   return wins.length ? weakest(wins, atout) : lowest(legal, atout);
 }
 

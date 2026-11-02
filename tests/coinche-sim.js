@@ -34,7 +34,7 @@ export function shuffle(deck, rand) {
 // reseed : hasard des bots repris à chaque donne (graine botSeed et numéro
 // de donne) ; dans un duel, les deux parties jumelles imaginent les mêmes
 // mondes à chaque donne : l'écart ne vient plus que des bots.
-export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, decide = null, reseed = false } = {}) {
+export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, decide = null, reseed = false, regles } = {}) {
   const { createGame, actOn, bots, tuning } = engine;
   let now = 0;
   let seq = 0;
@@ -51,7 +51,7 @@ export function play(engine, { dealSeed = 1, botSeed = 2, deal = null, on = {}, 
   Math.random = rand; // anciens moteurs : mondes tirés avec Math.random (les récents tirent leur graine de l'état)
   tuning.now = () => 0; // anciens moteurs : réflexion jamais interrompue (les récents ignorent l'horloge)
   try {
-    const G = createGame([0, 1, 2, 3].map(() => ({ type: 'bot', name: 'Ordinateur' })), dealRand, deal);
+    const G = createGame([0, 1, 2, 3].map(() => ({ type: 'bot', name: 'Ordinateur' })), dealRand, deal, regles);
     const newDonne = () => {
       if (!reseed || G.donneNumero === donne) return;
       donne = G.donneNumero;
