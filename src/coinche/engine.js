@@ -342,7 +342,8 @@ function botTurnAction(seat) {
   }
   if (G.phase === "JEU") {
     if (botWantsMisere(seat)) return { type: "MISERE" };
-    return { type: "JOUER", carte: botChooseCard(seat) };
+    const carte = botChooseCard(seat);
+    return { type: "JOUER", carte, hesit: cardHesit, ...(cardWhy && { why: cardWhy }) };
   }
   return null;
 }
@@ -729,7 +730,16 @@ export const BID_WHY = {
   "sim-TA": ["Tout Atout : la simulation le réussit assez souvent", "All Trumps: simulation makes it often enough"],
   "sim-SA": ["Sans Atout : la simulation le réussit assez souvent", "No Trumps: simulation makes it often enough"],
   "sim-apres-TA-SA": ["après un Tout Atout / Sans Atout : décidé par la simulation", "after All/No Trumps: decided by simulation"],
+  // Coinche et surcoinche (G.contract.coincheWhy, surcoincheWhy). Une coinche
+  // « libre » paraît absurde sans sa raison : 61 % des coinches des bots.
+  "coinche-libre": ["vous sortez de toute façon : la coinche ne coûte rien", "you go out anyway: the double costs nothing"],
+  "coinche-tenue": ["contre un capot : un pli d'atout sûr", "against a capot: a sure trump trick"],
+  "coinche-sim": ["la simulation fait chuter le contrat assez souvent", "simulation sinks the contract often enough"],
+  "surcoinche-sortie": ["une chute coinchée nous ferait sortir de toute façon", "a doubled fall would put us out anyway"],
+  "surcoinche-huit": ["les huit atouts en main", "all eight trumps in hand"],
+  "surcoinche-sim": ["la simulation réussit le contrat assez souvent", "simulation makes the contract often enough"],
 };
+let coincheWhy = null; // raison de la dernière coinche ou surcoinche d'un bot
 let bidWhy = null;
 function withWhy(w, o) {
   if (o) bidWhy = w;
@@ -1163,6 +1173,7 @@ function botWantsToCoinche(seat) {
   // déjà gagner : coincher ne pourrait que doubler son gain.
   const pre = G.scores[contract.equipePreneur];
   const def = G.scores[1 - contract.equipePreneur];
+  coincheWhy = "coinche-libre";
   if (pre + contractValue(contract) >= 1010 && pre + contractValue(contract) > def)
     return true;
   if (def + 160 >= 1010 && def + 160 > pre) return false;
@@ -1175,7 +1186,9 @@ function botWantsToCoinche(seat) {
   // Générale comprise : la lecture des enchères (bidFits) ne sait pas
   // encore ce qu'elle promet, les mondes simulés lui prêteraient des mains
   // trop faibles ; on s'en tient au pli d'atout sûr.
+  coincheWhy = "coinche-tenue";
   if (contract.type !== "NUMERIQUE") return tenue;
+  coincheWhy = "coinche-sim";
   // La coinche double tout : rentable dès que le contrat réussit moins
   // souvent que 160/(160+M) (67 % à 80, 57 % à 120). On joue la donne sur
   // des mondes compatibles avec les enchères ; la marge couvre la
@@ -1208,10 +1221,13 @@ function botWantsToSurcoinche(seat) {
   if (pre + 2 * contractValue(contract) >= 1010 && pre + 2 * contractValue(contract) > def)
     return false;
   // Une chute coinchée les ferait sortir de toute façon : on surcoinche par principe.
+  coincheWhy = "surcoinche-sortie";
   if (def + 320 >= 1010) return true;
   // Le preneur qui tient les 8 atouts (sa propre main, rien d'autre) gagne à coup sûr.
+  coincheWhy = "surcoinche-huit";
   if (seat === contract.preneur && suitCards(hand, atout).length === 8)
     return true;
+  coincheWhy = "surcoinche-sim";
   // Réussite simulée, capots et Générales compris (ZON-7 : un capot coinché
   // n'était jamais surcoinché, +336 pts par donne laissés sur la table dans
   // le cas mesuré) ; sur au moins CAPOT_WORLDS mondes (ou tous ceux réglés).
@@ -1421,10 +1437,10 @@ function playContext(seat) {
 
 // Un adversaire peut-il couper cette couleur ? Manque constaté, ou au
 // plus une carte de la couleur encore dehors.
-function oppCanRuff(ctx, suit) {
+function oppCanRuff(ctx, suit, who = ctx.opponents) {
   if (suit === ctx.atout || !ctx.oppTrumps) return false;
   const fewLeft = outCards(ctx.hand, suit).length <= 1;
-  return ctx.opponents.some(
+  return who.some(
     (o) => mayTrump(o, 0, ctx.hand) && (G.void[o][suit] || fewLeft),
   );
 }
@@ -1522,8 +1538,17 @@ function sigFalse(hand, c, legal) {
 // remplace le précédent : un appel efface les autres appels du siège et le
 // refus de la même couleur, un refus les autres refus et l'appel de la même
 // couleur.
+// Un humain ne signale que sur le pli de son partenaire, et son Valet y est
+// un refus : sous un pli adverse, il jette sa carte la moins chère, lue
+// comme un appel (65 % de faux appels humains en octobre).
 function readDiscardSignal(seat, carte, legalBefore) {
-  const k = sigReading(carte, legalBefore);
+  let k = sigReading(carte, legalBefore);
+  if (G.seats?.[seat]?.type === "human") {
+    const before = G.pliCourant.filter((e) => e.siege !== seat);
+    if (!before.length || teamOf(trickWinnerSeat(before, G.contract.atout)) !== teamOf(seat)) return;
+    if (!k && carte.rank === "J" && carte.suit !== G.contract.atout && G.plisJoues < SIGNAL_TRICKS && volontaire(legalBefore, G.contract.atout))
+      k = "refus";
+  }
   if (!k) return;
   const [same, other] = k === "appel" ? [G.appel, G.refus] : [G.refus, G.appel];
   same[seat] = { [carte.suit]: true };
@@ -1631,12 +1656,20 @@ function defaultLead(ctx) {
     const top = strongest(legal, atout);
     return higherOut(hand, top, atout) ? weakest(legal, atout) : top;
   }
+  // Défense : faire couper le preneur l'affaiblit ; seule la coupe de son
+  // partenaire est à craindre. Bonus si l'on garde l'atout maître ou trois
+  // atouts (le Monte-Carlo le faisait 63 % du temps, le réflexe 43 %).
+  const takerMate = ctx.attack ? null : partnerOf(G.contract.preneur);
+  const trumps = suitCards(hand, atout);
+  const trumpHold =
+    trumps.length >= 3 || (trumps.length > 0 && !higherOut(hand, strongest(trumps, atout), atout));
   let best = null;
   for (const suit of new Set(side.map((c) => c.suit))) {
     const n = suitCards(hand, suit).length;
     let score = ctx.attack ? n * 3 : -n * 3; // attaque : travailler la longue ; défense : se raccourcir
     if (G.refus[ctx.partner][suit]) score -= 30;
-    if (oppCanRuff(ctx, suit)) score -= 25;
+    if (takerMate === null ? oppCanRuff(ctx, suit) : oppCanRuff(ctx, suit, [takerMate])) score -= 25;
+    else if (takerMate !== null && trumpHold && oppCanRuff(ctx, suit)) score += 10;
     if (G.void[ctx.partner][suit] && mayTrump(ctx.partner, 0, hand))
       score += ctx.attack ? -10 : 20;
     if (holds(hand, suit, "A")) score -= 15; // ne pas jouer sous l'As
@@ -2071,7 +2104,10 @@ function baremeFits({ e, partnerBid, acted, opened, libre }, h) {
       // Relance = soutien (plus de palier de prudence), ou soutien − 10 si forcée.
       const pts = supportPoints(h, e.atout, partnerBid.montant, libre);
       const r = e.montant - partnerBid.montant;
-      if (pts >= (forced ? r - 10 : r) && (acted || e.montant >= 160 || pts < r + 10))
+      // Un humain relance « par le bas » : +10 dit le Valet ou le 9 (un Valet
+      // et un petit, lus sans Valet sur 90, avaient le poids 0).
+      const human = (e.type ?? G.seats[e.seat]?.type) !== "bot";
+      if (pts >= (forced ? r - 10 : r) && (acted || human || e.montant >= 160 || pts < r + 10))
         return 1;
       // L'étape 3 essaie la couleur du partenaire avec un honneur ou deux atouts.
       return overOpp && peutAppuyer(h, e.atout) ? SIM_FIT : 0;
@@ -2335,7 +2371,9 @@ function playOut(seat, world, card) {
 }
 
 // Score de la donne vu d'une équipe, plus un soupçon de points de plis
-// pour départager.
+// pour départager, et 1 pt pour les huit plis : un capot faisable se joue
+// jusqu'au bout, comme le ferait un joueur (réussi 64 fois sur 70 à quatre
+// plis de la fin).
 function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team, plisSiege) {
   const reussi = contratReussi(c, pointsPlis, plisGagnes, bel, plisSiege);
   const gain = (reussi ? contractValue(c) : 160) * multiplicateur;
@@ -2343,7 +2381,8 @@ function donneValue(c, pointsPlis, plisGagnes, bel, multiplicateur, team, plisSi
     ((reussi ? c.equipePreneur : 1 - c.equipePreneur) === team
       ? gain
       : -gain) +
-    (pointsPlis[team] - pointsPlis[1 - team]) * 0.01
+    (pointsPlis[team] - pointsPlis[1 - team]) * 0.01 +
+    (plisGagnes[team] === 8) - (plisGagnes[1 - team] === 8)
   );
 }
 
@@ -2536,7 +2575,11 @@ const TRUMP_LEAD_MARGIN = 16;
 // atout, le preneur Valet-9 et trois atouts tire atout, la défense entame
 // son As, la couleur appelée ou annoncée par le partenaire revient.
 // Violations mesurées : 8 → 3 %, 57 → 26 %, 55 → 27 %, 45-63 → 10-12 %.
-const CONVENTION_MARGIN = { trumpDef: 32, takerDraw: 32, defAce: 32, called: 32 };
+// Défense 32 → 64 (2 novembre, « elle fait trop tomber les atouts ») :
+// entames d'atout volontaires 4,0 → 0,7 %, avec un seul atout 10,5 → 1,7 %
+// (journal des parties humaines : 3,6 % chez les humains) ; duel MC 48
+// neutre (−0,05 ± 0,77). Jamais : −1,4 ± 1,0, le calcul a parfois raison.
+const CONVENTION_MARGIN = { trumpDef: 64, takerDraw: 32, defAce: 32, called: 32 };
 // Le 10 non maître (As dehors, ni tombé ni en main) que le réflexe garde :
 // le Monte-Carlo le posait 0,45 fois par donne avant le 4e joueur, toujours
 // contre le réflexe (entamé par la défense : pli fait 14-18 % du temps).
@@ -2547,6 +2590,7 @@ const TEN_MARGIN = 16;
 // (gardé 36 % → 86 % du temps) ; un faux signal coûte 5 pts par monde tant
 // qu'il reste un choix honnête (faux signaux émis 4,9 % → 1,3 %).
 const KEEP_APPEL_MARGIN = 32;
+const DISCARD_MASTER_MARGIN = 16; // carte maîtresse défaussée en second, pts par monde
 // Campagne du 18 octobre (duels MC 48, deux séries chacune, paquet neutre :
 // +0,6 ± 2,4 et −0,6 ± 2,3) : marges d'entame d'atout 8 → 16 et d'As de
 // la défense 16 → 32, appel gardé 16 → 32, attaque qui tire atout aux deux
@@ -2581,6 +2625,11 @@ function mcChooseCard(seat, legal, reflex, why) {
   totals.forEach((t, i) => {
     if (t > totals[best] + 1e-9) best = i;
   });
+  // Hésitation (délai du bot, voir thinkMs de host.js) : des valeurs très
+  // étalées entre deux cartes proches, à 1 pt par monde près.
+  const vals = [...new Set(totals.map((t) => Math.round(t / n)))].sort((a, b) => b - a);
+  const gap = vals.length > 1 ? vals[0] - vals[1] : Infinity;
+  cardHesit = Math.min(1, (vals[0] - vals[vals.length - 1]) / 20) * (1 - Math.min(1, gap / 10));
   if (!best) return reflex;
   const choice = cards[best];
   if (!suitGame) return choice;
@@ -2600,6 +2649,16 @@ function mcChooseCard(seat, legal, reflex, why) {
   if (G.pliCourant.length) {
     if (sigOnPlay(reflex, legal) === "appel" && holds(hand, reflex.suit, "A"))
       margin = Math.max(margin, KEEP_APPEL_MARGIN);
+    // En second, un As ou un 10 maître jeté sur le pli de l'adversaire :
+    // le partenaire ne reprend que 54 % du temps (0,078 fois par donne).
+    if (
+      G.pliCourant.length === 1 &&
+      choice.suit !== G.pliCourant[0].carte.suit &&
+      choice.suit !== atout &&
+      (choice.rank === "A" || choice.rank === "10") &&
+      !higherOut(hand, choice, atout)
+    )
+      margin = Math.max(margin, DISCARD_MASTER_MARGIN);
   } else {
     const M = CONVENTION_MARGIN;
     const def = teamOf(seat) !== equipePreneur;
@@ -2681,11 +2740,56 @@ function botChooseCard(seat) {
     G.contract.atout,
     seat,
   );
+  cardWhy = null;
+  cardHesit = 0;
   if (legal.length === 1) return legal[0];
   return withSeed(seat, "card", () => {
+    reflexWhy = null;
     const reflex = rolloutCard(seat);
-    return mcChooseCard(seat, legal, reflex, reflexWhy);
+    const why = reflexWhy;
+    const card = mcChooseCard(seat, legal, reflex, why);
+    cardWhy = cardReason(seat, card, card.id === reflex.id ? why : "calcul", legal);
+    return card;
   });
+}
+
+// Ce que fait la carte d'un bot, dit à la table (« Dernier pli ») : ce
+// qu'il fait, jamais ce qu'il lit des autres. Le réflexe n'expliquait que
+// 6 % des cartes, et le bot s'en écarte une fois sur trois.
+export const CARD_WHY = {
+  master: ["encaisse une carte maîtresse", "cashes a master card"],
+  called: ["rejoue la couleur appelée par son partenaire", "returns the suit partner called"],
+  partner: ["joue la couleur annoncée par son partenaire", "leads the suit partner bid"],
+  atout: ["tire atout", "draws trumps"],
+  entame: ["entame la couleur la moins risquée", "leads the safest suit"],
+  calcul: ["la simulation préfère cette carte à son réflexe", "simulation prefers this card to the reflex"],
+  prend: ["prend le pli", "wins the trick"],
+  charge: ["charge le pli de son partenaire", "loads partner's trick"],
+  petite: ["ne donne rien de cher", "gives nothing valuable"],
+  coupe: ["coupe", "ruffs"],
+  appel: ["appel : rejouez-moi cette couleur", "call: lead this suit back to me"],
+  refus: ["refus : pas cette couleur", "refusal: not this suit"],
+  defausse: ["se défausse", "discards"],
+};
+let cardWhy = null;
+let cardHesit = 0; // 0 : coup évident ou indifférent, 1 : coup à peser (voir mcChooseCard)
+function cardReason(seat, card, why, legal) {
+  const atout = G.contract.atout;
+  const hand = G.hands[seat];
+  const pli = G.pliCourant;
+  if (!pli.length) {
+    if (why) return why;
+    if (card.suit === atout) return "atout";
+    return higherOut(hand, card, atout) ? "entame" : "master";
+  }
+  if (card.suit !== pli[0].carte.suit) {
+    if (card.suit === atout) return "coupe";
+    const k = SUITS.includes(atout) && !sigFalse(hand, card, legal) && sigOnPlay(card, legal);
+    return k || "defausse";
+  }
+  const w = trickWinnerSeat([...pli, { siege: seat, carte: card }], atout);
+  if (w === seat) return "prend";
+  return teamOf(w) === teamOf(seat) && cardPoints(card, atout) >= 10 ? "charge" : "petite";
 }
 
 // Tout Atout / Sans Atout (salon ESSEC) : les réflexes de club supposent une
@@ -2990,6 +3094,8 @@ function act(seat, action) {
     if (teamOf(seat) === G.contract.equipePreneur) return "COINCHE_INTERDITE";
     G.contract.coinche = true;
     G.contract.coincheur = seat;
+    const why = whyOf(seat, action).why;
+    if (why) G.contract.coincheWhy = why;
     G.multiplicateur = 2;
     G.phase = "SURCOINCHE";
     startTurn();
@@ -3002,6 +3108,8 @@ function act(seat, action) {
       return "SURCOINCHE_INTERDITE";
     G.contract.surcoinche = true;
     G.contract.surcoincheur = seat;
+    const why = whyOf(seat, action).why;
+    if (why) G.contract.surcoincheWhy = why;
     G.multiplicateur = 4;
     lockContractAndStartPlay();
     return;
@@ -3021,7 +3129,11 @@ function act(seat, action) {
       : null;
     const carte = hand.splice(idx, 1)[0];
     noteTrumpObligations(seat, carte);
-    G.pliCourant.push({ siege: seat, carte });
+    G.pliCourant.push({
+      siege: seat,
+      carte,
+      ...(G.seats?.[seat]?.type === "bot" && Object.hasOwn(CARD_WHY, action.why) && { why: action.why }),
+    });
     G.playedBy[seat].push(carte);
     G.seen[carte.id] = true;
     if (couleurDemandeeAvant && carte.suit !== couleurDemandeeAvant) {
@@ -3134,6 +3246,7 @@ export const bots = {
   turnAction: withG(botTurnAction),
   decideBid: withG(botDecideBid),
   lastBidWhy: () => bidWhy,
+  lastCoincheWhy: () => coincheWhy,
   chooseCard: withG(botChooseCard),
   wantsMisere: withG(botWantsMisere),
   wantsToCoinche: withG((s) =>

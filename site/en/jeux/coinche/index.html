@@ -317,8 +317,10 @@
             refusal for the same suit, and vice versa.
           </li>
           <li>
-            The bots read your discards the same way, without ever saying what
-            they make of them.
+            Your own discards are only read on a trick your partner holds (your
+            Jack counts as a refusal there): elsewhere, a small card thrown is
+            not a call. The bots never say what they make of them, and lead
+            your called suit back unless their calculations see better.
           </li>
         </ul>
         <h3>Leading</h3>
@@ -331,13 +333,20 @@
           <li>
             On defense: it does not lead trump, cashes its Aces (except an Ace
             whose 10 is still out, on the first lead), leads the suit called
-            or announced by its partner, and leads a singleton to trump in
-            later.
+            or announced by its partner, leads a singleton to trump in later,
+            and makes the taker ruff when it keeps the master trump or three
+            trumps.
           </li>
           <li>
             These are its habits: it only departs from them if its
             calculations see a clear gain, which happens mostly for a taker at
             80 or 90 holding only three trumps.
+          </li>
+          <li>
+            In “Last trick”, each bot card says what it does (loads, ruffs,
+            call, calculation…); the bidding history says why it bid, doubled
+            or redoubled. It takes longer over a real dilemma than over an
+            obvious move.
           </li>
         </ul>
       </div>

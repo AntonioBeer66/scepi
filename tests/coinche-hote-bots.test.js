@@ -12,7 +12,7 @@
 //   - HAS-7 : les clients ne reçoivent ni personnalités ni mémoire des bots.
 //   node tests/coinche-hote-bots.test.js
 import assert from "assert";
-import { actOn, bots, createGame } from "../src/coinche/engine.js";
+import { __read, actOn, bots, computeLegal, createGame, maskOf } from "../src/coinche/engine.js";
 import { Coinche } from "../src/coinche/game.js";
 import { createHost, thinkMs } from "../src/coinche/host.js";
 import { rng } from "./coinche-sim.js";
@@ -192,14 +192,28 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   G.pliCourant = [{ siege: 1, carte: card("AS") }];
   G.joueurActif = 2;
   G.hands[2] = [card("8S"), card("7H"), card("9D")]; // une seule pique : coup forcé
+  G.plisJoues = 2;
   for (const u of [0, 0.5, 0.999]) {
     const ms = thinkMs(G, 2, u);
-    ok(ms >= 450 && ms < 600, `HAS-4 : carte forcée entre 450 et 600 ms (${Math.round(ms)})`);
+    ok(ms >= 300 && ms < 1000, `HAS-4 : carte forcée entre 300 et 1000 ms (${Math.round(ms)})`);
   }
+  ok(Math.round(thinkMs(G, 2, 0.5)) === 450, "HAS-4 : carte forcée, médiane 450 ms");
   G.hands[2] = [card("8S"), card("9S"), card("7H")]; // deux piques : un choix
-  ok(thinkMs(G, 2, 0) === 800 && thinkMs(G, 2, 0.999) < 1200, "HAS-4 : un choix demande 0,8 à 1,2 s");
+  const card_ = (hesit) => Math.round(thinkMs(G, 2, 0.5, { type: "JOUER", hesit }));
+  ok(card_(0) === 800 && card_(1) === 1600, "HAS-4 : coup évident 0,8 s, coup à peser 1,6 s (médianes)");
+  ok(thinkMs(G, 2, 0, { hesit: 0 }) >= 500 && thinkMs(G, 2, 0.999, { hesit: 1 }) < 3500, "HAS-4 : jamais sous 0,5 s, jamais un temps mort");
+  G.plisJoues = 0;
+  ok(card_(0) === 1200, "HAS-4 : +0,4 s au premier pli");
   G.phase = "ENCHERES";
-  ok(thinkMs(G, 2, 0) >= 900 && thinkMs(G, 2, 0.999) < 1400, "HAS-4 : une enchère, 0,9 à 1,4 s (rythme régulier)");
+  const bid = (action) => Math.round(thinkMs(G, 2, 0.5, action));
+  ok(
+    bid({ type: "PASSER" }) === 700 &&
+      bid({ type: "ENCHERIR", why: "bareme" }) === 1000 &&
+      bid({ type: "ENCHERIR", why: "intervention-sim" }) === 1400 &&
+      bid({ type: "ENCHERIR", why: "capot-sim" }) === 2200 &&
+      bid({ type: "COINCHER", why: "coinche-libre" }) === 1000,
+    "HAS-4 : passe 0,7 s, barème 1 s, simulation 1,4 s, capot 2,2 s, coinche libre 1 s",
+  );
   G.phase = "JEU";
   // Dans l'hôte : le minuteur du bot dépend du nombre de cartes légales.
   const delays = [];
@@ -223,8 +237,9 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
 
 // ---- ZON-3 : carte jouée d'office, aucun signal ------------------------------------
 // Siège 2 sans pique et sans atout défausse le 8♣ (« appel » s'il le joue
-// volontairement : il pouvait aussi jeter le 7♦). Témoin : le même coup joué
-// par le joueur.
+// volontairement : il pouvait aussi jeter le 7♦), sur l'As de pique de son
+// partenaire (un humain ne signale que sur le pli de son partenaire).
+// Témoin : le même coup joué par le joueur.
 {
   const jeu = () => {
     const G = createGame(seatsOf("human", "human", "human", "human"), rng(5));
@@ -232,7 +247,7 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
     actOn(G, s0, { type: "ENCHERIR", montant: 80, atout: "H" }, rng(1));
     for (let i = 0; i < 3; i++) actOn(G, G.joueurActif, { type: "PASSER" }, rng(1));
     assert.strictEqual(G.phase, "JEU");
-    G.pliCourant = [{ siege: 1, carte: card("AS") }];
+    G.pliCourant = [{ siege: 0, carte: card("AS") }, { siege: 1, carte: card("7S") }];
     G.joueurActif = 2;
     G.hands[2] = [card("8C"), card("7D")];
     return G;
@@ -244,6 +259,53 @@ const bid = (t) => sent(t).find((e) => e.type === "ENCHERIR");
   assert.strictEqual(actOn(office, null, { type: "TIMEOUT", tour: office.tour }, rng(1)), undefined);
   ok(office.playedBy[2].length === 1 && office.void[2].S === true, "ZON-3 : la carte est jouée et le manque noté");
   ok(Object.keys(office.appel[2]).length === 0 && Object.keys(office.refus[2]).length === 0, "ZON-3 : carte d'office, pas de signal");
+  // Sous le pli de l'adversaire, la petite carte d'un humain ne dit rien ;
+  // sur le pli de son partenaire, son Valet est un refus.
+  const adverse = jeu();
+  adverse.pliCourant = [{ siege: 1, carte: card("AS") }];
+  actOn(adverse, 2, { type: "JOUER", carte: card("8C") }, rng(1));
+  ok(Object.keys(adverse.appel[2]).length === 0, "humain : pas d'appel lu sous le pli adverse");
+  const valet = jeu();
+  valet.hands[2] = [card("JC"), card("7D")];
+  actOn(valet, 2, { type: "JOUER", carte: card("JC") }, rng(1));
+  ok(valet.refus[2].C === true, "humain : son Valet sur le pli du partenaire est un refus");
+}
+
+// ---- Raisons : coinche et carte d'un bot gardées dans l'état ------------------
+{
+  const G = createGame(seatsOf("human", "bot", "human", "bot"), rng(5));
+  const s0 = G.joueurActif;
+  const pre = s0 % 2 === 0 ? s0 : (s0 + 1) % 4; // un humain annonce, un bot coinche
+  while (G.joueurActif !== pre) actOn(G, G.joueurActif, { type: "PASSER" }, rng(1));
+  actOn(G, pre, { type: "ENCHERIR", montant: 80, atout: "H" }, rng(1));
+  actOn(G, (pre + 1) % 4, { type: "COINCHER", why: "coinche-libre" }, rng(1));
+  ok(G.contract.coincheWhy === "coinche-libre", "raison de la coinche d'un bot gardée sur le contrat");
+  actOn(G, null, { type: "TIMEOUT", tour: G.tour }, rng(1));
+  const s = G.joueurActif;
+  G.seats[s] = { type: "bot", name: "Bob (bot)" };
+  actOn(G, s, { type: "JOUER", carte: G.hands[s][0], why: "entame" }, rng(1));
+  G.seats[G.joueurActif] = { type: "human", name: "Ana" };
+  actOn(G, G.joueurActif, { type: "JOUER", carte: computeLegal(G.hands[G.joueurActif], G.pliCourant, "H", G.joueurActif)[0], why: "coupe" }, rng(1));
+  ok(G.pliCourant[0].why === "entame" && G.pliCourant[1].why === undefined, "raison de la carte d'un bot seulement");
+}
+
+// ---- Relance d'un humain lue « par le bas » : +10 = Valet ou 9 ----------------
+{
+  const G = createGame(seatsOf("human", "human", "human", "human"), rng(1));
+  const main = ["JH", "7H", "7S", "8S", "9S", "7D", "8D", "7C"].map(card);
+  const lu = (type) =>
+    __read.baremeFits(
+      G,
+      {
+        e: { seat: 2, type, montant: 90, atout: "H", cur: { montant: 80, atout: "H", preneur: 0, equipePreneur: 0 }, passes: 1 },
+        partnerBid: { seat: 0, montant: 80, atout: "H" },
+        acted: false,
+        opened: false,
+        libre: false,
+      },
+      maskOf(main),
+    );
+  ok(lu("human") === 1 && lu("bot") === 0, "Valet et un petit sur 90 : lu chez un humain, pas chez un bot (+20)");
 }
 
 // ---- ZON-4 + MON-4 : relire un joueur selon ce qu'il était quand il a parlé ---

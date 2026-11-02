@@ -9,6 +9,7 @@ import {
   ALLOWED_BIDS,
   BELOTE_BONUS,
   BID_WHY,
+  CARD_WHY,
   DURATION_MS,
   ESSEC_ATOUTS,
   ESSEC_BIDS,
@@ -327,6 +328,13 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     const calls = [];
     if (c?.coinche && c.coincheur != null) calls.push(verb(c.coincheur, "coinche"));
     if (c?.surcoinche && c.surcoincheur != null) calls.push(verb(c.surcoincheur, "surcoinche"));
+    // Raison d'une coinche ou d'une surcoinche de bot (voir BID_WHY).
+    for (const [s, w, v] of [
+      [c?.coincheur, c?.coincheWhy, t("coinche", "double")],
+      [c?.surcoincheur, c?.surcoincheWhy, t("surcoinche", "redouble")],
+    ])
+      if (s != null && BID_WHY[w])
+        whys.push(`<li><b>${esc(seatName(s))}</b> · ${v} : ${esc(t(...BID_WHY[w]))}</li>`);
     return `<table class="cg-bids" aria-label="${t("Enchères de la donne", "Bids this deal")}">
       <thead><tr>${head}</tr></thead>
       <tbody>${rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody>
@@ -371,8 +379,10 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     }
     if (ui.panel === "trick" && G.lastTrick) {
       const bySeat = {};
+      const whyOf = {}; // ce que fait la carte d'un bot (G.lastTrick.cards[].why, voir CARD_WHY)
       G.lastTrick.cards.forEach((e) => {
         bySeat[e.siege] = e.carte;
+        if (CARD_WHY[e.why]) whyOf[e.siege] = t(...CARD_WHY[e.why]);
       });
       return `<div class="cg-panel" role="region" aria-label="${t("Dernier pli", "Last trick")}">
         <div class="cg-lasttrick">${[0, 1, 2, 3]
@@ -380,7 +390,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
           .map(
             (s) => `<figure class="${s === G.lastTrick.winnerSeat ? "is-winner" : ""}">
             <img src="/assets/images/coinche/cards/${bySeat[s].id}.webp" alt="${esc(cardLabel(bySeat[s]))}">
-            <figcaption>${esc(seatName(s))}</figcaption></figure>`,
+            <figcaption>${esc(seatName(s))}${whyOf[s] ? `<small>${esc(whyOf[s])}</small>` : ""}</figcaption></figure>`,
           )
           .join("")}</div>
       </div>`;
