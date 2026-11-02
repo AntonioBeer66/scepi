@@ -526,7 +526,16 @@ function fausses(hand, atout) {
 // Ouverture que la main justifie à cet atout (0 = pas d'ouverture).
 // « light » : dernier à parler après trois passes ; personne n'a de quoi
 // ouvrir, on peut forcer un 80.
+// Belote en main : 80, 90 et 100 demandent tous 81 points de plis (voir
+// contratReussi) ; l'ouverture monte à 100 sans rien coûter. Le barème
+// relit cette ouverture avec la même fonction (baremeFits). En duel (MC 48,
+// deux séries de 540 donnes de départ) : +1,0 puis +1,4 ± 2,1 pts/donne,
+// autant de contrats réussis.
 function openingBid(hand, suit, light) {
+  const v = baremeOuverture(hand, suit, light);
+  return v && v < 100 && hasBelote(hand, suit) ? 100 : v;
+}
+function baremeOuverture(hand, suit, light) {
   const m = asMask(hand);
   const n = countOf(m, suit);
   // Main entière dans une seule couleur (8 cartes sur 8, donc Valet, 9 ET

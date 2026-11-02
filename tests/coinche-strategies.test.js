@@ -70,6 +70,8 @@ setup({ hands: hands('JH 8H 7H AS 9S 8D 7D 8C') });
 check('Ouverture 80 : Valet troisième + un As', bid(api.botDecideBid(0)), '80H');
 setup({ hands: hands('JH 8H 7H KS 9S 8D 7D 8C') });
 check('Valet troisième sans As : passe', bid(api.botDecideBid(0)), 'passe');
+setup({ hands: hands('JH KH QH AS 8S 7D 8D 7C') });
+check('Valet-belote et un As : 100, qui demande 81 points comme le 80', bid(api.botDecideBid(0)), '100H');
 setup({ hands: hands('7H 8H KS QS 9D 8D 7C 10C') });
 check('Main faible : passe', bid(api.botDecideBid(0)), 'passe');
 setup({ hands: hands('9H KH QH 7S 8S 7D 8D 7C') });
