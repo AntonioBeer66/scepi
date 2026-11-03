@@ -2940,9 +2940,12 @@ function computeScore() {
   startTurn();
 }
 
+// Pas d'Object.hasOwn (absent des téléphones anciens : les bots plantaient).
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
 // Raison d'une enchère de bot, si elle est connue (voir BID_WHY).
 function whyOf(seat, action) {
-  return G.seats?.[seat]?.type === "bot" && Object.hasOwn(BID_WHY, action.why)
+  return G.seats?.[seat]?.type === "bot" && own(BID_WHY, action.why)
     ? { why: action.why }
     : {};
 }
@@ -3132,7 +3135,7 @@ function act(seat, action) {
     G.pliCourant.push({
       siege: seat,
       carte,
-      ...(G.seats?.[seat]?.type === "bot" && Object.hasOwn(CARD_WHY, action.why) && { why: action.why }),
+      ...(G.seats?.[seat]?.type === "bot" && own(CARD_WHY, action.why) && { why: action.why }),
     });
     G.playedBy[seat].push(carte);
     G.seen[carte.id] = true;
