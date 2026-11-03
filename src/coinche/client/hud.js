@@ -740,6 +740,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   }
   let addChat = () => {};
   let setWatchers = () => {};
+  let onTab = () => {};
   if (!spectator || onChat) {
     const label = spectator ? "Messages" : t("Émoticônes et messages", "Emotes and messages");
     const box = document.createElement("div");
@@ -777,6 +778,19 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       toggle.setAttribute("aria-label", label);
       if (log) log.scrollTop = log.scrollHeight;
     };
+    // Tab ouvre et ferme le chat (le champ de message prend le focus) ;
+    // Maj+Tab garde la navigation au clavier. Ailleurs qu'en jeu (règles
+    // ouvertes, etc.), Tab reste normal.
+    onTab = (event) => {
+      if (event.key !== "Tab" || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return;
+      const at = document.activeElement;
+      if (at && at !== document.body && !root.contains(at)) return;
+      event.preventDefault();
+      open(list.hidden);
+      if (!list.hidden) box.querySelector(".cg-chat input")?.focus();
+      else if (box.contains(document.activeElement)) document.activeElement.blur();
+    };
+    document.addEventListener("keydown", onTab);
     let nextEmote = 0;
     box.addEventListener("click", (event) => {
       const btn = event.target.closest("button");
@@ -898,6 +912,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       clearInterval(countTimer);
       clearTimeout(ui.armTimer);
       document.removeEventListener("pointerdown", onOutside, true);
+      document.removeEventListener("keydown", onTab);
       // Copie vide à la place : ses écouteurs (G null) ne survivent pas à la
       // partie suivante, qui relit #game-hud.
       root.replaceWith(root.cloneNode(false));
