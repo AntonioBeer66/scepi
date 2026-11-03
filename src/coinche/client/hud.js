@@ -364,6 +364,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   }
 
   function renderPanel() {
+    const close = `<button type="button" class="cg-icon cg-panel-close" data-action="close-panel" aria-label="${t("Fermer", "Close")}">${ICONS.quit}</button>`;
     if (ui.panel === "history") {
       const tab = ui.tab ?? "bids";
       const name = {
@@ -372,6 +373,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       }[tab];
       const body = { bids: renderBids, donnes: renderDonnes }[tab]();
       return `<div class="cg-panel" role="region" aria-label="${name}">
+        ${close}
         <div class="cg-tabs" role="group" aria-label="${t("Contenu de l’historique", "History contents")}">${TABS.map(
           ([k, label]) =>
             `<button type="button" class="cg-tab" data-tab="${k}" data-focus-key="tab-${k}" aria-pressed="${k === tab}">${label}</button>`,
@@ -387,6 +389,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         if (CARD_WHY[e.why]) whyOf[e.siege] = t(...CARD_WHY[e.why]);
       });
       return `<div class="cg-panel" role="region" aria-label="${t("Dernier pli", "Last trick")}">
+        ${close}
         <div class="cg-lasttrick">${[0, 1, 2, 3]
           .map((p) => (anchor + p) % 4)
           .map(
@@ -688,7 +691,8 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       const p = action === "toggle-history" ? "history" : "trick";
       ui.panel = ui.panel === p ? null : p;
       render();
-    } else if (action === "rules") document.querySelector("#rules-btn")?.click();
+    } else if (action === "close-panel") closePanel();
+    else if (action === "rules") document.querySelector("#rules-btn")?.click();
     else if (action === "rules-essec") {
       // Le panneau des règles, ouvert sur ce qui change au salon ESSEC.
       if (document.querySelector("#rules-panel")?.hidden) document.querySelector("#rules-btn")?.click();
@@ -699,16 +703,25 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     else if (action === "quit") onQuit();
   });
 
+  function closePanel() {
+    const opener = `toggle-${ui.panel}`;
+    ui.panel = null;
+    render();
+    // Focus resté dans le panneau fermé (onglets, croix) : retour au bouton qui l'ouvre.
+    if (!root.contains(document.activeElement))
+      root.querySelector(`[data-focus-key="${opener}"]`)?.focus();
+  }
   root.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && ui.panel) {
-      const opener = `toggle-${ui.panel}`;
-      ui.panel = null;
-      render();
-      // Focus resté dans le panneau fermé (onglets) : retour au bouton qui l'ouvre.
-      if (!root.contains(document.activeElement))
-        root.querySelector(`[data-focus-key="${opener}"]`)?.focus();
-    }
+    if (event.key === "Escape" && ui.panel) closePanel();
   });
+  // Toucher hors du panneau (table, cartes, barre) le ferme, sauf ses
+  // propres boutons d'ouverture, qui le basculent déjà.
+  const onOutside = (event) => {
+    if (!ui.panel || !G) return;
+    if (event.target.closest?.(".cg-panel, [data-action^='toggle-']")) return;
+    closePanel();
+  };
+  document.addEventListener("pointerdown", onOutside, true);
 
   const countTimer = setInterval(tickCount, 200);
 
@@ -884,6 +897,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
     destroy() {
       clearInterval(countTimer);
       clearTimeout(ui.armTimer);
+      document.removeEventListener("pointerdown", onOutside, true);
       // Copie vide à la place : ses écouteurs (G null) ne survivent pas à la
       // partie suivante, qui relit #game-hud.
       root.replaceWith(root.cloneNode(false));

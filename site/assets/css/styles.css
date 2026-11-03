@@ -2823,6 +2823,15 @@ body.is-playing .header {
   transform-origin: top right;
   animation: panelDown 0.2s var(--ease-out) both;
 }
+/* Croix de fermeture, toujours visible même panneau défilé. */
+.cg-panel-close {
+  position: sticky;
+  top: -8px;
+  float: right;
+  z-index: 1;
+  margin: -8px -10px 0 8px;
+  background: var(--surface);
+}
 @keyframes panelDown {
   from {
     opacity: 0;
