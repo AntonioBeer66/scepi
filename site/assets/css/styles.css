@@ -2677,6 +2677,11 @@ body.is-playing .header {
   flex: 0 0 auto;
   justify-content: flex-end;
 }
+.cg-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .cg-contract {
   background: var(--gold);
   color: #241a00;
@@ -3412,25 +3417,42 @@ body.is-playing .header {
     row-gap: 2px;
     padding: 4px 8px;
   }
-  /* Donne et tour sur une seconde ligne, sous le contrat et les scores. */
-  .cg-top-mid {
-    order: 3;
-    flex-basis: 100%;
-    justify-content: flex-start;
-  }
+  /* Portrait : contrat et scores en haut ; dessous, donne et tour à gauche,
+     boutons à droite (ils passent à la ligne suivante s'ils ne tiennent
+     pas : jamais de bouton écrasé ni coupé). */
   .cg-top-right {
-    gap: 2px;
+    display: contents;
   }
   .cg-score {
+    order: 1;
     min-width: 46px;
     padding: 1px 6px;
   }
+  .cg-topbar::after {
+    content: "";
+    order: 2;
+    flex-basis: 100%;
+    height: 0;
+  }
+  .cg-topbar {
+    column-gap: 6px;
+  }
+  .cg-top-mid {
+    order: 3;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+  .cg-tools {
+    order: 4;
+    gap: 0;
+    margin-left: auto;
+  }
   .cg-icon {
-    min-width: 40px;
+    min-width: 44px;
     padding: 0 6px;
   }
   .cg-panel {
-    top: 92px;
+    top: 100px;
   }
 }
 

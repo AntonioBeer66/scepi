@@ -253,11 +253,13 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       }</div>
       <div class="cg-top-right">
         ${score(us, US)}${score(1 - us, THEM)}
+        <div class="cg-tools">
         ${iconBtn("toggle-history", "history", t("Historique", "History"), ui.panel === "history")}
         ${G.lastTrick ? iconBtn("toggle-trick", "trick", t("Dernier pli", "Last trick"), ui.panel === "trick") : ""}
         ${G.regles === "essec" ? `<button type="button" class="cg-icon cg-essec" data-action="rules-essec" data-focus-key="rules-essec" aria-label="${t("Règles de l’ESSEC : ce qui change", "ESSEC rules: what changes")}">ESSEC</button>` : ""}
         ${iconBtn("rules", "rules", t("Règles", "Rules"))}
         ${iconBtn("quit", "quit", t("Quitter", "Quit"))}
+        </div>
       </div>
     </div>`;
   }
