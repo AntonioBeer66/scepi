@@ -129,8 +129,10 @@ setup({ hands: hands('JS 7H 8H 9H 7D 8D 7C 8C'), contract: contract(1, 250, 'S')
 check('Coincher un capot avec le Valet d’atout', api.botWantsToCoinche(0), true);
 setup({ hands: hands('7H 8H 9H 7S 8S 7D 8D 7C'), contract: contract(0, 90, 'H', { coinche: true }), scores: [300, 400] });
 check('Pas de surcoinche d’une main vide', api.botWantsToSurcoinche(0), false);
-setup({ hands: hands('AH 10H KS 7S AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [600, 950], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
-check('Coinche gratuite : le preneur sort de toute façon s’il réussit', api.botWantsToCoinche(0), true);
+setup({ hands: hands('JS 9S AH 10H AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [600, 950], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
+check('Coinche gratuite : le preneur sort s’il réussit et la simulation le voit chuter', api.botWantsToCoinche(0), true);
+setup({ hands: hands('7S AH 8H 7H 9D 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [600, 950], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
+check('Pas de coinche gratuite d’un contrat que la simulation voit réussir', api.botWantsToCoinche(0), false);
 setup({ hands: hands('JS 9S AH 10H AD 8D 7C 8C'), contract: contract(1, 80, 'S'), scores: [900, 300], donneAnnonces: [{ seat: 1, montant: 80, atout: 'S' }] });
 check('Pas de coinche quand une simple chute nous fait gagner', api.botWantsToCoinche(0), false);
 

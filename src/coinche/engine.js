@@ -1169,13 +1169,23 @@ function botWantsToCoinche(seat) {
   const hand = G.hands[seat];
   const atout = contract.atout;
   // Score de la partie. Le preneur sort s'il réussit, coinché ou non : la
-  // coinche ne coûte rien et double la chute. Une simple chute nous fait
-  // déjà gagner : coincher ne pourrait que doubler son gain.
+  // coinche ne coûte rien et double la chute. Mais elle ne coûte rien à tout
+  // contrat, même sûr : les bots coinchaient 87 % de contrats réussis rien
+  // que parce que l'adversaire allait sortir (57 % de leurs coinches). On
+  // exige que la simulation le voie chuter assez souvent (COINCHE_LIBRE_MAX).
+  // Une simple chute nous fait déjà gagner : coincher ne pourrait que doubler
+  // son gain.
   const pre = G.scores[contract.equipePreneur];
   const def = G.scores[1 - contract.equipePreneur];
   coincheWhy = "coinche-libre";
-  if (pre + contractValue(contract) >= 1010 && pre + contractValue(contract) > def)
-    return true;
+  if (pre + contractValue(contract) >= 1010 && pre + contractValue(contract) > def) {
+    const p = makeProbability(
+      seat,
+      contract,
+      Math.min(CAPOT_WORLDS, tuning.bidSamples),
+    );
+    return p !== null && p < COINCHE_LIBRE_MAX;
+  }
   if (def + 160 >= 1010 && def + 160 > pre) return false;
   const tenue =
     holds(hand, atout, "J") ||
@@ -1209,6 +1219,8 @@ function botWantsToCoinche(seat) {
   );
 }
 const COINCHE_MARGIN = 0.35;
+// Réussite simulée au-dessus de laquelle on ne coinche pas, même gratuitement.
+const COINCHE_LIBRE_MAX = 0.5;
 
 function botWantsToSurcoinche(seat) {
   const contract = G.contract;
