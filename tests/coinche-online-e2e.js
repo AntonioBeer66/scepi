@@ -133,9 +133,9 @@ try {
   // Émoticône d'Alice (siège 0) relayée par le serveur jusqu'à Bob (en jeu :
   // sur téléphone, le bouton est masqué pendant les enchères).
   await alice.click(".cg-emote-toggle");
-  await alice.click('.cg-emote[data-emote="😭"]');
+  await alice.click('.cg-emote[data-emote="💙"]');
   for (let i = 0; i < 25 && !bob.emotes.length; i++) await bob.waitForTimeout(200);
-  assert.deepStrictEqual(bob.emotes[0], { type: "emote", seat: 0, emote: "😭" }, "émoticône reçue par Bob");
+  assert.deepStrictEqual(bob.emotes[0], { type: "emote", seat: 0, emote: "💙" }, "émoticône reçue par Bob");
 
   // Message de Bob (siège 2), une seconde plus tard (une par seconde au plus).
   await bob.waitForTimeout(1100);

@@ -23,7 +23,7 @@ export const MAX_NAME = 18; // pseudo
 // phrase, traduite selon la langue de la page, ne sert qu'à l'affichage.
 export const EMOTES = new Map([
   ["😂", "Skill issue"],
-  ["😭", t("Ouin ouin", "Boo hoo")],
+  ["🕊️", t("Colombe", "Dove")],
   ["🤡", "L bozo"],
   ["🎬", "Absolutes kino"],
   ["🥱", "GG EZ"],
@@ -35,7 +35,7 @@ export const EMOTES = new Map([
   ["🅰️", t("Sous A", "On A")],
   ["❓", "???"],
   ["🤔", "Hmmmmm"],
-  ["🤷", t("Bah", "Meh")],
+  ["💙", t("Magnifique", "Gorgeous")],
 ]);
 
 // Message libre d'un joueur (palette des émoticônes) : une ligne, sans

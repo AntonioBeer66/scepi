@@ -3855,18 +3855,6 @@ body.is-playing .header {
   font-weight: 800;
   cursor: default;
 }
-.cg-chat-off {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #f7f4fcb3;
-  font-size: 12px;
-  cursor: pointer;
-}
-.cg-chat-off input {
-  accent-color: var(--gold);
-}
 @media (prefers-reduced-motion: reduce) {
   .cg-emote,
   .cg-emote-toggle {
@@ -3876,17 +3864,18 @@ body.is-playing .header {
 }
 /* Portrait étroit : l'éventail et la barre d'enchères occupent le bas ; le
    bouton reste toute la partie en haut à droite de la table, sous la barre
-   de jeu (~92 px), et la palette s'ouvre vers le bas. */
+   de jeu (~95 px, bouton Quitter au-dessus : 116 px laisse de la place), et
+   la palette s'ouvre vers le bas. */
 @media (max-width: 640px) {
   .cg-emotes {
-    top: calc(100px + env(safe-area-inset-top));
+    top: calc(116px + env(safe-area-inset-top));
     bottom: auto;
     flex-direction: column-reverse;
   }
-  /* Sous le bouton (100 px + 48 px + 8 px), jamais plus bas que l'écran. */
+  /* Sous le bouton (116 px + 48 px + 8 px + marge), jamais plus bas que l'écran. */
   .cg-emote-list {
-    max-height: calc(100vh - 168px);
-    max-height: calc(100dvh - 168px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100vh - 184px);
+    max-height: calc(100dvh - 184px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
 }
 /* Peu haut (téléphone en paysage) : palette sur trois colonnes, moins haute. */
@@ -3908,8 +3897,7 @@ body.is-playing .header {
   }
   .cg-chat-watchers,
   .cg-chat-log,
-  .cg-chat,
-  .cg-chat-off {
+  .cg-chat {
     order: -1;
   }
 }

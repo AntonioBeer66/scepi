@@ -26,7 +26,6 @@ import {
 import { CHAT_GAP_MS, EMOTES, MAX_CHAT } from "../../online/tables.js";
 import { t } from "./i18n.js";
 
-const CHAT_OFF_KEY = "scepi-coinche-chat-off"; // "1" : messages des autres masqués
 const COINCHE_ARM_MS = 600; // « Coincher » inactif juste après son apparition
 const RANK_SHORT = { J: "V", Q: "D", K: "R" }; // Valet, Dame, Roi (les autres : tels quels)
 const COMPASS = [t("Sud", "South"), t("Est", "East"), t("Nord", "North"), t("Ouest", "West")]; // position vue du joueur
@@ -730,14 +729,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   // Bouton en bas à droite : il ouvre la palette ; une émoticône ou un
   // message par seconde au plus. Émoticônes : joueurs assis seulement. En
   // ligne, la palette a aussi les messages de la table (spectateurs compris),
-  // une ligne pour écrire et une case pour masquer ceux des autres (retenue
-  // dans ce navigateur) ; une pastille compte les messages pas encore vus.
-  let chatOff = false;
-  try {
-    chatOff = localStorage.getItem(CHAT_OFF_KEY) === "1";
-  } catch {
-    // stockage bloqué : messages affichés
-  }
+  // une ligne pour écrire ; une pastille compte les messages pas encore vus.
   let addChat = () => {};
   let setWatchers = () => {};
   let onTab = () => {};
@@ -758,8 +750,7 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
       onChat
         ? `<p class="cg-chat-watchers">${t("👀 Aucun spectateur", "👀 No spectators")}</p>
       <ol class="cg-chat-log" aria-label="${t("Messages de la table", "Table messages")}" aria-live="polite" hidden></ol>
-      <form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="${t("Message à la table", "Message the table")}" aria-label="${t("Message à la table", "Message the table")}"><button type="submit" aria-label="${t("Envoyer le message", "Send message")}">➤</button></form>
-      <label class="cg-chat-off"><input type="checkbox"${chatOff ? " checked" : ""}> ${t("Masquer les messages des autres", "Hide other players’ messages")}</label>`
+      <form class="cg-chat"><input name="text" maxlength="${MAX_CHAT}" autocomplete="off" enterkeyhint="send" placeholder="${t("Message à la table", "Message the table")}" aria-label="${t("Message à la table", "Message the table")}"><button type="submit" aria-label="${t("Envoyer le message", "Send message")}">➤</button></form>`
         : ""
     }</div>
       <button type="button" class="cg-emote-toggle" aria-expanded="false" aria-label="${label}">${spectator ? "💬" : "😈"}<span class="cg-badge" hidden></span></button>`;
@@ -820,14 +811,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
         send.textContent = "➤";
       }, 1000);
     });
-    box.querySelector(".cg-chat-off input")?.addEventListener("change", (event) => {
-      chatOff = event.target.checked;
-      try {
-        localStorage.setItem(CHAT_OFF_KEY, chatOff ? "1" : "0");
-      } catch {
-        // stockage bloqué : réglage pour cette partie seulement
-      }
-    });
     // Texte posé en textContent : jamais interprété comme du HTML.
     // Message du serveur (name null : bannissement…) : en italique, sans pseudo.
     addChat = (name, text, mine, watcher) => {
@@ -864,7 +847,6 @@ export function createHud(view, { me, onAction, onRelaunch, onQuit, onFocusCard,
   return {
     // Message reçu : ajouté à la liste ; false s'il est masqué (pas de bulle).
     chat(name, text, { mine = false, watcher = false, system = false } = {}) {
-      if (chatOff && !mine && !system) return false;
       addChat(name, text, mine, watcher);
       return true;
     },

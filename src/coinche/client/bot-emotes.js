@@ -93,7 +93,7 @@ function reaction(G, prev) {
       const u = roll(G, "qui");
       const mock = say(def, r.multiplicateur > 1 ? "🤡" : "😂");
       if (u < 0.5) return mock;
-      if (u < 0.75) return say([r.preneur], "😭") || mock;
+      if (u < 0.75) return say([r.preneur], "😔") || mock;
       return say([(r.preneur + 2) % 4], "❓") || mock;
     }
     if (r.multiplicateur > 1) return lucky("coincheRatee") ? say(pre, "🥱") || say(def, "😔") : null;
@@ -108,7 +108,7 @@ function reaction(G, prev) {
     prev.phase === "ENCHERES" &&
     G.donneNumero > prev.donneNumero
   )
-    return lucky("passe") ? say([0, 1, 2, 3], "🤷") : null;
+    return lucky("passe") ? say([0, 1, 2, 3], "🤔") : null;
 
   // Coinche, puis surcoinche.
   // Troisième élément : attente (ms) que la vidéo de l'écran (hud.js, FLASH) passe.
